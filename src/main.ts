@@ -13,7 +13,8 @@ import { createMatch } from './core/match.ts';
 import { PERSONALITIES, personalityById } from './ai/personalities.ts';
 import { drawBoard, boardLayout, drawScoreBar } from './render/boardView.ts';
 import { COLORS, FONTS } from './render/theme.ts';
-import { clickToAction, hitTest, KEY_BINDINGS } from './input/pointer.ts';
+import { clickToAction, hitTest } from './input/pointer.ts';
+import { KEY_BINDINGS, handleKey, resolveKey } from './input/keys.ts';
 import { MatchController } from './ui/app.ts';
 import { Opponent } from './ai/opponent.ts';
 import { renderBattlePicker } from './ui/components/picker.ts';
@@ -185,10 +186,9 @@ function boot(): void {
     syncDom();
   }
 
-  keysEl.textContent =
-    KEY_BINDINGS.map((b) => `${b.keys} — ${b.action}`).join('   ·   ') +
-    `   ·   N — new match (vs ${personalityById(profile.save.opponent).name})` +
-    `   ·   M — next mode   ·   C — collection   ·   R — how to play`;
+  keysEl.textContent = KEY_BINDINGS.map(
+    (binding) => `${binding.keys} — ${binding.description}`,
+  ).join('   ·   ');
 
   // ── rendering ─────────────────────────────────────────────────────────────────────────────
 
@@ -480,53 +480,46 @@ function boot(): void {
     syncDom();
   });
 
+  // The key layer is one list in `src/input/keys.ts`: what the page documents and what the app
+  // performs come from the same source, so a binding cannot be documented without being wired.
   window.addEventListener('keydown', (event) => {
-    const moves: Record<string, [number, number]> = {
-      ArrowUp: [-1, 0],
-      ArrowDown: [1, 0],
-      ArrowLeft: [0, -1],
-      ArrowRight: [0, 1],
-      w: [-1, 0],
-      s: [1, 0],
-      a: [0, -1],
-      d: [0, 1],
-      W: [-1, 0],
-      S: [1, 0],
-      A: [0, -1],
-      D: [0, 1],
-    };
-    const move = moves[event.key];
-    if (move) {
-      event.preventDefault();
-      controller.moveHover(move[0], move[1]);
-      draw();
-      return;
-    }
-    if (event.key >= '1' && event.key <= '5') {
-      controller.selectCard(Number(event.key) - 1);
-    } else if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      controller.confirm();
-    } else if (event.key === 'Escape') {
-      controller.cancel();
-    } else if (event.key === 'h' || event.key === 'H') {
-      controller.showHint();
-    } else if (event.key === 'r' || event.key === 'R') {
-      showRulesPanel(!showingRules);
-      return;
-    } else if (event.key === 'c' || event.key === 'C') {
-      showCollection(!showingCollection);
-      return;
-    } else if (event.key === 'm' || event.key === 'M') {
-      startMode(modeId === 'match' ? 'tournament' : modeId === 'tournament' ? 'hotseat' : 'match');
-      return;
-    } else if (event.key === 'n' || event.key === 'N') {
-      seed += 1;
-      controller = newController(seed);
-      syncDom();
-    } else {
-      return;
-    }
+    const resolved = resolveKey(event.key);
+    if (resolved === null) return;
+    if (resolved.preventDefault) event.preventDefault();
+
+    handleKey(event.key, {
+      move: (dx, dy) => {
+        controller.moveHover(dx, dy);
+        draw();
+      },
+      select: (index) => {
+        controller.selectCard(index);
+      },
+      confirm: () => {
+        controller.confirm();
+      },
+      cancel: () => {
+        controller.cancel();
+      },
+      hint: () => {
+        controller.showHint();
+      },
+      newMatch: () => {
+        seed += 1;
+        controller = newController(seed);
+      },
+      nextMode: () => {
+        startMode(
+          modeId === 'match' ? 'tournament' : modeId === 'tournament' ? 'hotseat' : 'match',
+        );
+      },
+      collection: () => {
+        showCollection(!showingCollection);
+      },
+      rules: () => {
+        showRulesPanel(!showingRules);
+      },
+    });
     syncDom();
   });
 

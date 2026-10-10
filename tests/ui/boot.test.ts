@@ -74,9 +74,10 @@ describe('boot', () => {
     expect(announcer?.textContent).toMatch(/turn/);
     // The key bindings are documented on the page, including the collection shortcut.
     expect(document.querySelector('#keys')?.textContent).toMatch(/Move the board cursor/);
-    expect(document.querySelector('#keys')?.textContent).toMatch(/C — collection/);
-    expect(document.querySelector('#keys')?.textContent).toMatch(/R — how to play/);
-    expect(document.querySelector('#keys')?.textContent).toMatch(/M — next mode/);
+    // Every documented binding is rendered, so the page cannot advertise a key the app lacks.
+    expect(document.querySelector('#keys')?.textContent).toMatch(/Collection and deck editor/);
+    expect(document.querySelector('#keys')?.textContent).toMatch(/How to play/);
+    expect(document.querySelector('#keys')?.textContent).toMatch(/Next mode/);
     expect(document.querySelector('#status')?.textContent).toMatch(/Pick a card/);
 
     // Run one frame: the board should actually be painted, not merely mounted.

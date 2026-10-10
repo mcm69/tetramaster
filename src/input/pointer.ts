@@ -82,11 +82,5 @@ export function moveHover(
 }
 
 /** Key bindings, kept declarative so the help screen can render them from one source. */
-export const KEY_BINDINGS: ReadonlyArray<{ keys: string; action: string }> = [
-  { keys: 'W A S D / arrows', action: 'Move the board cursor' },
-  { keys: '1 – 5', action: 'Pick a card from your hand' },
-  { keys: 'Enter / Space', action: 'Play the selected card here' },
-  { keys: 'Q', action: 'Choose the highlighted pending battle' },
-  { keys: 'Esc', action: 'Deselect the card' },
-  { keys: 'H', action: 'Show a hint for this cell' },
-];
+// The keyboard bindings live in `src/input/keys.ts`, where the documented list and the
+// handler are one thing -- see the note there.

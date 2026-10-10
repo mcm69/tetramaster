@@ -7,13 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import {
-  clickToAction,
-  hitTest,
-  moveHover,
-  KEY_BINDINGS,
-  type PointerTarget,
-} from '../../src/input/pointer.ts';
+import { clickToAction, hitTest, moveHover, type PointerTarget } from '../../src/input/pointer.ts';
 import { boardLayout, cellRect } from '../../src/render/boardView.ts';
 import { applyAction, createMatch, legalCells } from '../../src/core/match.ts';
 import { createRng } from '../../src/core/rng.ts';
@@ -195,15 +189,5 @@ describe('moveHover', () => {
     // Null whatever the input: with no legal cell there is nowhere sensible for the cursor to be.
     expect(moveHover(null, 0, 0, filled)).toBeNull();
     expect(moveHover(5, 1, 0, filled)).toBeNull();
-  });
-});
-
-describe('key bindings', () => {
-  it('documents every binding the help screen shows', () => {
-    expect(KEY_BINDINGS.length).toBeGreaterThan(0);
-    for (const binding of KEY_BINDINGS) {
-      expect(binding.keys).toBeTruthy();
-      expect(binding.action).toBeTruthy();
-    }
   });
 });

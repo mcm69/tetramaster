@@ -19,7 +19,9 @@
     "coverage": "vitest run --coverage",
     "rules:audit": "node tools/rules-audit.ts",
     "simulate": "node tools/verify.ts 10000",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage && npm run rules:audit && npm run simulate"
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage && npm run rules:audit && npm run simulate && npm run balance && npm run perf",
+    "perf": "node tools/perf.ts",
+    "balance": "node tools/balance.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -33,5 +35,8 @@
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.4",
     "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

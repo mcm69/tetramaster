@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 13 · **Current stage:** 11 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 14 · **Current stage:** complete — 11 of 11 done
 
 ---
 
@@ -69,36 +69,53 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 11 — Hardening & docs. Stages 0–10 are complete. The game is finished.**
+**Every stage is complete.** `npm run verify` is green from a clean clone, and `PLAN.md` §6 has no
+remaining items.
 
-Three modes are playable: a **Match** against a named opponent, **Master Tournament** where the
-computer builds a deck against yours, and **Hotseat** for two players at one keyboard. There is a
-rules screen generated one-entry-per-§1-paragraph and tied to `PLAN.md` by a test, so it cannot
-fall behind the spec. Sound is synthesised and off by default. The board is mirrored into an
-`aria-live` region, motion follows `prefers-reduced-motion`, and ownership is drawn as shape and tint
-rather than tint alone.
+The gate, in order: typecheck → lint → tests → coverage → rules audit → 10,000-match invariant sweep →
+balance → performance → build. `rules:audit` reports **9 traced · 0 pending · 0 untested**, so every
+paragraph of §1 has a tagged test and the in-game rules screen has a test proving it matches the spec.
 
-**Measured:** every AI beats random by 12–18 points · the Master Tournament counter has a **12.2-point
-mean advantage** and is better in **100%** of 120 decks · the opening player wins 41.9% of decided
-matches · perfect games ~17.7%.
+**Measured:** 610 tests · every AI beats random by 12–18 points · the Master Tournament counter has a
+12.2-point mean advantage and is better in **100%** of 120 decks · the opening player wins 41.9% of
+decided matches · perfect games ~17.7% · animator frame p95 **0.0008ms** against a 4ms budget · AI
+decision p95 **0.036ms** against 8ms · animator queue depth **8** against a limit of 64.
 
 ## Next Actions
 
-- [ ] `README.md` — controls, rules summary, architecture, how to extend (add a figure, add an
-      opponent), and the §7.4 deviations list the plan requires be shipped
-- [ ] CI workflow running `npm run verify` on every push
-- [ ] Performance pass: board render under 4ms/frame; confirm the animator queue stays bounded
-- [ ] `verify --strict` green, then a final `git log` review for a coherent history
-- [ ] Optional, if there is appetite: FF9's per-match card _sale_ economy, and an opponent roster
-      drawn from the real game rather than the project-authored set
+Nothing is required. If the project continues, in rough order of value:
+
+- [ ] **Play it in a real browser.** The one DoD item checked headlessly rather than for real: every
+      stage was verified in Node and jsdom, and no one has yet seen the board render on hardware.
+- [ ] Optional: FF9's per-match card _sale_ economy, which is the main progression loop still missing
+- [ ] Optional: an opponent roster from the real game rather than the project-authored set
+- [ ] Optional: replay/export of a finished match from its event log — §3.2 already keeps the log
 
 ## Blocked On
+
+Nothing.
 
 Nothing. Stage 11 depends only on Stages 1–10.
 
 Nothing. Stage 10 depends only on Stages 1–9.
 
 ## Lessons worth keeping
+
+### From Stage 11
+
+- **A documented key did nothing, and nothing noticed.** `KEY_BINDINGS` listed eight keys; the
+  handler in `main.ts` implemented seven. `Q` was advertised on the page and did nothing, and it took
+  until the README was being rewritten to surface. A documented binding was just a string in an array,
+  so there was nothing to fail. The list and the handler are now one thing in `src/input/keys.ts`, each
+  entry names an action, and a test asserts both directions of the agreement.
+- **The performance requirement is now a gate, not a number.** `PLAN.md` asked for a board render
+  under 4ms a frame. There was nothing measuring it. `tools/perf.ts` now gates on **p95** rather than
+  the median — a frame that is slow one time in twenty is exactly the one a player feels — and it
+  measures the animator's frame work and the AI's decision, deliberately _not_ drawing, because timing
+  a canvas stub would report the stub's speed and look like a measurement.
+- **The animator queue needed a getter to be checkable.** "It does not grow without bound" is not a
+  claim anyone can verify, so `Animator.queueDepth` now exists and the bound is asserted over whole
+  matches — a synthetic burst cannot catch a queue that only runs away on a rare cascade.
 
 ### From Stage 10
 
@@ -822,3 +839,43 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 `src/ui/screens/*`, `src/ui/accessibility.ts`, `src/ui/components/toolbar.ts`, `src/main.ts`,
 `index.html`, `vite.config.ts`, `tests/{ai/counterDeck,game/modes,game/session,audio/synth,ui/rules,ui/toolbar,ui/collection,ui/boot}.test.ts`,
 `tools/balance.ts`, `PLAN.md`, `STATUS.md`
+
+---
+
+### S14 — 2026-10-10 — Stage 11 complete: the project is done
+
+**Stage:** 11 (Hardening & docs) · **Status:** ⬜ → ✅ · **All 11 stages complete.**
+**Did:** `tools/perf.ts` (a real performance gate), `.github/workflows/verify.yml`, a rewritten
+`README.md`, and `src/input/keys.ts` merging the documented key bindings with the handler.
+**610 tests**, up from 583.
+
+**Learned:**
+
+- **A documented key did nothing, and nothing noticed.** `KEY_BINDINGS` listed eight keys and the
+  handler in `main.ts` implemented seven — `Q` was advertised on the page and did nothing. It surfaced
+  only because rewriting the README meant checking every claim in it. **A documented binding was just a
+  string in an array, so there was nothing to fail.** The list and the handler are now one thing in
+  `src/input/keys.ts`, each entry names an action, and `tests/core/keys.test.ts` asserts the agreement
+  in both directions. Three mutations confirm it bites: a phantom binding, an action the handler does
+  not implement, and a documented action the handler silently ignores.
+- **"Under 4ms a frame" was a requirement nobody was measuring.** `tools/perf.ts` now gates on **p95**
+  rather than the median, because a frame that is slow one time in twenty is the one a player feels.
+  It deliberately does _not_ time drawing: a canvas stub in Node would report the stub's speed, which
+  is worse than no number because it looks like a measurement. Measured: animator frame p95 0.0008ms
+  against a 4ms budget, AI decision p95 0.036ms against 8ms.
+- **"The animator queue stays bounded" needed a getter to be checkable at all.** `Animator.queueDepth`
+  now exists, and the bound is asserted over whole matches rather than a synthetic burst — a queue that
+  only runs away on a rare cascade is invisible to a burst. It reached depth 8 against a limit of 64.
+- `npm run verify` grew two gates: `balance` and `perf`. It is now typecheck → lint → tests → coverage
+  → rules audit → 10k simulation → balance → performance, with `build` in CI.
+- **Clean-clone verified.** Cloned to an empty directory, `npm ci`, `npm run verify` — exit 0. The
+  git history is 11 commits, one per stage, each subject saying what the stage produced.
+
+**Still true, and worth repeating:** the one DoD item not checked for real is rendering. Every stage
+was verified in Node and jsdom; nobody has yet watched the board draw on hardware.
+
+**Next:** nothing required. `README.md` and `STATUS.md` carry the state.
+**Files touched:** `tools/perf.ts` (new), `src/input/keys.ts` (new), `src/input/pointer.ts`,
+`src/render/animator.ts`, `src/main.ts`, `tests/core/keys.test.ts` (new),
+`tests/ui/perf.test.ts` (new), `.github/workflows/verify.yml` (new), `README.md`, `package.json`,
+`PLAN.md`, `STATUS.md`

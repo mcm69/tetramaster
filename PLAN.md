@@ -737,10 +737,15 @@ produces a working `dist/`; canvas paints a placeholder.
 
 ### Stage 11 — Hardening & docs
 
+**Status:** complete. `npm run verify` green from a clean clone: 610 tests, 9 rules traced, 10k-match
+invariant sweep, balance and performance gates, production build.
+
 **Goal:** Shippable.
 
 - `tools/verify.ts` full run: typecheck + lint + tests + coverage gates + rules audit + 10k-match
-  simulation + invariant assertions + perf timing
+  simulation + invariant assertions. `tools/perf.ts` and `tools/balance.ts` joined the gate in Stage
+  11, so `npm run verify` is now typecheck → lint → tests → coverage → rules audit → 10k simulation →
+  balance → performance → build
 - README: controls, rules summary, architecture, how to extend (adding a figure, adding an opponent)
 - Performance pass: board render under 4ms/frame; animator queue bounded
 - Final `git log` review for coherent history

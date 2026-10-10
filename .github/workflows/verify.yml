@@ -1,0 +1,52 @@
+# Runs the full gate on every push.
+#
+# `npm run verify` is the whole contract: typecheck, lint, tests, coverage
+# thresholds, rule traceability, a 10k-match invariant sweep, the balance
+# sweep, and the performance budgets. If any of it can be skipped, it is not
+# really a gate, so this runs the script rather than re-listing its steps and
+# letting the two drift.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A superseded run on the same branch is wasted compute; cancel it.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the `engines` field. Node 22+ runs `.ts` directly via type
+          # stripping, which `tools/rules-audit.ts` and `tools/perf.ts` rely on.
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Formatting is not part of `verify` -- it rewrites files -- so it is
+      # checked, and it is a separate step because a diff should not be able to
+      # fail the gate for everyone else.
+      - name: Format check
+        run: npm run format:check
+
+      - name: Verify
+        run: npm run verify
+
+      # The production build is a separate concern from the rules: it catches an
+      # import the tests never take, which is exactly what an entry-point-only
+      # module looks like.
+      - name: Build
+        run: npm run build

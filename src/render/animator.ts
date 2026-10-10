@@ -72,6 +72,17 @@ export class Animator {
     return this.queue.length === 0;
   }
 
+  /**
+   * How many animations are waiting.
+   *
+   * Exposed because the queue has to stay bounded (`PLAN.md` §6, Stage 11) and "it does not grow
+   * without limit" is not a claim anyone can check without this. `tools/perf.ts` asserts the depth
+   * across whole matches, which is the only way to catch a queue that only grows in a rare cascade.
+   */
+  get queueDepth(): number {
+    return this.queue.length;
+  }
+
   /** Queues the animations for one action's event log. Order is preserved: it is the sequence. */
   push(events: readonly GameEvent[], state: GameState): void {
     let cursor = this.clock;
