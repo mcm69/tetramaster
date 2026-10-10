@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 3 · **Current stage:** 1 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 4 · **Current stage:** 2 — ready to start
 
 ---
 
@@ -39,8 +39,8 @@
 | Stage | Name                                  | Status         | DoD met | Notes                            |
 | ----- | ------------------------------------- | -------------- | ------- | -------------------------------- |
 | 0     | Scaffold                              | ✅ Done        | ✅      | toolchain green; `verify` exit 0 |
-| 1     | Grid geometry & stats                 | ⬜ Not started | ☐       | **next up**                      |
-| 2     | Card catalog                          | 🔒 Blocked     | ☐       |                                  |
+| 1     | Grid geometry & stats                 | ✅ Done        | ✅      | 72 tests; §1.2 + §1.3 traced     |
+| 2     | Card catalog                          | ⬜ Not started | ☐       | **next up**                      |
 | 3     | Resolution engine (takedown + combos) | 🔒 Blocked     | ☐       | highest value                    |
 | 4     | Battle math + multi-battle chains     | 🔒 Blocked     | ☐       |                                  |
 | 5     | Match state machine                   | 🔒 Blocked     | ☐       |                                  |
@@ -69,37 +69,40 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 1 — Grid geometry & stats. Stage 0 is complete and every gate is green.**
+**Stage 2 — Card catalog. Stage 1 is complete and every gate is green.**
 
-The toolchain exists and the rules-traceability gate is live, so §1 is protected from the very first
-rule test onward. No game rules are implemented yet — `src/core/` contains only `rng.ts`.
+The geometry and stat layers are done: 4×4 grid with verified no-wrap adjacency, card anatomy,
+hex→interval mapping, and the type table. §1.2 and §1.3 are implemented and traced to tagged tests,
+so `rules:audit` now reports them as covered. No match logic exists yet.
+
+**Two plan errors were found and corrected while implementing §1.3/§1.6 — see the Session Log
+entry for S4.** The win-probability formula the plan asserted was wrong.
 
 ## Next Actions
 
-- [ ] `src/core/types.ts` — `Cell` union (0–15), `Owner`, `CardType`, `Phase`, `Outcome`,
-      `BoardCard`, `GameState`, `GameEvent` (from `PLAN.md` §3.1–3.2)
-- [ ] `src/core/constants.ts` — `GRID`, `CELLS`, `MAX_BLOCKED`, `HAND_SIZE`, interval table
-- [ ] `src/core/direction.ts` — 8 directions, `neighbor()`, `delta()`, arrow-bit helpers.
-      **No wraparound at grid edges**
-- [ ] `src/core/card.ts` — card factory, arrow-mask helpers, stat accessors
-- [ ] `src/core/battle.ts` — `resolveStats()` and `winProbability()` only (no `rollBattle` yet)
-- [ ] `tests/core/direction.test.ts` — all 16 cells × 8 directions = 128 cases, 48 on-grid edges
-- [ ] `tests/core/battle.test.ts` — all 16 hex digits → intervals; all 4×4 type pairs
-- [ ] Tag tests `[§1.2]` and `[§1.3]`, and **remove `1.2`/`1.3` from `PENDING` in
-      `tools/rules-audit.ts`** — that removal is what makes the tests mandatory
-- [ ] Confirm `src/core/**` still meets its 95/90 per-file threshold
-- [ ] Update this file and append a Session Log entry
+- [ ] `src/data/cards.ts` — 100 figures: `figureId → {name, caps:{atk,pdef,mdef}, baseType, tier,
+family}`
+- [ ] `src/data/arrowSets.ts` — arrow masks; ~30 hand-authored signature figures, the rest seeded
+      from tier (weak figures sparse/awkward, strong figures dense)
+- [ ] `card.ts` gains `rollInstance(figure, rng)` — **stats are rolled on acquisition** (§1.2,
+      faithful to the original), capped by the figure's `caps`
+- [ ] `tests/core/data.test.ts` — every figure has caps ≥ its base stats; signature arrow masks
+      are unique; all 100 figures roll valid instances
+- [ ] Tag tests `[§1.2]` where they extend card anatomy; `1.2` is already out of `PENDING`
+- [ ] `src/data/**` is gated at **100% coverage** — a pure-data import test must cover it
+- [ ] Update this file and commit as `stage(2): ...` (§7.2)
 
 ## Blocked On
 
-Nothing. Stage 1 has no prerequisites.
+Nothing. Stage 2 depends only on Stage 1.
 
 ## Next Stage Preview
 
-Stage 1 introduces the 4x4 grid geometry and the hex stat-interval math (`PLAN.md` §1.3) — both
-unit-tested before any rendering exists. The 8-direction neighbour table with **no wraparound at grid
-edges** is the single most error-prone piece; test it exhaustively (16 cells × 8 directions = 128
-cases, of which 48 are on-grid edges). Tests are tagged `[§1.3]` so `rules:audit` can see them.
+Stage 3 is the **resolution engine** — arrow takedown and the combo cascade (§1.4, §1.5). It is
+the highest-value stage in the plan: the rules players most often get wrong. The battle branch is
+stubbed to always-lose until Stage 4, and `tests/fixtures.ts` will hold hand-built named boards
+("two pending battles where winning the first combos the second") with the expected cell list
+written out inline.
 
 ---
 
@@ -160,6 +163,26 @@ wrong during implementation, change `PLAN.md` §1 and log it here — don't sile
 4. **Vitest project config lives in `vite.config.ts`** via `test.projects`. The plan's file layout
    listed a separate `vitest.workspace.ts`; the workspace file is deprecated in Vitest 5 and two
    config files invite drift, so the Vitest block is colocated with the Vite config.
+5. **`GameState` omits the persistent card collection.** `PLAN.md` §3.1 sketched an `owned` array on
+   each player; the collection is global meta state (Stage 9), and keeping it out of match state
+   makes a match cheap to serialise and saves independently. `PlayerState` carries only `deck` and
+   `hand`.
+6. **`isValidStatIndex` returns `boolean`, not `index is StatIndex`.** `StatIndex` is an alias for
+   `number`, so the type predicate narrowed the negative branch to `never` and made the error
+   message untypeable. A no-op predicate buys nothing and costs clarity.
+
+## Corrections to the Plan
+
+Found while implementing, fixed in `PLAN.md` in the same commit:
+
+1. **The win-probability formula was wrong.** The plan asserted `P(win) = (a+1)/(a+b+2)`, carried
+   over from a community write-up that describes it as an approximation. It ignores ties, which the
+   Q1 resolution gives to the defender: it predicts `P(0,0) = 0.5` where the attacker actually loses
+   every time, and is off by up to 50 percentage points. Replaced with the exact count of
+   favourable `(A, D)` pairs and pinned by a brute-force enumeration test. See `PLAN.md` §1.6.
+2. **The grid edge count was wrong.** The plan said 48 on-grid adjacencies; the correct figure for a
+   4×4 board with eight directions is **84 directed (42 undirected)**, plus 44 off-grid steps.
+   Corrected in `PLAN.md` §6 and here.
 
 ## Known Issues
 
@@ -300,3 +323,51 @@ natively. All recorded in Decisions and Deviations.
 > **Committed.** Stage 0 landed as `stage(0): scaffold toolchain, seeded RNG, rules audit gate`.
 > Per `PLAN.md` §7.2, every stage ends with a commit — a met DoD with uncommitted work is not a
 > finished stage.
+
+---
+
+### S4 — 2026-10-10 — Stage 1 complete; two plan errors caught and fixed
+
+**Stage:** 1 (Grid geometry & stats) · **Status:** ⬜ → ✅
+**Did:** Added `src/core/types.ts` (the `Cell` union, `CardType`, `Phase`, and `GameEvent` as an
+exhaustive discriminated union), `constants.ts`, `direction.ts`, `card.ts`, and `battle.ts` with
+`resolveStats()` / `baseValue()` / `previewOdds()`. Wrote `tests/core/direction.test.ts`,
+`card.test.ts`, and `battle.test.ts` — 71 new tests, 72 total. Removed `1.2` and `1.3` from the
+`PENDING` manifest, so `rules:audit` now reports **2 traced · 7 pending · 0 untested**.
+`src/core/**` is at 100% on every metric.
+**Verified, not assumed:** mutation-tested both load-bearing modules. Injecting the classic 1-D
+modulo wrap into `neighbor()` fails the 128-case hand-derived table and the no-wrap assertions;
+injecting the old wrong probability formula fails the brute-force enumeration. Stripping the
+`[§1.3]` tags makes `rules:audit` exit 1, confirming the gate still bites now that the rule is live.
+**Decisions:** `GameState` drops the sketched `owned` collection (global meta state, Stage 9);
+`isValidStatIndex` returns a plain `boolean`; stat ties break toward the earlier key in
+[atk, pdef, mdef], which affects only the displayed label, never the value.
+**Learned:**
+
+- **The plan's win-probability formula was wrong.** I had written `P(win) = (a+1)/(a+b+2)` from a
+  community source that itself calls it an approximation. Checking it against brute force before
+  coding showed it is wrong by up to 50 points: it ignores ties, so it predicts `P(0,0) = 0.5` when
+  the attacker loses every such battle, and `P(15,15) = 0.5` when the tie rule makes it 0.46875.
+  The exact form counts favourable `(A, D)` pairs: `m = min(a,b)`, `P = ((m+1)a - m(m+1)/2) / ((a+1)(b+1))`.
+  Fixed in `PLAN.md` §1.6 with a warning against reinstating the old one. **This is exactly what the
+  §1.6 Monte Carlo test planned for Stage 4 would have caught later — it cost nothing to catch it
+  now, by checking the arithmetic before writing the module.**
+- **The plan's grid edge count was also wrong**: 48 on-grid adjacencies claimed, actual is 84
+  directed / 42 undirected, verified as 4 corners × 3 + 8 edges × 5 + 4 interior × 8.
+- **Three of my own test expectations were wrong before the code was ever run** — I asserted
+  `neighbor(15, N)` was off-grid (cell 15 is on the bottom row, so N is on-grid → 11), and that
+  cells 0 and 5 were non-adjacent (5 is exactly cell 0's SE neighbour). The hand-derived adjacency
+  table caught both, which is the argument for writing expectations from the layout instead of from
+  the implementation.
+- `StatIndex` being an alias for `number` makes any `x is StatIndex` type predicate a no-op that
+  narrows the negative branch to `never`; it turned an error-message template into a type error.
+- The `never` exhaustiveness guard in `resolveStats` is unreachable by construction, which cost
+  enough coverage to fail the 95/90 per-file gate. Rather than suppress it with a coverage-ignore
+  comment, I tested it through a deliberately corrupt card — a hand-edited or mis-migrated save is a
+  real way to reach it, and throwing beats silently comparing the wrong stats.
+  **Next:** Stage 2 — the 100-figure catalog in `src/data/`, with `rollInstance()` since stats are
+  rolled on acquisition. Note `src/data/**` is gated at 100% coverage, so a single import-and-assert
+  test must cover the catalog.
+  **Files touched:** `src/core/types.ts`, `constants.ts`, `direction.ts`, `card.ts`, `battle.ts`,
+  `tests/core/direction.test.ts`, `card.test.ts`, `battle.test.ts`, `tools/rules-audit.ts`,
+  `PLAN.md` (probability formula, edge count, §1.6.2 ties), `STATUS.md`

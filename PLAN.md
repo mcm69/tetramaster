@@ -121,8 +121,27 @@ battles are resolved as one combined chain, in this order per §1.7.
 Step 3 is why a strong card loses to a weak one, and why rolling _high_ is _bad_. The player sees
 base values and final actuals only if we choose to display them (§7.4).
 
-Because each `actual` is uniform on `[0, base]`, for bases `a` and `b` the probability that
-`(a − Ra) > (b − Rb)` is `(a + 1) / (a + b + 2)`. We compute and display this.
+Because each `actual` is uniform on `[0, base]` and ties go to the defender (§1.6.2, Q1), the
+attacker's win probability is **exactly**:
+
+```
+m     = min(a, b)
+P(win) = ((m + 1) * a  -  m * (m + 1) / 2)  /  ((a + 1) * (b + 1))
+```
+
+which counts the `(A, D)` pairs with `A > D` out of all `(a + 1)(b + 1)` pairs. Note the tie term:
+two identical stat digits give `P = 0.46875`, not `0.5`, because the defender takes ties. Sanity
+cases: `P(0, 0) = 0` (the attacker can never exceed), `P(15, 0) = 15/16`, `P(0, 15) = 0`.
+We compute and display this, and a brute-force enumeration test pins it.
+
+> ⚠️ The closed form `(a+1)/(a+b+2)` circulating in community write-ups — and in an earlier draft of
+> this file — is **wrong**; it ignores ties and is off by up to 50 points (`P(0,0)` → 0.5 instead
+> of 0). Do not reinstate it.
+
+### 1.6.2 Ties
+
+A battle where both `actual` values are equal is won by the **defender**. Resolved from Q1; the
+research sources do not specify it, and the choice matters only for the displayed odds.
 
 #### 1.6.1 Type table
 
@@ -573,7 +592,8 @@ produces a working `dist/`; canvas paints a placeholder.
 - `src/core/types.ts`, `constants.ts`, `direction.ts` (8 directions, `neighbor()` wraps **nowhere** —
   grid edges are hard boundaries), `card.ts` (arrow masks, stat accessors), `battle.ts`
   (`resolveStats` and `winProbability` only; `rollBattle` arrives in Stage 4)
-- Tests: neighbor table (16 cells × 8 dirs, 48 on-grid edges, 0 wraparound), hex→interval for all
+- Tests: neighbor table (16 cells × 8 dirs = 128 cases; 84 on-grid adjacencies, 44 off-grid, 0
+  wraparound), hex→interval for all
   16 digits, `winProbability` against the closed form, type resolution for all 4×4 type pairs
 
 **DoD:** `direction.test.ts` and the type-resolution tests green; interval table matches §1.3 exactly;
@@ -610,7 +630,8 @@ produces a working `dist/`; canvas paints a placeholder.
 
 - Complete `rollBattle`; wire into `resolution.ts`
 - Tests: all four attacker types × four defender types; `A`-type stat picking; win-probability
-  matches the closed form `(a+1)/(a+b+2)`; two-battle chain; combo-cancels-pending-battle;
+  matches a brute-force enumeration of the `(A, D)` pairs (§1.6); two-battle chain;
+  combo-cancels-pending-battle;
   attacker-loses-then-captured; chain terminates when placed card is captured
 - **Monte Carlo test:** 100k simulated battles per type pair, empirical win rate within 2% of
   `winProbability()`. This is what proves the closed form and the implementation agree.

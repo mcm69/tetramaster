@@ -37,11 +37,11 @@ interface RuleSection {
  */
 const PENDING: Record<string, number> = {
   '1.1': 5, // match setup — blocked cells, coin flip, deal
-  '1.2': 2, // card anatomy — arrows, stats, figures
-  '1.3': 1, // stat intervals — hex digits to ranges
+  // 1.2 (card anatomy) and 1.3 (stat intervals) landed in Stage 1 and are now traced to tagged
+  // tests. Deleting a line from this map is what makes its test mandatory — keep the two in sync.
   '1.4': 3, // only the placed card attacks
   '1.5': 3, // arrow takedown
-  '1.6': 4, // card battle math
+  '1.6': 4, // card battle — resolveStats is done, but rollBattle and the cascades are not
   '1.7': 4, // combos and multiple battles
   '1.8': 9, // stat growth and type evolution
   '1.9': 9, // collector level
