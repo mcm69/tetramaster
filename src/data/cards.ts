@@ -14,8 +14,8 @@
  * to grow through play — see PLAN.md §1.8.
  */
 
-import { FIGURE_SIGNATURES, patternForFigure, toPattern } from './arrowSets';
-import type { CardFigure, Family, StatCaps, Tier } from '../core/types';
+import { FIGURE_SIGNATURES, patternForFigure, toPattern } from './arrowSets.ts';
+import type { CardFigure, Family, StatCaps, Tier } from '../core/types.ts';
 
 type Row = readonly [string, Family, Tier, number, number, number, CardFigure['baseType']];
 

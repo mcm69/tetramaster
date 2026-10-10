@@ -5,10 +5,18 @@
  * [16n, 16n+15] (§1.3). Nothing here knows that rule's arithmetic — that lives in battle.ts.
  */
 
-import { ARROW_SLOTS, STAT_MAX, STAT_MIN, STAT_SPAN } from './constants';
-import { arrowCount, arrowsOf } from './direction';
-import type { Rng } from './rng';
-import type { Card, CardFigure, CardType, Direction, StatCaps, StatIndex, StatKey } from './types';
+import { ARROW_SLOTS, STAT_MAX, STAT_MIN, STAT_SPAN } from './constants.ts';
+import { arrowCount, arrowsOf } from './direction.ts';
+import type { Rng } from './rng.ts';
+import type {
+  Card,
+  CardFigure,
+  CardType,
+  Direction,
+  StatCaps,
+  StatIndex,
+  StatKey,
+} from './types.ts';
 
 /** The three stats, in the order used to break ties for `A`-type cards. */
 export const STAT_KEYS = ['atk', 'pdef', 'mdef'] as const satisfies readonly StatKey[];

@@ -14,11 +14,11 @@ import {
   rollBattle,
   rngResolver,
   winProbability,
-} from '../../src/core/battle';
-import { createRng } from '../../src/core/rng';
-import type { Rng } from '../../src/core/rng';
-import { cardFromStats, statInterval } from '../../src/core/card';
-import type { BattleOutcome, Card, CardType } from '../../src/core/types';
+} from '../../src/core/battle.ts';
+import { createRng } from '../../src/core/rng.ts';
+import type { Rng } from '../../src/core/rng.ts';
+import { cardFromStats, statInterval } from '../../src/core/card.ts';
+import type { BattleOutcome, Card, CardType } from '../../src/core/types.ts';
 
 /**
  * The analytically expected win rate for a stat-index pair: the mean of `winProbability` over every

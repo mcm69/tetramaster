@@ -12,7 +12,7 @@
  * the collector's unique-pattern bonus (§1.9) depends on repeats being possible.
  */
 
-import type { Tier } from '../core/types';
+import type { Tier } from '../core/types.ts';
 
 /** How many fallback patterns each tier offers. Also the modulus used to pick one. */
 const PATTERNS_PER_TIER = 5;

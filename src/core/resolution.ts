@@ -25,8 +25,8 @@
  * {@link BattleResolver}, which Stage 4 replaces with the real two-roll implementation.
  */
 
-import { DIRECTIONS, hasArrow, neighbor, opposite } from './direction';
-import { resolveStats, rngResolver, winProbability } from './battle';
+import { DIRECTIONS, hasArrow, neighbor, opposite } from './direction.ts';
+import { resolveStats, rngResolver, winProbability } from './battle.ts';
 import type {
   BattleResolver,
   BoardCard,
@@ -35,8 +35,8 @@ import type {
   GameEvent,
   GameState,
   Owner,
-} from './types';
-import type { Rng } from './rng';
+} from './types.ts';
+import type { Rng } from './rng.ts';
 
 /**
  * The Stage 3 stub: the placed card always loses. Replaced by the real roll in Stage 4.
@@ -68,6 +68,8 @@ export interface ResolveOptions {
 export interface ResolveResult {
   readonly state: GameState;
   readonly events: GameEvent[];
+  /** Battles awaiting an order decision. Non-empty only when the scan stopped early. */
+  readonly pendingBattles: readonly Cell[];
 }
 
 /** The other player. */
@@ -143,18 +145,39 @@ export function resolvePlacement(
   cell: Cell,
   options: ResolveOptions = {},
 ): ResolveResult {
-  const battle = options.battle ?? (options.rng ? rngResolver(options.rng) : defaultResolver);
+  const begun = beginPlacement(state, cell);
+  if (begun.pendingBattles.length === 0) {
+    return begun;
+  }
+  const done = continuePlacement(begun.state, cell, options);
+  // The scan's takedowns happen first and must survive into the combined log the renderer replays.
+  return {
+    state: done.state,
+    events: [...begun.events, ...done.events],
+    pendingBattles: [],
+  };
+}
+
+/**
+ * Stage 1 of a placement: the initial scan only (§1.5).
+ *
+ * Takedowns resolve immediately; anything pointing back is left in `pendingBattles` for the
+ * battle chain. Splitting here is what lets the UI offer the player a choice of battle order
+ * (§1.7, `PLAN.md` §5.4) without the engine ever blocking — it returns, and the caller decides
+ * whether to call `continuePlacement` or pick an order first.
+ */
+export function beginPlacement(state: GameState, cell: Cell): ResolveResult {
   const placed = state.board[cell];
   if (!placed) {
-    return { state, events: [] };
+    return { state, events: [], pendingBattles: [] };
   }
 
   const owner = placed.owner;
   const events: GameEvent[] = [];
   let board = state.board.slice();
-
-  // 1. Initial scan — takedowns resolve at once, pointing-back targets queue a battle (§1.5).
   const pending: Cell[] = [];
+
+  // Takedowns resolve at once, pointing-back targets queue a battle (§1.5).
   for (const target of targetsOf(state, cell, owner)) {
     if (pointsBack(state.board, target)) {
       pending.push(target.cell);
@@ -164,8 +187,44 @@ export function resolvePlacement(
     }
   }
 
-  // 2. Battles, in queue order. A player may choose this order later (§1.7); Stage 4 wires the
-  //    chooser in, and the AI scores it in Stage 8.
+  const next: GameState = { ...state, board, pendingBattles: pending };
+  if (pending.length === 0) {
+    // Nothing left to decide, so this placement is fully resolved and its events are history.
+    const finished: GameState = {
+      ...next,
+      pendingBattles: [],
+      history: [...state.history, ...events],
+    };
+    return { state: finished, events, pendingBattles: [] };
+  }
+  // Battles are pending. Record the takedowns so far and leave the queue for `continuePlacement`.
+  const partial: GameState = { ...next, history: [...state.history, ...events] };
+  return { state: partial, events, pendingBattles: pending };
+}
+
+/**
+ * Stage 2 of a placement: the battle chain, using the queue left by {@link beginPlacement}.
+ *
+ * The queue order *is* the choice: whoever orders `pendingBattles` decides which battle is fought
+ * first, which can change the whole outcome (§1.7). Callers that do not care can leave the
+ * discovery order alone.
+ */
+export function continuePlacement(
+  state: GameState,
+  cell: Cell,
+  options: ResolveOptions = {},
+): ResolveResult {
+  const battle = options.battle ?? (options.rng ? rngResolver(options.rng) : defaultResolver);
+  const placed = state.board[cell];
+  if (!placed) {
+    return { state, events: [], pendingBattles: [] };
+  }
+
+  const owner = placed.owner;
+  const events: GameEvent[] = [];
+  let board = state.board.slice();
+  const pending: Cell[] = [...state.pendingBattles];
+
   // Safe: only ever re-populated by pushes inside the loop, so shift cannot come back empty.
   for (let next = pending.shift(); next !== undefined; next = pending.shift()) {
     const defenderCell = next;
@@ -242,7 +301,7 @@ export function resolvePlacement(
     pendingBattles: [],
     history: [...state.history, ...events],
   };
-  return { state: next, events };
+  return { state: next, events, pendingBattles: [] };
 }
 
 /**

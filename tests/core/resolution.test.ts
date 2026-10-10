@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { previewPendingBattles, resolvePlacement } from '../../src/core/resolution';
+import { previewPendingBattles, resolvePlacement } from '../../src/core/resolution.ts';
 import {
   attackerAlwaysLoses,
   attackerAlwaysWins,
@@ -21,9 +21,9 @@ import {
   ownedBy,
   resolverBy,
   winsOnArrowCount,
-} from '../fixtures';
-import { createRng } from '../../src/core/rng';
-import type { GameEvent } from '../../src/core/types';
+} from '../fixtures.ts';
+import { createRng } from '../../src/core/rng.ts';
+import type { GameEvent } from '../../src/core/types.ts';
 
 // Board reference used by the comments below:
 //

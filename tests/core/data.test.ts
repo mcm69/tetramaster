@@ -7,7 +7,7 @@ import {
   figureById,
   figuresOfFamily,
   figuresOfTier,
-} from '../../src/data/cards';
+} from '../../src/data/cards.ts';
 import {
   FULL_MASK,
   FIGURE_SIGNATURES,
@@ -16,12 +16,12 @@ import {
   signaturePatterns,
   tierPatterns,
   toPattern,
-} from '../../src/data/arrowSets';
-import { isMaxed, rollDeck, rollInstance, statCode } from '../../src/core/card';
-import { createRng } from '../../src/core/rng';
-import { arrowCount } from '../../src/core/direction';
-import { ALL_ARROWS, STAT_MAX, STAT_MIN } from '../../src/core/constants';
-import type { CardFigure, Tier } from '../../src/core/types';
+} from '../../src/data/arrowSets.ts';
+import { isMaxed, rollDeck, rollInstance, statCode } from '../../src/core/card.ts';
+import { createRng } from '../../src/core/rng.ts';
+import { arrowCount } from '../../src/core/direction.ts';
+import { ALL_ARROWS, STAT_MAX, STAT_MIN } from '../../src/core/constants.ts';
+import type { CardFigure, Tier } from '../../src/core/types.ts';
 
 const ALL_TIERS: readonly Tier[] = [1, 2, 3, 4, 5];
 

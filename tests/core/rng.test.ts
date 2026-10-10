@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createRng } from '../../src/core/rng';
+import { createRng } from '../../src/core/rng.ts';
 
 describe('rng', () => {
   it('[rng] the same seed produces the same stream (determinism)', () => {

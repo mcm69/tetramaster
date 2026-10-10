@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "coverage": "vitest run --coverage",
     "rules:audit": "node tools/rules-audit.ts",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage && npm run rules:audit"
+    "simulate": "node tools/verify.ts 10000",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage && npm run rules:audit && npm run simulate"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -13,8 +13,8 @@
  *     12 13 14 15
  */
 
-import { CELLS } from '../src/core/constants';
-import { maskFrom } from '../src/core/card';
+import { CELLS } from '../src/core/constants.ts';
+import { maskFrom } from '../src/core/card.ts';
 import type {
   BattleOutcome,
   BattleResolver,
@@ -26,7 +26,7 @@ import type {
   GameEvent,
   GameState,
   Owner,
-} from '../src/core/types';
+} from '../src/core/types.ts';
 
 /** Direction names mapped to their indices, so scenarios read `arrows('N', 'SE')`. */
 export const DIRS = {
@@ -115,6 +115,7 @@ export function buildState(scene: Scene): GameState {
     turn: owner,
     phase: 'place',
     pendingBattles: [],
+    placedCount: 1,
     history: [],
     result: null,
   };

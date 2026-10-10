@@ -17,15 +17,15 @@ import {
   statCode,
   statInterval,
   statRange,
-} from '../../src/core/card';
+} from '../../src/core/card.ts';
 import {
   ALL_ARROWS,
   ARROW_SLOTS,
   STAT_MAX,
   STAT_SPAN,
   STAT_VALUE_MAX,
-} from '../../src/core/constants';
-import type { Card, CardType, StatIndex, StatKey } from '../../src/core/types';
+} from '../../src/core/constants.ts';
+import type { Card, CardType, StatIndex, StatKey } from '../../src/core/types.ts';
 
 function card(atk: StatIndex, type: CardType, pdef: StatIndex, mdef: StatIndex, arrows = 0): Card {
   return cardFromStats(0, { atk, type, pdef, mdef }, arrows);

@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 7 · **Current stage:** 5 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 8 · **Current stage:** 6 — ready to start
 
 ---
 
@@ -43,8 +43,8 @@
 | 2     | Card catalog                          | ✅ Done        | ✅      | 103 tests; 100 figures           |
 | 3     | Resolution engine (takedown + combos) | ✅ Done        | ✅      | 144 tests; §1.4/§1.5/§1.7 traced |
 | 4     | Battle math + multi-battle chains     | ✅ Done        | ✅      | 163 tests; §1.6 traced           |
-| 5     | Match state machine                   | ⬜ Not started | ☐       | **next up**                      |
-| 6     | Rendering                             | 🔒 Blocked     | ☐       |                                  |
+| 5     | Match state machine                   | ✅ Done        | ✅      | 201 tests; §1.1 traced           |
+| 6     | Rendering                             | ⬜ Not started | ☐       | **next up**                      |
 | 7     | Playable match UI                     | 🔒 Blocked     | ☐       |                                  |
 | 8     | Opponent AI                           | 🔒 Blocked     | ☐       |                                  |
 | 9     | Progression, collection, save         | 🔒 Blocked     | ☐       |                                  |
@@ -69,30 +69,45 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 5 — Match state machine. Stages 0–4 are complete and every gate is green.**
+**Stage 6 — Rendering. Stages 0–5 are complete and every gate is green.**
 
-Every rule from §1.2 to §1.7 is now implemented and traced to tagged tests: **6 traced · 3 pending ·
-0 untested**. Battles are real — `rollBattle()` draws two independent uniform rolls, and the Monte
-Carlo suite confirms the empirical win rate matches `winProbability()` across all sixteen type
-pairings and a wide spread of stat gaps.
+A whole match now runs headless: `createMatch` builds a real board from a seed, `applyAction`
+reduces it, and `tools/verify.ts` asserts ten cards placed, a score summing to ten, one
+game-over, and no illegal placements across 10,000 matches in ~120ms.
+**7 rules traced · 2 pending · 0 untested** — only §1.8 and §1.9 remain, both Stage 9.
 
-**Nothing orchestrates a match yet.** There is no coin flip, no blocked-cell generation, no turn
-alternation, no scoring, and no way to play ten cards in a row. `resolvePlacement()` resolves one
-placement against a hand-built board.
+Nothing is on screen yet beyond a placeholder canvas. This stage makes the board visible and
+animates the event log the engine already produces.
 
 ## Next Actions
 
-- [ ] `src/core/match.ts` — `createMatch({seed, playerDeck, aiDeck})` and a pure
-      `applyAction(state, action) -> {state, events}` reducer
-- [ ] Blocked-cell generation: uniform 0–6 (Q3), shared/symmetric (Q4), and prove the
-      **10-card invariant** — 16 − max 6 blocked = 10 free cells = exactly the 10 cards
-- [ ] Coin flip shown before the match (Q5); turn alternation; score tally summing to 10
-- [ ] Win / draw / perfect detection, and the capture-choice step at match end (§1.1)
-- [ ] `illegal` events rather than throws for illegal actions (per §5.4)
-- [ ] Thread `rngState` through the reducer so a match saves and resumes exactly
-- [ ] `tools/verify.ts` skeleton — 1,000 headless matches asserting the invariants on every one
-- [ ] Remove `1.1` from `PENDING`, tag tests `[§1.1]`
-- [ ] Update this file and commit as `stage(5): ...` (§7.2)
+- [ ] `render/theme.ts` — palette, spacing, type scale
+- [ ] `render/arrowSprite.ts` — draws an 8-direction arrow mask onto a card face
+- [ ] `render/sprites.ts` — **procedural** card art seeded by `figureId`, cached to an offscreen
+      canvas. No FF9 artwork (§7.5)
+- [ ] `render/boardView.ts` — the 4x4 grid, blocked-cell styling, legal-move highlights, hover
+- [ ] `render/cardView.ts` — card face: art, stat code, ownership indicator (**shape + tint**, never
+      tint alone — colourblind safety, §6 Stage 10)
+- [ ] `render/animator.ts` — the single rAF loop; consumes `GameEvent[]` and produces tweens. Its
+      `switch (event.t)` must be exhaustive or the compiler says so
+- [ ] `input/pointer.ts` — canvas hit-testing → cell indices
+- [ ] DoD: a headless-driven match animates correctly, and **no render code mutates state**
+- [ ] `src/render/**` is gated at 60% coverage only (§9.2); pixel output is not asserted (§9.4)
+
+## Blocked On
+
+Nothing. Stage 6 depends only on Stages 1–5.
+
+## Balance Note for Stage 8
+
+A side observation from this stage's sweeps, recorded so it is not rediscovered later:
+
+- Matched decks, both sides playing the same policy, give a near-even split (39.9% / 38.5%), so
+  **turn order carries no positional bias**. Good.
+- **Clustering cards raises the perfect-game rate roughly 1.7x** (10.0% vs 5.9% for a corner-greedy
+  policy). This is a genuine strategic property — dense adjacency maximises combo cascades — and
+  matches the community advice to avoid bunching up. Not a bug, but Stage 8's `balance.ts` should
+  check the AI does not fall into it.
 
 ## Blocked On
 
@@ -506,3 +521,45 @@ mean_ of `winProbability` over the base intervals. **163 tests total, 6 rules tr
   **Files touched:** `src/core/battle.ts` (rollBattle, rngResolver), `src/core/resolution.ts` (rng
   option), `tests/core/rollBattle.test.ts` (new, 15 tests), `tests/core/resolution.test.ts`
   (composition tests), `tools/rules-audit.ts` (1.6 claimed), `STATUS.md`
+
+---
+
+### S8 — 2026-10-10 — Stage 5 complete: whole matches run headless
+
+**Stage:** 5 (Match state machine) · **Status:** ⬜ → ✅
+**Did:** `src/core/match.ts` — `createMatch` (blocked cells, coin flip, deal), a pure
+`applyAction` reducer, turn flow, scoring, and win/draw/perfect detection. Split
+`resolvePlacement` into `beginPlacement` + `continuePlacement` so the engine can park the match in
+`phase: 'chooseBattle'` and let the caller choose battle order (§1.7, §5.4) without ever blocking.
+`tools/verify.ts` runs the invariant sweep; `tests/core/verify.test.ts` runs a smaller batch inside
+every `npm test`. **201 tests, 7 rules traced, 2 pending, 0 untested.**
+**Verified by mutation** — each caught immediately: ending the match only when the board is full
+(716 violations), blocking up to 7 cells (60), and not alternating turns (1400).
+**Learned:**
+
+- **A refactor regression I nearly shipped.** Splitting the cascade made `resolvePlacement` return
+  the battle-chain events _without_ the initial scan's takedown events. Three Stage 3 tests failed —
+  including the corner sweep — which is precisely what those tests were written to protect. The
+  hand-derived expectations earned their keep a second time.
+- **Two real engine bugs in the same file.** `finishMatch` originally required `16 − blocked`
+  placements to end a match, but only ten cards exist, so **no match ever ended**. And `claimable`
+  was computed for whoever won, which meant a _loss_ offered the player a card to take. Both were
+  caught the moment the verifier could run a match end to end — they were invisible while nothing
+  orchestrated play.
+- **`node tools/verify.ts` could not import our own modules.** Bare Node needs explicit extensions;
+  Vite does not. Rather than run the verifier through a bundler, I converted all 67 relative
+  imports in `src/`, `tools/` and `tests/` to carry `.ts` and enabled `allowImportingTsExtensions`.
+  The same sources now run under both, which is what makes the headless verifier trustworthy rather
+  than a separate copy of the logic.
+- A confound nearly produced a false alarm: a first sweep showed the AI winning ~74% and I started
+  investigating turn order before noticing the AI had been dealt **tier-2 cards against tier-1**.
+  Re-run with matched decks, the split is 39.9/38.5 — no positional bias. Worth remembering that a
+  surprising balance number is usually a broken test fixture, not a broken rule.
+- Clustered placement produces ~1.7x the perfect-game rate of corner-greedy play. Recorded under
+  **Balance Note for Stage 8** so the AI does not walk into it.
+  **Next:** Stage 6 — rendering. Everything it needs exists: `GameEvent` is an exhaustive union and a
+  full match already yields a complete ordered log of it.
+  **Files touched:** `src/core/match.ts` (new), `src/core/types.ts` (`placedCount`, `pendingCell`,
+  `MatchResult.claimable`), `src/core/resolution.ts` (split), `tools/verify.ts` (new),
+  `tests/core/match.test.ts` (new), `tests/core/verify.test.ts` (new), `tests/fixtures.ts`,
+  `tsconfig.json`, all relative imports, `tools/rules-audit.ts`, `package.json`, `STATUS.md`

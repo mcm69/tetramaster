@@ -36,14 +36,9 @@ interface RuleSection {
  * `--strict` fails while any entry remains; CI switches to it once Stage 11 lands.
  */
 const PENDING: Record<string, number> = {
-  '1.1': 5, // match setup — blocked cells, coin flip, deal
-  // 1.2 (card anatomy) and 1.3 (stat intervals) landed in Stage 1 and are now traced to tagged
-  // tests. Deleting a line from this map is what makes its test mandatory — keep the two in sync.
-  '1.4': 3, // only the placed card attacks
-  '1.5': 3, // arrow takedown
-  // 1.6 (card battle) and 1.7 (combos and multi-battle chains) landed across Stages 3-4 and are
-  // now traced to tagged tests. The roll maths is pinned statistically in
-  // tests/core/rollBattle.test.ts; cascade shape in tests/core/resolution.test.ts.
+  // 1.1 (match setup) landed in Stage 5, traced to tests/core/match.test.ts, with the cross-match
+  // invariants checked by tools/verify.ts. 1.2-1.7 landed across Stages 1-4.
+  // Deleting a line from this map is what makes its test mandatory — keep the two in sync.
   '1.8': 9, // stat growth and type evolution
   '1.9': 9, // collector level
 };

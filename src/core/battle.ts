@@ -7,10 +7,10 @@
  * Everything here is a pure function of its arguments and an `Rng`. Nothing peeks at future rolls.
  */
 
-import { STAT_SPAN } from './constants';
-import { lowestStat, highestStat, statInterval } from './card';
-import type { Rng } from './rng';
-import type { BattleOutcome, BattleResolver, Card, StatIndex, StatKey } from './types';
+import { STAT_SPAN } from './constants.ts';
+import { lowestStat, highestStat, statInterval } from './card.ts';
+import type { Rng } from './rng.ts';
+import type { BattleOutcome, BattleResolver, Card, StatIndex, StatKey } from './types.ts';
 
 /** Which stat each side contributes to a battle. */
 export interface StatPick {

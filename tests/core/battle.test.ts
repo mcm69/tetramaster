@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { baseValue, previewOdds, resolveStats, winProbability } from '../../src/core/battle';
-import { cardFromStats } from '../../src/core/card';
-import { statInterval } from '../../src/core/card';
-import type { Card, CardType } from '../../src/core/types';
+import { baseValue, previewOdds, resolveStats, winProbability } from '../../src/core/battle.ts';
+import { cardFromStats } from '../../src/core/card.ts';
+import { statInterval } from '../../src/core/card.ts';
+import type { Card, CardType } from '../../src/core/types.ts';
 
 function card(atk: number, type: CardType, pdef: number, mdef: number): Card {
   return cardFromStats(0, { atk, type, pdef, mdef }, 0);

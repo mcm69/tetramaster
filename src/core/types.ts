@@ -128,6 +128,11 @@ export interface MatchResult {
   readonly outcome: Outcome;
   /** Cards the winner takes. Empty on a draw or loss. */
   readonly taken: readonly Card[];
+  /**
+   * Cards the winner may claim: all five enemy cards on a perfect game, otherwise the single one
+   * it currently owns (§1.1). Empty on a draw or a loss.
+   */
+  readonly claimable: readonly Card[];
 }
 
 /**
@@ -148,6 +153,10 @@ export interface GameState {
   phase: Phase;
   /** Non-empty only while `phase === 'chooseBattle'`. */
   pendingBattles: readonly Cell[];
+  /** The cell holding the placed card whose battles are pending, during `chooseBattle`. */
+  pendingCell?: Cell;
+  /** How many cards have been placed so far. Ten ends the match (§1.1). */
+  placedCount: number;
   /** Append-only log for replay, debugging and the rules screen. */
   history: readonly GameEvent[];
   result: MatchResult | null;

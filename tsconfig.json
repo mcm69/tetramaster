@@ -20,6 +20,9 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
+    // Relative imports carry explicit .ts extensions so the same sources run under Vite *and*
+    // under bare Node (`node tools/verify.ts`), which is what keeps the headless verifier honest.
+    "allowImportingTsExtensions": true,
 
     "paths": {
       "@/*": ["./src/*"]

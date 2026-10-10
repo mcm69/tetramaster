@@ -7,8 +7,8 @@
  * stop at the border (§1.5, §1.7).
  */
 
-import { ARROW_SLOTS, CELLS, DIRECTION_NAMES, GRID } from './constants';
-import type { Cell, Direction } from './types';
+import { ARROW_SLOTS, CELLS, DIRECTION_NAMES, GRID } from './constants.ts';
+import type { Cell, Direction } from './types.ts';
 
 /** Row/column deltas per direction, keyed by the Direction union so lookups never yield undefined. */
 const DELTAS: Record<Direction, readonly [number, number]> = {

@@ -14,10 +14,10 @@ import {
   opposite,
   pointsAt,
   rowOf,
-} from '../../src/core/direction';
-import { CELLS, GRID } from '../../src/core/constants';
-import { maskFrom } from '../../src/core/card';
-import type { Cell, Direction } from '../../src/core/types';
+} from '../../src/core/direction.ts';
+import { CELLS, GRID } from '../../src/core/constants.ts';
+import { maskFrom } from '../../src/core/card.ts';
+import type { Cell, Direction } from '../../src/core/types.ts';
 
 /**
  * The authoritative adjacency table, hand-derived from the layout rather than computed from the
