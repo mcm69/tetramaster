@@ -67,6 +67,30 @@ export interface CardFigure {
 }
 
 /**
+ * The result of one battle, whatever decided it (PLAN.md §1.6).
+ *
+ * Stage 3 uses a deterministic stub so the cascade can be tested without the RNG; Stage 4 swaps in
+ * the real roll. Keeping the shape fixed means the resolution code below never changes.
+ */
+export interface BattleOutcome {
+  readonly attackerWins: boolean;
+  readonly atkBase: number;
+  readonly atkRoll: number;
+  readonly atkActual: number;
+  readonly defBase: number;
+  readonly defRoll: number;
+  readonly defActual: number;
+  /** The attacker's chance, computed before rolling (§1.6). */
+  readonly probability: number;
+}
+
+/**
+ * Decides a battle. The real implementation draws two uniform rolls from the injected RNG; Stage
+ * 3 supplies a stub. Tests use this seam to force either outcome and assert the cascade's shape.
+ */
+export type BattleResolver = (attacker: Card, defender: Card) => BattleOutcome;
+
+/**
  * A card as it exists in a match.
  *
  * `figureId` picks the artwork and identity; `arrows` is an 8-bit mask where bit `d` is set when

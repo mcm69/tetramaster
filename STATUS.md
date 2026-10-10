@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 5 · **Current stage:** 3 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 6 · **Current stage:** 4 — ready to start
 
 ---
 
@@ -41,8 +41,8 @@
 | 0     | Scaffold                              | ✅ Done        | ✅      | toolchain green; `verify` exit 0 |
 | 1     | Grid geometry & stats                 | ✅ Done        | ✅      | 72 tests; §1.2 + §1.3 traced     |
 | 2     | Card catalog                          | ✅ Done        | ✅      | 103 tests; 100 figures           |
-| 3     | Resolution engine (takedown + combos) | ⬜ Not started | ☐       | **next up** — highest value      |
-| 4     | Battle math + multi-battle chains     | 🔒 Blocked     | ☐       |                                  |
+| 3     | Resolution engine (takedown + combos) | ✅ Done        | ✅      | 144 tests; §1.4/§1.5/§1.7 traced |
+| 4     | Battle math + multi-battle chains     | ⬜ Not started | ☐       | **next up**                      |
 | 5     | Match state machine                   | 🔒 Blocked     | ☐       |                                  |
 | 6     | Rendering                             | 🔒 Blocked     | ☐       |                                  |
 | 7     | Playable match UI                     | 🔒 Blocked     | ☐       |                                  |
@@ -69,29 +69,33 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 3 — Resolution engine. Stages 0–2 are complete and every gate is green.**
+**Stage 4 — Battle math and multi-battle chains. Stages 0–3 are complete and every gate is green.**
 
-The foundation is done: grid geometry with verified no-wrap adjacency, card anatomy, hex→interval
-mapping, the type table, the corrected probability formula, and 100 playable figures. No match logic
-exists yet — nothing consumes the catalog.
+The placement cascade is implemented and tested against hand-derived expectations. §1.4, §1.5 and
+§1.7 are traced to tagged tests, so `rules:audit` reports 5 traced / 4 pending / 0 untested.
 
-**Read before Stage 3:** `PLAN.md` §1.4, §1.5, §1.7, and the pseudocode in §5.3. This is the stage
-where players most often get the rules wrong, and where a subtle inversion would be invisible in
-aggregate statistics.
+**The battle is still a stub.** `defaultResolver` always returns `attackerWins: false`, so no real
+combat has run yet. Every cascade test forces an outcome deliberately — which is why the _shape_ of
+§1.7 is verified even though the _numbers_ are not. That gap is exactly what Stage 4 closes.
 
 ## Next Actions
 
-- [ ] `tests/fixtures.ts` — builders for named board scenarios. Each fixture's _expected_ result is
-      written out inline, derived by hand from the rules rather than from the code
-- [ ] `src/core/resolution.ts` — implement `resolvePlacement()` per §5.3 exactly. Battle branch
-      stubbed to always-lose until Stage 4
-- [ ] `tests/core/resolution.test.ts` — no-arrow placement, single takedown, multi-arrow takedown,
-      takedown into a blocked cell, blocked-cell adjacency, **no second-degree combo**, arrows
-      pointing off-grid, and combo firing only after a battle
-- [ ] Tag tests `[§1.4]` and `[§1.5]`, remove `1.4` and `1.5` from `PENDING` in
-      `tools/rules-audit.ts`
-- [ ] `resolution.ts` must meet 95% lines / 90% branches per file
-- [ ] Update this file and commit as `stage(3): ...` (§7.2)
+- [ ] `battle.ts` gains `rollBattle(attacker, defender, rng)` — the two independent uniform rolls
+      of §1.6, returning `BattleOutcome`
+- [ ] `resolution.ts` takes the RNG-backed resolver as its default; keep `defaultResolver`
+      exported for the "no resolver" test
+- [ ] `tests/core/battle.test.ts` additions — **Monte Carlo**: 100k battles per type pair, empirical
+      win rate within 2% of `winProbability()`. This is the test that pins §1.6 statistically
+- [ ] Tests for: roll ranges inside the stat interval; `actual = base − roll` never negative; a
+      tie goes to the defender; determinism from a seed
+- [ ] Cascade tests re-run with the real resolver — at least one seeded scenario asserting the full
+      event log, so the two halves are proven to compose
+- [ ] Remove `1.6` from `PENDING` in `tools/rules-audit.ts` when its tests land
+- [ ] Update this file and commit as `stage(4): ...` (§7.2)
+
+## Blocked On
+
+Nothing. Stage 4 depends only on Stages 1–3.
 
 ## Blocked On
 
@@ -99,11 +103,12 @@ Nothing. Stage 2 depends only on Stage 1.
 
 ## Next Stage Preview
 
-Stage 3 is the **resolution engine** — arrow takedown and the combo cascade (§1.4, §1.5). It is
-the highest-value stage in the plan: the rules players most often get wrong. The battle branch is
-stubbed to always-lose until Stage 4, and `tests/fixtures.ts` will hold hand-built named boards
-("two pending battles where winning the first combos the second") with the expected cell list
-written out inline.
+Stage 5 is the **match state machine** — blocked-cell generation, the coin flip, turn alternation,
+score tally, and win/draw/perfect detection, driven by a pure `applyAction` reducer. It is the
+first stage where a whole match runs headless end to end, which unlocks the 1,000-match invariant
+simulation. `resolvePlacement` already returns `{state, events}`, so the reducer is mostly turn
+bookkeeping; the interesting design question is splitting `phase: 'chooseBattle'` out of the
+engine so it never blocks. §1.1 comes out of `PENDING` there.
 
 ---
 
@@ -413,3 +418,48 @@ data file. `Family` gained a `'dragon'` member. `base` stats derive from tier vi
   carry hand-derived expected results, not results captured from the implementation.
   **Files touched:** `src/data/cards.ts`, `src/data/arrowSets.ts`, `src/core/types.ts`,
   `src/core/card.ts`, `tests/core/data.test.ts`, `STATUS.md`
+
+---
+
+### S6 — 2026-10-10 — Stage 3 complete: the placement cascade, and one real engine bug
+
+**Stage:** 3 (Resolution engine) · **Status:** ⬜ → ✅
+**Did:** `src/core/resolution.ts` implements §5.3 — initial scan, battle queue, combo cascade,
+chain-termination. `BattleResolver` is a seam in `core/types.ts` so the cascade's shape is testable
+without the RNG. `tests/fixtures.ts` provides board vocabulary and deterministic stub resolvers;
+`tests/core/resolution.test.ts` holds 41 tests. **144 total**, 5 rules traced, 0 untested.
+**Found and fixed one real engine bug.** When the placed card _loses_ a battle, its arrows fire a
+combo — but I was computing those targets against the **old** owner, so the combo flipped cards the
+winner already owned instead of cards the loser owned. A losing placement therefore gave its own
+cards back instead of sweeping the opponent's. Caught by the Q7 and "combo onto cards we own"
+tests. This is the single most consequential bug in the stage and it was invisible until the
+combination was exercised.
+**Verified by mutation:** duplicate combo targets → 3 failures; takedown firing combos (the classic
+§1.7 mistake) → 2 failures; chain continuing after a loss → 1 failure; re-introducing the real bug
+→ 3 failures. The suite catches every one.
+**Learned:**
+
+- **Eleven of my twelve initial failures were my own geometry, not the engine's.** I wrote comments
+  asserting adjacencies that do not exist — "cell 6's S arrow reaches 11" when it reaches 10, "5's S
+  reaches 10" when it reaches 9. I verified every coordinate against a generated adjacency table
+  before fixing them. Hand-writing fixtures from a mental picture of the board is error-prone;
+  cross-checking against the real table is not.
+- **Three separate tests silently encoded a rule I had backwards.** My "losing the first battle
+  stops the chain" test initially asserted that a card we captured mid-cascade stayed ours — when
+  in fact the enemy's combo from the card that captured it takes it straight back. Same for the
+  Q7 skip case and the eight-arrow sweep. Each was a case where I had the _outcome_ right but the
+  _reason_ wrong, and writing the reasoning into the comment is what exposed it.
+- **The per-file coverage gate found four dead branches**, and each pointed at a real simplification
+  rather than needing a test: an unreachable `!other` guard, a `directionFrom` null return that
+  could never fire, and — most usefully — the re-scan's takedown `else`, which I proved unreachable
+  (every surviving neighbour of the placed card must point back, since the initial scan took the
+  rest). Removing it also let `pointsBack` take a `Target` carrying its own direction, deleting a
+  whole coordinate-lookup table. **The gate paid for itself twice over.**
+- I nearly shipped a nonsense `pointsBack` (calling `directionFrom(cell, cell)` and returning
+  `false ? false : false`) while fixing a type error. Typecheck caught it immediately, but it is a
+  reminder that the fast path through a type error is where nonsense gets committed.
+  **Next:** Stage 4 — `rollBattle()` and the real RNG-backed resolver, closing the §1.6 gap. The
+  Monte Carlo test (100k battles per type pair within 2% of `winProbability()`) is the piece that
+  pins the maths statistically rather than by example.
+  **Files touched:** `src/core/resolution.ts`, `src/core/types.ts` (BattleResolver/BattleOutcome),
+  `tests/fixtures.ts`, `tests/core/resolution.test.ts`, `STATUS.md`
