@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tetra Master</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b0d12;
+        --panel: #12151c;
+        --ink: #e6e9f0;
+        --muted: #8b93a7;
+        --accent: #7aa2f7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          16px/1.5 system-ui,
+          -apple-system,
+          'Segoe UI',
+          sans-serif;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      canvas {
+        display: block;
+        border-radius: 8px;
+        box-shadow: 0 8px 32px rgb(0 0 0 / 55%);
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.875rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tetra Master</h1>
+    <canvas id="board" width="480" height="480" aria-label="Game board"></canvas>
+    <p id="boot-note" role="status" aria-live="polite">Loading…</p>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
