@@ -30,6 +30,42 @@ export type Outcome = 'win' | 'loss' | 'draw' | 'perfect';
 /** A concrete stat index, 0-15, i.e. one hex digit. */
 export type StatIndex = number;
 
+/** Power band a figure belongs to. Drives stat caps, arrow density and deck balance. */
+export type Tier = 1 | 2 | 3 | 4 | 5;
+
+/** Art grouping for the procedural card art (§7.5) — also used to keep names varied. */
+export type Family =
+  'beast' | 'construct' | 'elemental' | 'spirit' | 'machine' | 'dragon' | 'humanoid';
+
+export interface StatCaps {
+  readonly atk: StatIndex;
+  readonly pdef: StatIndex;
+  readonly mdef: StatIndex;
+}
+
+/**
+ * A card *design* — the 100-figure catalog entry. Distinct from a {@link Card}, which is one
+ * acquired instance with rolled stats (PLAN.md §1.2).
+ *
+ * A figure fixes the arrow pattern, exactly as the artwork does in the original: the same design
+ * always has the same arrows. Stats, by contrast, are rolled per acquisition and only bounded by
+ * `caps`, which is why two copies of one figure can differ.
+ */
+export interface CardFigure {
+  readonly id: number;
+  readonly name: string;
+  readonly family: Family;
+  readonly tier: Tier;
+  /** Stats are rolled within [base, caps] when the card is acquired (Q6). */
+  readonly base: StatCaps;
+  readonly caps: StatCaps;
+  readonly baseType: CardType;
+  /** 8-bit arrow mask; bit `d` is the arrow in direction `d`. */
+  readonly arrows: number;
+  /** True for the ~30 hand-authored figures with a deliberately chosen arrow pattern. */
+  readonly signature: boolean;
+}
+
 /**
  * A card as it exists in a match.
  *

@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 4 · **Current stage:** 2 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 5 · **Current stage:** 3 — ready to start
 
 ---
 
@@ -40,8 +40,8 @@
 | ----- | ------------------------------------- | -------------- | ------- | -------------------------------- |
 | 0     | Scaffold                              | ✅ Done        | ✅      | toolchain green; `verify` exit 0 |
 | 1     | Grid geometry & stats                 | ✅ Done        | ✅      | 72 tests; §1.2 + §1.3 traced     |
-| 2     | Card catalog                          | ⬜ Not started | ☐       | **next up**                      |
-| 3     | Resolution engine (takedown + combos) | 🔒 Blocked     | ☐       | highest value                    |
+| 2     | Card catalog                          | ✅ Done        | ✅      | 103 tests; 100 figures           |
+| 3     | Resolution engine (takedown + combos) | ⬜ Not started | ☐       | **next up** — highest value      |
 | 4     | Battle math + multi-battle chains     | 🔒 Blocked     | ☐       |                                  |
 | 5     | Match state machine                   | 🔒 Blocked     | ☐       |                                  |
 | 6     | Rendering                             | 🔒 Blocked     | ☐       |                                  |
@@ -69,28 +69,29 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 2 — Card catalog. Stage 1 is complete and every gate is green.**
+**Stage 3 — Resolution engine. Stages 0–2 are complete and every gate is green.**
 
-The geometry and stat layers are done: 4×4 grid with verified no-wrap adjacency, card anatomy,
-hex→interval mapping, and the type table. §1.2 and §1.3 are implemented and traced to tagged tests,
-so `rules:audit` now reports them as covered. No match logic exists yet.
+The foundation is done: grid geometry with verified no-wrap adjacency, card anatomy, hex→interval
+mapping, the type table, the corrected probability formula, and 100 playable figures. No match logic
+exists yet — nothing consumes the catalog.
 
-**Two plan errors were found and corrected while implementing §1.3/§1.6 — see the Session Log
-entry for S4.** The win-probability formula the plan asserted was wrong.
+**Read before Stage 3:** `PLAN.md` §1.4, §1.5, §1.7, and the pseudocode in §5.3. This is the stage
+where players most often get the rules wrong, and where a subtle inversion would be invisible in
+aggregate statistics.
 
 ## Next Actions
 
-- [ ] `src/data/cards.ts` — 100 figures: `figureId → {name, caps:{atk,pdef,mdef}, baseType, tier,
-family}`
-- [ ] `src/data/arrowSets.ts` — arrow masks; ~30 hand-authored signature figures, the rest seeded
-      from tier (weak figures sparse/awkward, strong figures dense)
-- [ ] `card.ts` gains `rollInstance(figure, rng)` — **stats are rolled on acquisition** (§1.2,
-      faithful to the original), capped by the figure's `caps`
-- [ ] `tests/core/data.test.ts` — every figure has caps ≥ its base stats; signature arrow masks
-      are unique; all 100 figures roll valid instances
-- [ ] Tag tests `[§1.2]` where they extend card anatomy; `1.2` is already out of `PENDING`
-- [ ] `src/data/**` is gated at **100% coverage** — a pure-data import test must cover it
-- [ ] Update this file and commit as `stage(2): ...` (§7.2)
+- [ ] `tests/fixtures.ts` — builders for named board scenarios. Each fixture's _expected_ result is
+      written out inline, derived by hand from the rules rather than from the code
+- [ ] `src/core/resolution.ts` — implement `resolvePlacement()` per §5.3 exactly. Battle branch
+      stubbed to always-lose until Stage 4
+- [ ] `tests/core/resolution.test.ts` — no-arrow placement, single takedown, multi-arrow takedown,
+      takedown into a blocked cell, blocked-cell adjacency, **no second-degree combo**, arrows
+      pointing off-grid, and combo firing only after a battle
+- [ ] Tag tests `[§1.4]` and `[§1.5]`, remove `1.4` and `1.5` from `PENDING` in
+      `tools/rules-audit.ts`
+- [ ] `resolution.ts` must meet 95% lines / 90% branches per file
+- [ ] Update this file and commit as `stage(3): ...` (§7.2)
 
 ## Blocked On
 
@@ -170,6 +171,8 @@ wrong during implementation, change `PLAN.md` §1 and log it here — don't sile
 6. **`isValidStatIndex` returns `boolean`, not `index is StatIndex`.** `StatIndex` is an alias for
    `number`, so the type predicate narrowed the negative branch to `never` and made the error
    message untypeable. A no-op predicate buys nothing and costs clarity.
+7. **`Family` gained a `'dragon'` member** in Stage 2, for the late-game figures. The plan listed
+   the union without enumerating it; the catalog chose the members.
 
 ## Corrections to the Plan
 
@@ -371,3 +374,42 @@ injecting the old wrong probability formula fails the brute-force enumeration. S
   **Files touched:** `src/core/types.ts`, `constants.ts`, `direction.ts`, `card.ts`, `battle.ts`,
   `tests/core/direction.test.ts`, `card.test.ts`, `battle.test.ts`, `tools/rules-audit.ts`,
   `PLAN.md` (probability formula, edge count, §1.6.2 ties), `STATUS.md`
+
+---
+
+### S5 — 2026-10-10 — Stage 2 complete: 100 playable figures
+
+**Stage:** 2 (Card catalog) · **Status:** ⬜ → ✅
+**Did:** `src/data/cards.ts` (100 figures as a compact typed table, expanded into `CardFigure`
+objects) and `src/data/arrowSets.ts` (31 hand-authored signature patterns plus five tier-graded
+fallback patterns). Added `CardFigure`/`Family`/`Tier` to `core/types.ts` and `rollInstance()` /
+`rollDeck()` / `isMaxed()` to `core/card.ts`. Wrote `tests/core/data.test.ts` — 31 tests, 103 total.
+`src/data/**` is at **100%** on every metric, as its gate demands.
+**Verified, not assumed:** mutation-tested the catalog guards. Making `Goblin`'s signature pattern
+collide with `Tonberry`'s fails the uniqueness test. Inspected the built catalog: caps and arrow
+density both climb monotonically across tiers (t1 avg caps 5.8 / 2.5 arrows → t5 avg caps 14.2 /
+7.2 arrows), 41 of 256 arrow masks are in use, and **Goblin's caps came out `7/9/4`, matching the
+researched original exactly** — a useful independent confirmation that the cap ranges are sane.
+**Decisions:** figure names are a themed set written for this project, **not** the canonical FF9
+card list, which has not been sourced from a reliable reference. Swapping in a sourced list is a
+data-only change since `FIGURE_TABLE` is the single source of names. Documented at the top of the
+data file. `Family` gained a `'dragon'` member. `base` stats derive from tier via `BASE_SPAN`.
+**Learned:**
+
+- **The 100% data gate earned its keep immediately**: it failed on two branches that were genuinely
+  dead. `pattern()` had an `ORDER[index] !== undefined` check that could never be false, and
+  `cards.ts` had a `?? 0` fallback for an array index that is always in range. Rather than add
+  coverage-ignore comments or relax the gate, I removed the dead code — the parser now walks bits by
+  index (position `i` _is_ direction `i`, so the lookup was never needed) and tier patterns are a
+  5-slot tuple with a literal-union index. **A threshold that fails immediately is better than one
+  that never fails**, because it points at real dead code rather than accumulating quietly.
+- Writing the arrow patterns as 8-character binary strings (`'11111000'`) rather than numeric masks
+  made them reviewable by eye against §1.2's "8-bit mask", and made the collision above a typo I
+  could spot rather than a decimal to compare.
+- `parsePattern` is now exported and its validation branch tested, rather than left unreachable
+  behind a private helper — a parser that rejects malformed input should have that input tested.
+  **Next:** Stage 3 — the resolution engine (§1.4, §1.5, §1.7). The highest-value stage in the plan,
+  and the one where a subtle inversion would be invisible in aggregate statistics. Fixtures must
+  carry hand-derived expected results, not results captured from the implementation.
+  **Files touched:** `src/data/cards.ts`, `src/data/arrowSets.ts`, `src/core/types.ts`,
+  `src/core/card.ts`, `tests/core/data.test.ts`, `STATUS.md`

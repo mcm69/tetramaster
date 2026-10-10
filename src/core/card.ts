@@ -7,7 +7,8 @@
 
 import { ARROW_SLOTS, STAT_MAX, STAT_MIN, STAT_SPAN } from './constants';
 import { arrowCount, arrowsOf } from './direction';
-import type { Card, CardType, Direction, StatIndex, StatKey } from './types';
+import type { Rng } from './rng';
+import type { Card, CardFigure, CardType, Direction, StatCaps, StatIndex, StatKey } from './types';
 
 /** The three stats, in the order used to break ties for `A`-type cards. */
 export const STAT_KEYS = ['atk', 'pdef', 'mdef'] as const satisfies readonly StatKey[];
@@ -147,6 +148,40 @@ export function maskFrom(arrowDirections: readonly Direction[]): number {
   let mask = 0;
   for (const dir of arrowDirections) mask |= 1 << dir;
   return mask;
+}
+
+/**
+ * Rolls a fresh instance of a figure.
+ *
+ * Stats are drawn when the card is **acquired**, not looked up from the figure — faithful to the
+ * original, and the reason players there reload saves to reroll. Each of the three indices is
+ * drawn uniformly from `[base, caps]`, so a card can never exceed its figure's limits and can
+ * never roll below its floor. Per Q6 the index may be anywhere in that range; the concrete value
+ * inside the index's interval is drawn later, at battle time, by `baseValue()` (§1.3).
+ *
+ * The arrow pattern is fixed by the design and is not rolled.
+ */
+export function rollInstance(figure: CardFigure, rng: Rng): Card {
+  const rolled: Record<StatKey, StatIndex> = {
+    atk: rng.range(figure.base.atk, figure.caps.atk),
+    pdef: rng.range(figure.base.pdef, figure.caps.pdef),
+    mdef: rng.range(figure.base.mdef, figure.caps.mdef),
+  };
+  return createCard({
+    figureId: figure.id,
+    arrows: figure.arrows,
+    stats: { atk: rolled.atk, type: figure.baseType, pdef: rolled.pdef, mdef: rolled.mdef },
+  });
+}
+
+/** Rolls a whole deck of one figure — used by fixtures and by the debug screens. */
+export function rollDeck(figure: CardFigure, count: number, rng: Rng): Card[] {
+  return Array.from({ length: count }, () => rollInstance(figure, rng));
+}
+
+/** True when a card is at its figure's ceiling on every stat. */
+export function isMaxed(card: Card, caps: StatCaps): boolean {
+  return card.atk >= caps.atk && card.pdef >= caps.pdef && card.mdef >= caps.mdef;
 }
 
 /** A mask with every direction set (§1.2). */
