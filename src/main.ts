@@ -1,26 +1,29 @@
 /**
- * Application entry point.
+ * Application entry point (PLAN.md §6, Stage 7).
  *
- * Stage 6 wires the real renderer to the real engine: a scripted match is played through
- * `applyAction`, and the animator replays each action's event log on a single rAF loop. This is the
- * end-to-end proof that the engine's output drives the screen.
+ * Wires the DOM to the engine: the canvas shows the board, the hand tray and chooser are buttons,
+ * and the keyboard does everything the mouse does. All the decision-making lives in
+ * `ui/app.ts` — this file only translates events and paints.
  *
- * Stages 7 and 8 replace the scripted driver with human input and the AI.
+ * The loop is a single `requestAnimationFrame`: advance the animation, then draw. Input is ignored
+ * while the board is animating, so the player can never outrun the visuals.
  */
 
-import { applyAction, createMatch, legalCells } from './core/match.ts';
+import { createMatch } from './core/match.ts';
 import { rollInstance } from './core/card.ts';
 import { createRng } from './core/rng.ts';
 import { figuresOfTier } from './data/cards.ts';
 import { drawBoard, boardLayout, drawScoreBar } from './render/boardView.ts';
-import { Animator } from './render/animator.ts';
 import { COLORS, FONTS } from './render/theme.ts';
-import type { Action } from './core/match.ts';
-import type { Card, GameState, Tier } from './core/types.ts';
+import { clickToAction, hitTest, KEY_BINDINGS } from './input/pointer.ts';
+import { MatchController } from './ui/app.ts';
+import { renderBattlePicker } from './ui/components/picker.ts';
+import { renderHand, renderResults, statusText } from './ui/components/hand.ts';
+import type { Card, Tier } from './core/types.ts';
 
-const SEED = 20261010;
+const BOARD_SIZE = 560;
 
-function deck(seed: number, tier: Tier): Card[] {
+function demoDeck(seed: number, tier: Tier): Card[] {
   const pool = figuresOfTier(tier);
   const rng = createRng(seed);
   return Array.from({ length: 5 }, () => {
@@ -31,92 +34,196 @@ function deck(seed: number, tier: Tier): Card[] {
 }
 
 function boot(): void {
-  const canvas = document.querySelector<HTMLCanvasElement>('#board');
-  const note = document.querySelector<HTMLParagraphElement>('#boot-note');
-  if (!canvas) throw new Error('boot: #board canvas is missing from index.html');
-
-  const size = 620;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
-  canvas.style.width = `${size}px`;
-  canvas.style.height = `${size}px`;
+  const canvas = query('#board') as HTMLCanvasElement;
+  const statusEl = query('#status');
+  const hintEl = query('#hint');
+  const handEl = query('#hand');
+  const pickerEl = query('#picker');
+  const resultsEl = query('#results');
+  const keysEl = query('#keys');
 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('boot: 2d canvas context unavailable');
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = BOARD_SIZE * dpr;
+  canvas.height = BOARD_SIZE * dpr;
+  canvas.style.width = `${BOARD_SIZE}px`;
+  canvas.style.height = `${BOARD_SIZE}px`;
   ctx.scale(dpr, dpr);
 
-  let state: GameState = createMatch({
-    seed: SEED,
-    playerDeck: deck(SEED, 2),
-    aiDeck: deck(SEED + 1, 3),
-  });
-  const animator = new Animator();
-  animator.syncTo(state.board);
+  let seed = 20261010;
+  let controller = newController(seed);
+  const layout = boardLayout(BOARD_SIZE - 40, 20, 20);
 
-  const layout: ReturnType<typeof boardLayout> = boardLayout(size - 40, 20, 56);
-  let hover = legalCells(state)[0] ?? null;
-  let step = 0;
-  const policy = createRng(SEED + 99);
+  function newController(nextSeed: number): MatchController {
+    return new MatchController(
+      createMatch({
+        seed: nextSeed,
+        playerDeck: demoDeck(nextSeed, 2),
+        aiDeck: demoDeck(nextSeed + 1, 3),
+      }),
+    );
+  }
+
+  keysEl.textContent = KEY_BINDINGS.map((b) => `${b.keys} — ${b.action}`).join('   ·   ');
+
+  // ── rendering ─────────────────────────────────────────────────────────────────────────────
 
   const draw = (): void => {
+    const view = controller.view;
     ctx.fillStyle = COLORS.pageBackground;
-    ctx.fillRect(0, 0, size, size);
+    ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
 
-    drawBoard(ctx, state, {
+    drawBoard(ctx, controller.state, {
       layout,
-      frames: animator.frames(),
+      frames: controller.animator.frames(),
       highlightLegal: true,
-      hover,
-      pendingBattles: state.pendingBattles,
+      hover: view.hover,
+      pendingBattles: view.pending.map((choice) => choice.cell),
     });
-    drawScoreBar(ctx, state, 20, 28, size - 40);
+    drawScoreBar(ctx, controller.state, 20, 14, BOARD_SIZE - 40);
 
     ctx.font = FONTS.label;
     ctx.fillStyle = COLORS.inkMuted;
     ctx.textAlign = 'center';
-    ctx.fillText(`seed ${SEED} · step ${step} · ${state.phase}`, size / 2, size - 12);
+    ctx.fillText(
+      `seed ${seed} · ${view.phase}${view.busy ? ' (animating)' : ''}`,
+      BOARD_SIZE / 2,
+      BOARD_SIZE - 10,
+    );
   };
 
-  // A single rAF loop owns the clock. The scripted policy plays a move whenever the board settles.
-  const loop = (): void => {
-    const busy = animator.tick(16);
-    draw();
-    if (!busy && state.phase !== 'over') {
-      const action = scriptedAction(policy, state);
-      if (action) {
-        const result = applyAction(state, action);
-        if (!result.events.some((e) => e.t === 'illegal')) {
-          state = result.state;
-          animator.push(result.events, state);
-          step++;
-          hover = legalCells(state)[0] ?? null;
-        }
-      }
+  // ── DOM sync ──────────────────────────────────────────────────────────────────────────────
+
+  const syncDom = (): void => {
+    const view = controller.view;
+    statusEl.textContent = statusText(view);
+    hintEl.textContent = view.hint ?? '';
+
+    renderHand(handEl, view.hand, (index) => {
+      controller.selectCard(index);
+      syncDom();
+      draw();
+    });
+
+    renderBattlePicker(pickerEl, view.pending, (cell) => {
+      controller.chooseBattle(cell);
+      syncDom();
+    });
+
+    if (view.result) {
+      renderResults(
+        resultsEl,
+        view.result,
+        controller.taken,
+        (index) => {
+          controller.claim(index);
+          syncDom();
+        },
+        () => {
+          seed += 1;
+          controller = newController(seed);
+          resultsEl.hidden = true;
+          syncDom();
+        },
+      );
+    } else {
+      resultsEl.hidden = true;
     }
+  };
+
+  // ── input ──────────────────────────────────────────────────────────────────────────────────
+
+  canvas.addEventListener('pointermove', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const cell = hitTest(event.clientX - rect.left, event.clientY - rect.top, layout);
+    controller.setHover(cell);
+    draw();
+  });
+
+  canvas.addEventListener('pointerleave', () => {
+    controller.setHover(null);
+    draw();
+  });
+
+  canvas.addEventListener('click', (event) => {
+    const rect = canvas.getBoundingClientRect();
+    const action = clickToAction(
+      event.clientX - rect.left,
+      event.clientY - rect.top,
+      layout,
+      controller.state,
+      { selectedCard: controller.view.selected, hover: controller.view.hover },
+    );
+    if (action === null) return;
+    if (action.t === 'place') {
+      controller.selectCard(action.cardIndex);
+      controller.playAt(action.cell);
+    } else if (action.t === 'chooseBattle') {
+      controller.chooseBattle(action.cell);
+    }
+    syncDom();
+  });
+
+  window.addEventListener('keydown', (event) => {
+    const moves: Record<string, [number, number]> = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+      w: [-1, 0],
+      s: [1, 0],
+      a: [0, -1],
+      d: [0, 1],
+      W: [-1, 0],
+      S: [1, 0],
+      A: [0, -1],
+      D: [0, 1],
+    };
+    const move = moves[event.key];
+    if (move) {
+      event.preventDefault();
+      controller.moveHover(move[0], move[1]);
+      draw();
+      return;
+    }
+    if (event.key >= '1' && event.key <= '5') {
+      controller.selectCard(Number(event.key) - 1);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      controller.confirm();
+    } else if (event.key === 'Escape') {
+      controller.cancel();
+    } else if (event.key === 'h' || event.key === 'H') {
+      controller.showHint();
+    } else if (event.key === 'n' || event.key === 'N') {
+      seed += 1;
+      controller = newController(seed);
+    } else {
+      return;
+    }
+    syncDom();
+  });
+
+  // ── the one loop ───────────────────────────────────────────────────────────────────────────
+
+  const loop = (): void => {
+    const wasBusy = controller.busy;
+    controller.advance(16);
+    if (wasBusy && !controller.busy) syncDom();
+    draw();
     requestAnimationFrame(loop);
   };
 
-  if (note) {
-    note.textContent =
-      'Scripted demo match — the engine drives the board through the animator. Player input and the AI arrive in Stages 7 and 8.';
-  }
+  syncDom();
   requestAnimationFrame(loop);
 }
 
-/**
- * A deterministic stand-in for a player. It picks a random legal cell and, when a battle order is
- * pending, takes the first contested card — enough to drive a whole match for the demo.
- */
-function scriptedAction(rng: ReturnType<typeof createRng>, state: GameState): Action | null {
-  if (state.phase === 'chooseBattle') {
-    const next = state.pendingBattles[0];
-    return next === undefined ? null : { t: 'chooseBattle', cell: next };
-  }
-  const cells = legalCells(state);
-  const cell = cells[rng.int(cells.length)];
-  if (cell === undefined) return null;
-  return { t: 'place', cell, cardIndex: rng.int(state.players[state.turn].hand.length) };
+function query(selector: string): HTMLElement {
+  const element = document.querySelector(selector);
+  if (!element) throw new Error(`boot: ${selector} is missing from index.html`);
+  return element as HTMLElement;
 }
 
 boot();

@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 9 · **Current stage:** 7 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 10 · **Current stage:** 8 — ready to start
 
 ---
 
@@ -69,27 +69,41 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 7 — Playable match UI. Stages 0–6 are complete and every gate is green.**
+**Stage 8 — Opponent AI. Stages 0–7 are complete, and the game is playable.**
 
-The board is on screen. `main.ts` plays a scripted match through `applyAction`, and the animator
-replays each action's event log on a single rAF loop — the engine's output genuinely drives the
-canvas. Card art is generated procedurally from figure ids; nothing is sourced from FF9.
+You can now play: click a card in the hand, click a square, or press 1–5 then Enter. The board
+animates, the score updates, and when a card points back the **battle chooser** appears with each
+contested card's odds before you commit. That chooser is the one piece the original had and this
+clone adds — §1.7 promises the choice, the original never explains its consequences.
 
-**What still stands between you and a match:** the driver is scripted. There is no way to click a
-card or choose a cell. Everything needed for that already exists in `src/input/pointer.ts`
-(hit-testing, click-to-action, keyboard cursor movement) and is tested.
+**Nothing plays against you yet.** Every action has to come from you. Stage 8 gives the opponent a
+turn.
 
 ## Next Actions
 
-- [ ] `ui/app.ts` — screen router; replace the scripted driver in `main.ts` with a real controller
-- [ ] Hand tray: pick a card (click or 1–5), show the selected state
-- [ ] Click a cell to play; hover highlight and cursor feedback via `hitTest`
-- [ ] `components/picker.ts` — the **battle-order chooser** (§1.7). List pending battles, show each
-      one's win odds, dispatch `{t:'chooseBattle'}`. This is the one piece with no UI yet
-- [ ] Keyboard parity: WASD/arrows move the cursor, Enter plays, Esc deselects, H hints (§9.5)
-- [ ] Results screen: win/draw/perfect, and the capture choice (`MatchResult.claimable`)
-- [ ] DoD: **complete a match by mouse only, then again by keyboard only**
-- [ ] `tests/ui/` jsdom tests for the picker and the controller
+- [ ] `ai/evaluate.ts` — position scoring: cell exposure (how many unblocked edges an enemy arrow can
+      reach), corner/edge value, low-defence-side penalty, combo potential, quarantine detection
+- [ ] `ai/moves.ts` — enumerate every (cell, cardIndex) pair and predict the outcome using
+      `resolveStats` + `winProbability`. **Never peek at future rolls**
+- [ ] `ai/opponent.ts` — weighted score plus a seeded tiebreak; 3 difficulty tiers
+- [ ] `ai/personalities.ts` — 6–10 NPCs with distinct biases
+- [ ] Wire the AI into `MatchController` behind a `policy` callback, so the same controller serves a
+      human, the AI, and the verifier
+- [ ] `tools/balance.ts` — sweep that asserts the AI beats a random-move baseline by a real margin
+      and is still beatable
+- [ ] Update this file and commit as `stage(8): ...` (§7.2)
+
+## Blocked On
+
+Nothing. Stage 8 depends only on Stages 1–7.
+
+## Note on the busy guard
+
+`MatchController.dispatch()` refuses actions while the board is animating. Through the UI this is
+currently unreachable, because `selectCard` already refuses during an animation and a placement
+clears the selection — the test pins the _behaviour_ (no second card is ever placed mid-animation),
+not that specific line. The guard is kept deliberately as defence-in-depth at the single choke point,
+because the AI in Stage 8 will dispatch without holding a selected card. Reassess once the AI lands.
 
 ## Blocked On
 
@@ -603,3 +617,38 @@ it — the Stage 6 DoD ("a headless-driven match animates correctly"). **248 tes
   **Files touched:** `src/render/{theme,sprites,arrowSprite,cardView,boardView,animator}.ts`,
   `src/input/pointer.ts`, `src/main.ts`, `tests/ui/{render,canvasStub,boot}.test.ts`,
   `tests/core/input.test.ts`, `STATUS.md`
+
+---
+
+### S10 — 2026-10-10 — Stage 7 complete: the game is playable
+
+**Stage:** 7 (Playable match UI) · **Status:** ⬜ → ✅
+**Did:** `ui/app.ts` — `MatchController`, deliberately DOM-free so it can be driven entirely from a
+test. `ui/components/picker.ts` — the battle-order chooser (§1.7), listing each contested card with
+its odds and the defender's arrow count, because the loser's arrows drive the combo and a heavily
+armed defender is worse than its numbers suggest. `ui/components/hand.ts` — hand tray with stat
+codes, arrow counts, and warnings ("no arrows — cannot take anything"), plus the results panel.
+`main.ts` rewired: click-to-play, pointer hover, full keyboard parity, one rAF loop. **283 tests.**
+**DoD met and machine-checked:** a whole match completes by mouse alone and again by keyboard alone,
+as two tests — not as a claim someone has to verify by hand.
+**Learned:**
+
+- **A bug that would have made the keyboard unplayable, and only the DoD test found it.**
+  `moveHover` guarded with `if (!from)`, but **cell 0 is falsy**, so the cursor returned null
+  whenever cell 0 was legal — which is most boards. Keyboard navigation was simply dead. Fixed with
+  an explicit `=== undefined` check and a comment saying why.
+- **My two DoD tests proved nothing, and mutation testing is the only reason I know.** Making Enter
+  play somewhere other than the cursor passed all 34 tests: the cursor happened to sit on
+  `legal[0]`, which is exactly where the mutation also played. Rewritten to target a cell that is
+  _not_ the first legal one — now it fails, along with a new "click and Enter agree" equivalence test.
+- **A guard that could not be tested because it was unreachable.** `playAt`'s busy check can never
+  fire through the UI, because `selectCard` refuses first and a placement clears the selection. I
+  moved it to `dispatch()` — the single choke point every input path goes through — and rewrote the
+  test to assert the _behaviour_ (no card is ever placed mid-animation) rather than that line. The
+  guard stays as defence-in-depth for Stage 8's AI, which will dispatch without holding a card, and
+  that decision is recorded above rather than left as a mystery.
+- `statusText` said "0 cards point back" in a state the engine cannot produce. Rather than delete the
+  branch, it now says "Resolving the fight" — cheap robustness for a UI string.
+  **Next:** Stage 8 — the opponent AI, which is what turns this from a solo puzzle into a game.
+  **Files touched:** `src/ui/app.ts` (new), `src/ui/components/{picker,hand}.ts` (new),
+  `src/main.ts`, `index.html`, `tests/ui/{controller,boot}.test.ts`, `STATUS.md`

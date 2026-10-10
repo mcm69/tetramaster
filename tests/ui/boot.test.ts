@@ -1,28 +1,35 @@
 /**
  * Smoke test for the entry point (PLAN.md §9.2: `main.ts` is excluded from coverage because its
  * behaviour is "does the game boot", verified by running it rather than by asserting on pixels).
- * This is the automated half of that claim: the module executes, wires up the canvas, and paints a
- * frame without throwing.
+ * This is the automated half of that claim: the module wires every panel without throwing and
+ * paints a frame.
  */
 
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { installCanvasStub } from './canvasStub.ts';
 
-// jsdom has no canvas backend. The renderer touches far more of the 2D API than the old
-// placeholder did, so boot and render tests share one recording stub.
 const canvasStub = installCanvasStub();
 
 beforeAll(() => {
   canvasStub.reset();
 });
 
+/** The elements main.ts queries, in the shape index.html provides them. */
+function page(): void {
+  document.body.innerHTML = `
+    <canvas id="board" width="560" height="560"></canvas>
+    <p class="status" id="status"></p>
+    <p class="hint" id="hint"></p>
+    <div class="hand" id="hand"></div>
+    <div class="picker" id="picker" hidden></div>
+    <div class="picker" id="results" hidden></div>
+    <p class="keys" id="keys"></p>
+  `;
+}
+
 describe('boot', () => {
-  it('mounts the canvas and paints a frame', async () => {
-    document.body.innerHTML = `
-      <canvas id="board" width="480" height="480"></canvas>
-      <p id="boot-note"></p>
-    `;
-    // The render loop schedules frames; capture the callback so one can actually run.
+  it('wires every panel and paints a frame', async () => {
+    page();
     let frame: FrameRequestCallback | null = null;
     const raf = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
       frame = cb;
@@ -32,13 +39,17 @@ describe('boot', () => {
     await import('../../src/main');
 
     const board = document.querySelector<HTMLCanvasElement>('#board');
-    const note = document.querySelector<HTMLParagraphElement>('#boot-note');
-
     expect(board).not.toBeNull();
-    expect(note?.textContent).toMatch(/Scripted demo match/);
-    // HiDPI-corrected backing store.
-    expect(board?.width).toBeGreaterThan(480);
+    // Backing store is sized from devicePixelRatio, which is 1 under jsdom.
+    expect(board?.width).toBeGreaterThanOrEqual(560);
+    expect(board?.style.width).toBe('560px');
     expect(canvasStub.recorder.calls['scale']).toBeGreaterThan(0);
+
+    // The hand tray is populated from the initial view, so the player can see their cards.
+    expect(document.querySelectorAll('#hand button.hand-card')).toHaveLength(5);
+    // The key bindings are documented on the page.
+    expect(document.querySelector('#keys')?.textContent).toMatch(/Move the board cursor/);
+    expect(document.querySelector('#status')?.textContent).toMatch(/Pick a card/);
 
     // Run one frame: the board should actually be painted, not merely mounted.
     expect(frame).not.toBeNull();
@@ -48,10 +59,17 @@ describe('boot', () => {
     raf.mockRestore();
   });
 
-  it('surfaces a clear error when the canvas is missing from the page', async () => {
-    document.body.innerHTML = '';
+  it('surfaces a clear error when the board canvas is missing', async () => {
+    document.body.innerHTML = '<p id="status"></p>';
     vi.resetModules();
 
-    await expect(import('../../src/main')).rejects.toThrow(/#board canvas is missing/);
+    await expect(import('../../src/main')).rejects.toThrow(/#board is missing/);
+  });
+
+  it('surfaces a clear error when a panel is missing', async () => {
+    document.body.innerHTML = '<canvas id="board" width="560" height="560"></canvas>';
+    vi.resetModules();
+
+    await expect(import('../../src/main')).rejects.toThrow(/#status is missing/);
   });
 });
