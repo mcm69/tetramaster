@@ -94,6 +94,13 @@
         border-color: var(--accent);
         background: #1a2334;
       }
+      /* The card's arrow pattern, drawn with the same code the board uses. */
+      .arrow-preview {
+        display: block;
+        margin: 0 auto;
+        border-radius: 6px;
+        border: 1px solid var(--edge);
+      }
       .hand-name {
         font-weight: 600;
       }
@@ -235,7 +242,9 @@
         position: relative;
         display: flex;
         flex-direction: column;
+        align-items: center;
         gap: 0.15rem;
+        text-align: center;
         padding: 0.5rem 0.7rem;
         background: #161a24;
         border: 1px solid var(--edge);
@@ -259,6 +268,9 @@
       .collection-name {
         font-weight: 600;
         padding-right: 2.5rem;
+      }
+      .collection-meta {
+        font-family: inherit;
       }
       .collection-code,
       .collection-meta {
@@ -287,7 +299,9 @@
       .deck-slot {
         display: flex;
         flex-direction: column;
+        align-items: center;
         gap: 0.2rem;
+        text-align: center;
         flex: 1 1 12rem;
         padding: 0.5rem 0.7rem;
         background: #161a24;
@@ -295,7 +309,7 @@
         border-radius: 8px;
       }
       .deck-clear {
-        align-self: flex-start;
+        align-self: center;
         padding: 0.2rem 0.5rem;
         background: none;
         border: 1px solid var(--edge);
@@ -440,7 +454,10 @@
         margin: -1px;
         padding: 0;
         overflow: hidden;
-        clip: rect(0 0 0 0);
+        /* `rect()` requires commas. `rect(0 0 0 0)` is an invalid declaration and the whole
+           property is dropped, which left the live region relying on `overflow` alone. */
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
         white-space: nowrap;
         border: 0;
       }

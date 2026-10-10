@@ -26,6 +26,9 @@ Pick a mode from the bar at the top, then play the board.
 | **Master Tournament** | Your saved deck against one built specifically to counter it.   |
 | **Hotseat**           | Two players, one board, alternating. No computer involved.      |
 
+Every card you hold shows its **arrow pattern** — the actual directions it points — because that is
+the thing that decides where to play it. The board draws the same pattern, from the same code.
+
 **Controls** — the keyboard does everything the mouse does.
 
 | Key                      | Action                                |

@@ -172,26 +172,41 @@ export function drawScoreBar(
   ctx.font = '600 13px system-ui, -apple-system, sans-serif';
   ctx.textBaseline = 'middle';
 
+  // Three labels on one line, so each needs its own third of the bar.
+  //
+  // They used to sit at `mid - 10`, `mid` and `mid + 10`, which put the two counts on top of the
+  // turn label -- and the overlap grew as the counts did, so it was worst exactly when the score
+  // mattered most. Left, centre and right across the full width cannot collide.
+  const left = originX;
   const mid = originX + width / 2;
-  ctx.textAlign = 'right';
-  ctx.fillStyle = SEATS.player.frame;
-  ctx.fillText(`${counts.player} cards`, mid - 10, originY);
+  const right = originX + width;
+
   ctx.textAlign = 'left';
+  ctx.fillStyle = SEATS.player.frame;
+  ctx.fillText(`${counts.player} card${counts.player === 1 ? '' : 's'}`, left, originY);
+
+  ctx.textAlign = 'right';
   ctx.fillStyle = SEATS.ai.frame;
-  ctx.fillText(`${counts.ai} cards`, mid + 10, originY);
+  ctx.fillText(`${counts.ai} card${counts.ai === 1 ? '' : 's'}`, right, originY);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = COLORS.inkMuted;
-  const turnLabel =
-    state.phase === 'over'
-      ? 'match over'
-      : state.phase === 'chooseBattle'
-        ? 'choose a battle'
-        : `${state.turn} to play`;
-  ctx.fillText(turnLabel, mid, originY);
+  ctx.fillText(turnLabel(state), mid, originY);
   ctx.restore();
 
   return counts;
+}
+
+/**
+ * Whose turn it is, in words.
+ *
+ * Named rather than raw `'player'`/`'ai'`, which read as identifiers on the screen and matched
+ * nothing the rest of the interface says.
+ */
+export function turnLabel(state: GameState): string {
+  if (state.phase === 'over') return 'match over';
+  if (state.phase === 'chooseBattle') return 'choose a battle';
+  return state.turn === 'player' ? 'Player 1 to play' : 'Player 2 to play';
 }
 
 /** Draws a card count badge, used in the hand tray. */

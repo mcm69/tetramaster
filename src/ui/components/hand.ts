@@ -2,10 +2,16 @@
  * The hand tray and the results panel (PLAN.md §6, Stage 7).
  *
  * The tray is the player's only source of information about their own cards, so it shows more than
- * the board does: the exact stat code, how many arrows each card carries, and a warning when a card
- * has none — a card with no arrows can never take anything, and playing it is usually a wasted turn.
+ * the board does: the exact stat code, the card's actual arrow pattern, and a warning when a card has
+ * none — a card with no arrows can never take anything, and playing it is usually a wasted turn.
+ *
+ * The arrow pattern matters more than it looks. It used to say "5 arrows" — the count without the
+ * direction — which is the one thing you need to decide where to play. Choosing a square was a guess
+ * until you saw the arrows. Each card now carries a small canvas drawn by the same code that draws
+ * the board, plus the directions in words for screen readers.
  */
 
+import { arrowPreviewCanvas, describeArrows } from '../../render/arrowPreview.ts';
 import type { HandEntry, MatchView } from '../app.ts';
 import type { Card, MatchResult } from '../../core/types.ts';
 import { toCardView } from '../app.ts';
@@ -37,8 +43,11 @@ export function renderHand(
     button.setAttribute('aria-pressed', String(entry.selected));
     button.setAttribute(
       'aria-label',
-      `Card ${entry.index + 1}: ${entry.card.name}, ${entry.card.statCode}, ${entry.card.arrowCount} arrows.`,
+      `Card ${entry.index + 1}: ${entry.card.name}, ${entry.card.statCode}, ${describeArrows(entry.card.arrows)}.`,
     );
+
+    // The pattern first: it is the thing that decides where this card should go.
+    button.append(arrowPreviewCanvas(entry.card.arrows, { size: 56 }));
 
     const name = document.createElement('span');
     name.className = 'hand-name';
@@ -50,7 +59,9 @@ export function renderHand(
 
     const arrows = document.createElement('span');
     arrows.className = `hand-arrows${entry.card.arrowCount === 0 ? ' is-dead' : ''}`;
-    arrows.textContent = `${entry.card.arrowCount} arrows`;
+    // The directions, not just the count. "points NE, S, SW" tells you where it can take.
+    arrows.textContent = describeArrows(entry.card.arrows);
+    arrows.title = `${entry.card.arrowCount} arrows`;
 
     const warning = cardWarning(entry);
     if (warning !== null) {

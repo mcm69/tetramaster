@@ -126,8 +126,6 @@ function boot(): void {
   let thinking = false;
   let filter: CollectionFilter = DEFAULT_FILTER;
   let deckSlots: number[] = [...profile.save.deck];
-  let showingCollection = false;
-  let showingRules = false;
   let modeId: ModeId = profile.mode;
   let counterNote: string | null = null;
   // Progression runs exactly once per finished match. Declared up here because `newController`
@@ -307,16 +305,6 @@ function boot(): void {
     modeNoteEl.textContent = describeMode(MODES[modeId], counterNote);
   };
 
-  const showRulesPanel = (show: boolean): void => {
-    showingRules = show;
-    rulesEl.hidden = !show;
-    if (show) {
-      renderRules(rulesEl, () => {
-        showRulesPanel(false);
-      });
-    }
-  };
-
   // Reduced motion follows the OS setting until the player overrides it here, and keeps following
   // it afterwards if they never have.
   watchReducedMotion((systemReduced) => {
@@ -395,7 +383,7 @@ function boot(): void {
           renderProfileScreen();
         },
         onPlay: () => {
-          showCollection(false);
+          showScreen('match');
           seed += 1;
           controller = newController(seed);
           resultsEl.hidden = true;
@@ -421,26 +409,59 @@ function boot(): void {
     collectionEl.append(grid);
   };
 
+  /**
+   * Which of the three screens is showing.
+   *
+   * One owner for every `hidden` flag, because the previous arrangement -- each panel setting the
+   * other's -- had `showCollection` assign `rulesEl.hidden = showingRules`, which *reveals* the
+   * rules panel when the rules are not showing. Closing the collection dropped an empty bordered box
+   * into the flow above the board. Mutual exclusion is now structural rather than remembered.
+   */
+  type Screen = 'match' | 'collection' | 'rules';
+  let screen: Screen = 'match';
+
+  const showScreen = (next: Screen): void => {
+    screen = next;
+    const inMatch = next === 'match';
+
+    collectionEl.hidden = next !== 'collection';
+    rulesEl.hidden = next !== 'rules';
+    canvas.hidden = !inMatch;
+    handEl.hidden = !inMatch;
+    // Returning to the match restores whatever the picker and results already were.
+    pickerEl.hidden = !inMatch || pickerEl.hidden;
+    resultsEl.hidden = !inMatch || resultsEl.hidden;
+
+    toggleCollectionEl.setAttribute('aria-pressed', String(next === 'collection'));
+    toggleCollectionEl.textContent =
+      next === 'collection' ? 'Back to the match (C)' : 'Collection (C)';
+    toggleRulesEl.setAttribute('aria-pressed', String(next === 'rules'));
+
+    if (next === 'collection') {
+      renderProfileScreen();
+    } else if (next === 'rules') {
+      renderRules(rulesEl, () => {
+        showScreen('match');
+      });
+    } else {
+      rulesEl.textContent = '';
+      syncDom();
+    }
+  };
+
   const showCollection = (show: boolean): void => {
-    showingCollection = show;
-    collectionEl.hidden = !show;
-    canvas.hidden = show;
-    handEl.hidden = show;
-    pickerEl.hidden = show || showingRules || pickerEl.hidden;
-    resultsEl.hidden = show || showingRules || resultsEl.hidden;
-    rulesEl.hidden = showingRules;
-    toggleCollectionEl.setAttribute('aria-pressed', String(show));
-    toggleCollectionEl.textContent = show ? 'Back to the match (C)' : 'Collection (C)';
-    if (show) renderProfileScreen();
-    else syncDom();
+    showScreen(show ? 'collection' : 'match');
+  };
+  const showRulesPanel = (show: boolean): void => {
+    showScreen(show ? 'rules' : 'match');
   };
 
   toggleCollectionEl.addEventListener('click', () => {
-    showCollection(!showingCollection);
+    showScreen(screen === 'collection' ? 'match' : 'collection');
   });
 
   toggleRulesEl.addEventListener('click', () => {
-    showRulesPanel(!showingRules);
+    showScreen(screen === 'rules' ? 'match' : 'rules');
   });
 
   // ── input ──────────────────────────────────────────────────────────────────────────────────
@@ -514,10 +535,10 @@ function boot(): void {
         );
       },
       collection: () => {
-        showCollection(!showingCollection);
+        showScreen(screen === 'collection' ? 'match' : 'collection');
       },
       rules: () => {
-        showRulesPanel(!showingRules);
+        showScreen(screen === 'rules' ? 'match' : 'rules');
       },
     });
     syncDom();

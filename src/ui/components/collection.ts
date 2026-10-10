@@ -12,6 +12,7 @@
  */
 
 import { cardArrowCount, cardArrows, statCode } from '../../core/card.ts';
+import { arrowPreviewCanvas, describeArrows } from '../../render/arrowPreview.ts';
 import { figureById } from '../../data/cards.ts';
 import { MAX_PER_CARD, scoreCollection } from '../../game/collector.ts';
 import { DECK_SIZE } from '../../core/constants.ts';
@@ -315,13 +316,16 @@ function collectionCard(
     `${row.name}, ${row.code}, ${row.arrows.length} arrows, tier ${row.tier}, ${row.points} collector points${badges.length > 0 ? `, ${badges.join(', ')}` : ''}.`,
   );
 
+  button.append(arrowPreviewCanvas(row.card.arrows, { size: 44 }));
+
   const name = document.createElement('span');
   name.className = 'collection-name';
   name.textContent = row.name;
 
   const code = document.createElement('span');
   code.className = 'collection-code';
-  code.textContent = `${row.code} · ${row.arrows.length} arrows · tier ${row.tier}`;
+  code.textContent = `${row.code} · tier ${row.tier}`;
+  code.title = describeArrows(row.card.arrows);
 
   const meta = document.createElement('span');
   meta.className = 'collection-meta';

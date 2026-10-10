@@ -805,7 +805,7 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 **Stage:** 10 (Modes & polish) · **Status:** ⬜ → ✅
 **Did:** `src/ai/counterDeck.ts`, `src/game/modes.ts`, `src/audio/synth.ts`,
 `src/ui/screens/{rules,rulesView}.ts`, `src/ui/accessibility.ts`, `src/ui/components/toolbar.ts`, plus
-`main.ts`, `index.html`, and a v3 save with `settings`. **583 tests**, up from 468.
+`main.ts`, `index.html`, and a v3 save with `settings`. **636 tests**, up from 468.
 
 **Learned:**
 
@@ -842,12 +842,62 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S15 — 2026-10-10 — bugfixes: overlapping score text, and arrows you could not see
+
+**Status:** post-completion fixes. **636 tests**, up from 610.
+
+**Fixed:**
+
+1. **The score bar drew three labels on top of each other.** `drawScoreBar` put the two card counts
+   at `mid ± 10` and the turn label centred on `mid`, all at the same `y`. The counts ran straight
+   through the middle label — and the overlap grew with the counts, so it was worst exactly when the
+   score was worth reading. Now left / centre / right across the full width, which cannot collide.
+   The turn label also said `player to play`, leaking the internal `Owner` id; it now says
+   `Player 1 to play`.
+2. **The hand only said "N arrows".** The count without the direction is the one thing you need to
+   decide where to play a card, so choosing a square was a guess until you saw the board. Every card
+   in the hand, every deck slot and every collection card now carries a small canvas drawn by the
+   same `drawArrows` the board uses, plus the directions in words (`points N, E, SW`) for the tooltip
+   and the accessible name. A preview and the card it represents cannot drift apart.
+3. **Closing the collection dropped an empty panel above the board.** `showCollection` set
+   `rulesEl.hidden = showingRules` — which _reveals_ the rules panel when the rules are not showing.
+   Two panels each poking the other's flag is the whole cause, so this is now one `showScreen(next)`
+   with a `Screen` union, and mutual exclusion is structural rather than remembered.
+4. **`.sr-only` was not clipped.** `clip: rect(0 0 0 0)` is invalid CSS — `rect()` requires commas —
+   so the declaration was dropped and the live region relied on `overflow: hidden` alone. Now
+   `rect(0, 0, 0, 0)` plus `clip-path: inset(50%)`.
+5. **The announcer said "You's turn."** A possessive built from a seat name. It now reads
+   `Player 1's turn` / `Player 2's turn` in both single-player and hotseat.
+
+**Learned:**
+
+- **The arrow fix passed its first mutation test.** Removing the preview and the directions from the
+  hand tray again left the entire suite green — 163 tests, nothing. There was simply no assertion
+  that a card showed its arrows. `tests/ui/arrowPreview.test.ts` now covers all three surfaces, and
+  the mutation fails eight tests.
+- **Counting draw calls would never have caught the overlap.** The score bar still made exactly three
+  `fillText` calls when it was broken. The bug was in their _positions_, so the canvas stub now
+  records every `fillText` with x, y, alignment and font, and `tests/ui/scoreBar.test.ts` computes
+  the horizontal span of each label and asserts no two overlap — at every reachable score, in both
+  phases.
+- **I deleted a block of `main.ts` by accident** while collapsing the panel flags, and took four
+  commits' worth of recovery from `git show HEAD:src/main.ts`. Worth knowing that the file was in
+  git and clean at the time, which is the only reason it was a five-second fix rather than an
+  afternoon.
+
+**Next:** nothing required. Both reported bugs are fixed and mutation-tested.
+**Files touched:** `src/render/boardView.ts`, `src/render/arrowPreview.ts` (new),
+`src/ui/components/{hand,deckEditor,collection}.ts`, `src/main.ts`, `index.html`,
+`tests/ui/{scoreBar,arrowPreview}.test.ts` (new), `tests/ui/canvasStub.ts`, `README.md`, `STATUS.md`
+
+---
+
 ### S14 — 2026-10-10 — Stage 11 complete: the project is done
 
 **Stage:** 11 (Hardening & docs) · **Status:** ⬜ → ✅ · **All 11 stages complete.**
 **Did:** `tools/perf.ts` (a real performance gate), `.github/workflows/verify.yml`, a rewritten
 `README.md`, and `src/input/keys.ts` merging the documented key bindings with the handler.
-**610 tests**, up from 583.
+**636 tests**, up from 583.
 
 **Learned:**
 

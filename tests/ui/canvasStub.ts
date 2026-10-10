@@ -9,10 +9,21 @@
 
 import { vi } from 'vitest';
 
+/** One `fillText` call, with enough context to reason about where the text landed. */
+export interface TextCall {
+  readonly text: string;
+  readonly x: number;
+  readonly y: number;
+  readonly align: CanvasTextAlign;
+  readonly font: string;
+}
+
 export interface Recorder {
   readonly ctx: CanvasRenderingContext2D;
   /** Call counts by method name, e.g. `fill`, `stroke`, `drawImage`. */
   readonly calls: Record<string, number>;
+  /** Every `fillText`, in order. Needed to assert labels do not overlap. */
+  readonly text: TextCall[];
   /** Total draw calls, for assertions that do not care which operation. */
   total(): number;
 }
@@ -20,6 +31,7 @@ export interface Recorder {
 /** Builds a fresh recording context. */
 export function stubContext(): Recorder {
   const calls: Record<string, number> = {};
+  const text: TextCall[] = [];
   const bump = (name: string): void => {
     calls[name] = (calls[name] ?? 0) + 1;
   };
@@ -96,8 +108,11 @@ export function stubContext(): Recorder {
     strokeRect: () => {
       bump('strokeRect');
     },
-    fillText: () => {
+    fillText: (label: string, x: number, y: number) => {
       bump('fillText');
+      // Recorded so a test can assert two labels drawn on one line do not overlap. Counting the
+      // calls is not enough: the bug was three calls at the same y whose x ranges overlapped.
+      text.push({ text: label, x, y, align: ctx.textAlign, font: ctx.font });
     },
     setTransform: () => {
       bump('setTransform');
@@ -117,6 +132,7 @@ export function stubContext(): Recorder {
   } as unknown as CanvasRenderingContext2D;
 
   return {
+    text,
     ctx,
     calls,
     total: () => Object.values(calls).reduce((sum, n) => sum + n, 0),

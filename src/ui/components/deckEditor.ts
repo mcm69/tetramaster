@@ -8,6 +8,7 @@
 
 import { cardArrowCount, statCode } from '../../core/card.ts';
 import { figureById } from '../../data/cards.ts';
+import { arrowPreviewCanvas, describeArrows } from '../../render/arrowPreview.ts';
 import { deckStatus, growthLine } from './collection.ts';
 import { DECK_SIZE } from '../../core/constants.ts';
 import type { OwnedCard } from '../../core/types.ts';
@@ -103,13 +104,17 @@ function deckSlot(save: SaveData, slot: number, callbacks: DeckCallbacks): HTMLE
     return wrapper;
   }
 
+  // The arrows, so a deck can be judged on its reach and spread rather than on five names.
+  wrapper.append(arrowPreviewCanvas(card.arrows, { size: 48 }));
+
   const name = document.createElement('p');
   name.className = 'deck-name';
   name.textContent = figureById(card.figureId).name;
 
   const code = document.createElement('p');
   code.className = 'deck-code';
-  code.textContent = `${statCode(card)} · ${growthLine(card)}`;
+  code.textContent = `${statCode(card)} · ${describeArrows(card.arrows)}`;
+  code.title = growthLine(card);
 
   const warning = slotWarning(card);
   if (warning !== null) {
