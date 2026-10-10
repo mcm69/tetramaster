@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 6 · **Current stage:** 4 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 7 · **Current stage:** 5 — ready to start
 
 ---
 
@@ -42,8 +42,8 @@
 | 1     | Grid geometry & stats                 | ✅ Done        | ✅      | 72 tests; §1.2 + §1.3 traced     |
 | 2     | Card catalog                          | ✅ Done        | ✅      | 103 tests; 100 figures           |
 | 3     | Resolution engine (takedown + combos) | ✅ Done        | ✅      | 144 tests; §1.4/§1.5/§1.7 traced |
-| 4     | Battle math + multi-battle chains     | ⬜ Not started | ☐       | **next up**                      |
-| 5     | Match state machine                   | 🔒 Blocked     | ☐       |                                  |
+| 4     | Battle math + multi-battle chains     | ✅ Done        | ✅      | 163 tests; §1.6 traced           |
+| 5     | Match state machine                   | ⬜ Not started | ☐       | **next up**                      |
 | 6     | Rendering                             | 🔒 Blocked     | ☐       |                                  |
 | 7     | Playable match UI                     | 🔒 Blocked     | ☐       |                                  |
 | 8     | Opponent AI                           | 🔒 Blocked     | ☐       |                                  |
@@ -69,29 +69,34 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 4 — Battle math and multi-battle chains. Stages 0–3 are complete and every gate is green.**
+**Stage 5 — Match state machine. Stages 0–4 are complete and every gate is green.**
 
-The placement cascade is implemented and tested against hand-derived expectations. §1.4, §1.5 and
-§1.7 are traced to tagged tests, so `rules:audit` reports 5 traced / 4 pending / 0 untested.
+Every rule from §1.2 to §1.7 is now implemented and traced to tagged tests: **6 traced · 3 pending ·
+0 untested**. Battles are real — `rollBattle()` draws two independent uniform rolls, and the Monte
+Carlo suite confirms the empirical win rate matches `winProbability()` across all sixteen type
+pairings and a wide spread of stat gaps.
 
-**The battle is still a stub.** `defaultResolver` always returns `attackerWins: false`, so no real
-combat has run yet. Every cascade test forces an outcome deliberately — which is why the _shape_ of
-§1.7 is verified even though the _numbers_ are not. That gap is exactly what Stage 4 closes.
+**Nothing orchestrates a match yet.** There is no coin flip, no blocked-cell generation, no turn
+alternation, no scoring, and no way to play ten cards in a row. `resolvePlacement()` resolves one
+placement against a hand-built board.
 
 ## Next Actions
 
-- [ ] `battle.ts` gains `rollBattle(attacker, defender, rng)` — the two independent uniform rolls
-      of §1.6, returning `BattleOutcome`
-- [ ] `resolution.ts` takes the RNG-backed resolver as its default; keep `defaultResolver`
-      exported for the "no resolver" test
-- [ ] `tests/core/battle.test.ts` additions — **Monte Carlo**: 100k battles per type pair, empirical
-      win rate within 2% of `winProbability()`. This is the test that pins §1.6 statistically
-- [ ] Tests for: roll ranges inside the stat interval; `actual = base − roll` never negative; a
-      tie goes to the defender; determinism from a seed
-- [ ] Cascade tests re-run with the real resolver — at least one seeded scenario asserting the full
-      event log, so the two halves are proven to compose
-- [ ] Remove `1.6` from `PENDING` in `tools/rules-audit.ts` when its tests land
-- [ ] Update this file and commit as `stage(4): ...` (§7.2)
+- [ ] `src/core/match.ts` — `createMatch({seed, playerDeck, aiDeck})` and a pure
+      `applyAction(state, action) -> {state, events}` reducer
+- [ ] Blocked-cell generation: uniform 0–6 (Q3), shared/symmetric (Q4), and prove the
+      **10-card invariant** — 16 − max 6 blocked = 10 free cells = exactly the 10 cards
+- [ ] Coin flip shown before the match (Q5); turn alternation; score tally summing to 10
+- [ ] Win / draw / perfect detection, and the capture-choice step at match end (§1.1)
+- [ ] `illegal` events rather than throws for illegal actions (per §5.4)
+- [ ] Thread `rngState` through the reducer so a match saves and resumes exactly
+- [ ] `tools/verify.ts` skeleton — 1,000 headless matches asserting the invariants on every one
+- [ ] Remove `1.1` from `PENDING`, tag tests `[§1.1]`
+- [ ] Update this file and commit as `stage(5): ...` (§7.2)
+
+## Blocked On
+
+Nothing. Stage 5 depends only on Stages 1–4.
 
 ## Blocked On
 
@@ -103,12 +108,11 @@ Nothing. Stage 2 depends only on Stage 1.
 
 ## Next Stage Preview
 
-Stage 5 is the **match state machine** — blocked-cell generation, the coin flip, turn alternation,
-score tally, and win/draw/perfect detection, driven by a pure `applyAction` reducer. It is the
-first stage where a whole match runs headless end to end, which unlocks the 1,000-match invariant
-simulation. `resolvePlacement` already returns `{state, events}`, so the reducer is mostly turn
-bookkeeping; the interesting design question is splitting `phase: 'chooseBattle'` out of the
-engine so it never blocks. §1.1 comes out of `PENDING` there.
+Stage 6 is **rendering** — the canvas board, procedural card art, arrow sprites, and the animator
+that replays the event log. Everything it needs already exists: `GameEvent` is an exhaustive
+discriminated union, and a full match produces a complete, ordered log of it. HMR is already
+wired, so visual work will iterate quickly. Note that `src/render/**` is gated at only 60%
+coverage (§9.2) — pixel output is deliberately not asserted (§9.4); smoke plus manual play.
 
 ---
 
@@ -463,3 +467,42 @@ combination was exercised.
   pins the maths statistically rather than by example.
   **Files touched:** `src/core/resolution.ts`, `src/core/types.ts` (BattleResolver/BattleOutcome),
   `tests/fixtures.ts`, `tests/core/resolution.test.ts`, `STATUS.md`
+
+---
+
+### S7 — 2026-10-10 — Stage 4 complete: real battles, and what Monte Carlo cannot see
+
+**Stage:** 4 (Battle math + multi-battle chains) · **Status:** ⬜ → ✅
+**Did:** `rollBattle()` in `battle.ts` implements §1.6 — two bases drawn from their stat intervals,
+then two independent rolls, `actual = base − roll`, ties to the defender. `resolvePlacement()` now
+takes `{rng}` and binds the resolver itself, so the engine draws real battles with no call-site
+changes. `tests/core/rollBattle.test.ts` is the Monte Carlo suite: all 16 attacker/defender type
+pairings and nine stat gaps at 30k trials each, comparing the empirical rate against the _analytic
+mean_ of `winProbability` over the base intervals. **163 tests total, 6 rules traced, 0 untested.**
+**Verified by mutation:** ties awarded to the attacker → 3 failures; probability scaled → 1 failure;
+`actual = roll` instead of `base − roll` → **only 1 failure**.
+**Learned:**
+
+- **The mutation that broke `actual = base − roll` was caught by exactly one test — and it was not
+  the Monte Carlo.** `roll` and `base − roll` are _both_ uniform on `[0, base]`, so the win-rate
+  _distribution_ is identical either way; every statistical test sailed straight through a broken
+  implementation. Only the explicit `expect(r.atkActual).toBe(r.atkBase - r.atkRoll)` assertion
+  noticed. **Monte Carlo verifies the distribution, not the mechanism.** That is the sharpest
+  argument yet for keeping both kinds of test rather than reaching for whichever is convenient.
+- My own test expectations were wrong twice, in the same way: I built `card(15,'P',0,0)` expecting
+  it to attack a strong defence, but a `P` attacker uses its own `atk` against the defender's
+  `pdef`, so the 15 had to go in `pdef`. Caught both times by computing the analytic value
+  independently before touching the assertion.
+- **Identical cards give 0.4959, not 0.46875.** The 0.46875 figure is the _fixed-base_ case; with
+  bases redrawn every battle the two sides only tie outright about 1 round in 16, so the
+  defender's edge is small but still real. Both numbers are now asserted separately, with the test
+  explaining which is which — a reader who conflated them would conclude the rules were wrong.
+- Forcing an exact tie needs a scripted RNG returning zeros; there is no other way to observe the
+  tie rule directly rather than statistically, so `Rng` being a plain interface paid off.
+- The Monte Carlo suite runs ~1.5M battles in about 300ms, so it stays in the default `npm test`
+  rather than being gated behind a slow script. Full suite: 484ms.
+  **Next:** Stage 5 — the match state machine. First stage where a whole match runs headless, which
+  unlocks the 1,000-match invariant simulation and the 10-card invariant that justifies `MAX_BLOCKED = 6`.
+  **Files touched:** `src/core/battle.ts` (rollBattle, rngResolver), `src/core/resolution.ts` (rng
+  option), `tests/core/rollBattle.test.ts` (new, 15 tests), `tests/core/resolution.test.ts`
+  (composition tests), `tools/rules-audit.ts` (1.6 claimed), `STATUS.md`

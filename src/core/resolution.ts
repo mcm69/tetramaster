@@ -26,7 +26,7 @@
  */
 
 import { DIRECTIONS, hasArrow, neighbor, opposite } from './direction';
-import { resolveStats, winProbability } from './battle';
+import { resolveStats, rngResolver, winProbability } from './battle';
 import type {
   BattleResolver,
   BoardCard,
@@ -36,6 +36,7 @@ import type {
   GameState,
   Owner,
 } from './types';
+import type { Rng } from './rng';
 
 /**
  * The Stage 3 stub: the placed card always loses. Replaced by the real roll in Stage 4.
@@ -56,9 +57,12 @@ export const defaultResolver: BattleResolver = () => ({
 
 export interface ResolveOptions {
   /**
-   * Decides battles. Defaults to {@link defaultResolver}. Stage 4 passes the real RNG-backed one.
+   * Decides battles. Defaults to {@link defaultResolver}. Stage 4 wires the real RNG-backed one;
+   * tests override it to force a branch.
    */
   readonly battle?: BattleResolver;
+  /** An RNG to draw battles from, when no explicit resolver is given. */
+  readonly rng?: Rng;
 }
 
 export interface ResolveResult {
@@ -139,7 +143,7 @@ export function resolvePlacement(
   cell: Cell,
   options: ResolveOptions = {},
 ): ResolveResult {
-  const battle = options.battle ?? defaultResolver;
+  const battle = options.battle ?? (options.rng ? rngResolver(options.rng) : defaultResolver);
   const placed = state.board[cell];
   if (!placed) {
     return { state, events: [] };

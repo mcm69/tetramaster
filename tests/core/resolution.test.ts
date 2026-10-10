@@ -22,6 +22,7 @@ import {
   resolverBy,
   winsOnArrowCount,
 } from '../fixtures';
+import { createRng } from '../../src/core/rng';
 import type { GameEvent } from '../../src/core/types';
 
 // Board reference used by the comments below:
@@ -601,6 +602,88 @@ describe('cascade mechanics', () => {
     expect(ownedBy(after, 'player')).toEqual([10, 11, 14, 15]);
     expect(events.filter((e) => e.t === 'takedown')).toHaveLength(2);
     expect(events.filter((e) => e.t === 'battle')).toHaveLength(1);
+  });
+});
+
+describe('cascade with the real battle maths (Stage 4)', () => {
+  it('[§1.6] resolves a seeded battle through the cascade end to end', () => {
+    // 5 plays E at 6, and 6 points W back, so a real battle is fought with the seeded RNG.
+    const state = buildState({
+      pieces: { 6: { owner: 'ai', arrows: ['W'], atk: 5, type: 'P', pdef: 5, mdef: 5 } },
+      play: 5,
+      playedArrows: ['E'],
+      playedStats: { atk: 5, type: 'P', pdef: 5, mdef: 5 },
+    });
+    const rng = createRng(4242);
+    const { state: after, events } = resolvePlacement(state, 5, { rng });
+
+    const roll = events.find(
+      (e): e is Extract<GameEvent, { t: 'battle-roll' }> => e.t === 'battle-roll',
+    );
+    expect(roll).toBeDefined();
+    // The event log carries everything the animator needs to replay the fight.
+    expect(roll?.atkActual).toBe((roll?.atkBase ?? 0) - (roll?.atkRoll ?? 0));
+    expect(roll?.defActual).toBe((roll?.defBase ?? 0) - (roll?.defRoll ?? 0));
+    expect(roll?.probability).toBeGreaterThan(0);
+    expect(roll?.probability).toBeLessThan(1);
+    // Exactly one battle, and the winner is whoever the rolls say.
+    expect(events.filter((e) => e.t === 'battle')).toHaveLength(1);
+    expect(cardAt(after, 6)?.owner).toBe(roll?.attackerWins ? 'player' : 'ai');
+  });
+
+  it('[§1.6] is reproducible from a seed, so a match can be replayed exactly', () => {
+    const build = () =>
+      buildState({
+        pieces: {
+          6: { owner: 'ai', arrows: ['W'], atk: 8, type: 'M', pdef: 4, mdef: 9 },
+          9: { owner: 'ai', arrows: ['N'], atk: 6, type: 'P', pdef: 7, mdef: 3 },
+        },
+        play: 5,
+        playedArrows: ['E', 'S'],
+        playedStats: { atk: 11, type: 'X', pdef: 6, mdef: 6 },
+      });
+    const a = resolvePlacement(build(), 5, { rng: createRng(9001) });
+    const b = resolvePlacement(build(), 5, { rng: createRng(9001) });
+    expect(a.events).toEqual(b.events);
+    expect(a.state.board).toEqual(b.state.board);
+  });
+
+  it('[§1.6] different seeds produce different fights from the same position', () => {
+    const build = () =>
+      buildState({
+        pieces: { 6: { owner: 'ai', arrows: ['W'], atk: 8, type: 'M', pdef: 4, mdef: 9 } },
+        play: 5,
+        playedArrows: ['E'],
+        playedStats: { atk: 9, type: 'X', pdef: 5, mdef: 5 },
+      });
+    const outcomes = new Set(
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((seed) => {
+        const { events } = resolvePlacement(build(), 5, { rng: createRng(seed) });
+        const roll = events.find((e) => e.t === 'battle-roll');
+        return `${String(roll?.atkActual)}/${String(roll?.defActual)}`;
+      }),
+    );
+    expect(outcomes.size).toBeGreaterThan(1);
+  });
+
+  it('[§1.6] many seeded battles eventually flip the defender', () => {
+    // The stub made this trivial. With the real maths, an equal fight should flip roughly half
+    // the time, which proves the cascade is genuinely driven by the rolls.
+    let flipped = 0;
+    const trials = 40;
+    for (let seed = 0; seed < trials; seed++) {
+      const state = buildState({
+        pieces: { 6: { owner: 'ai', arrows: ['W'], atk: 7, type: 'P', pdef: 7, mdef: 7 } },
+        play: 5,
+        playedArrows: ['E'],
+        playedStats: { atk: 7, type: 'P', pdef: 7, mdef: 7 },
+      });
+      const { state: after } = resolvePlacement(state, 5, { rng: createRng(seed) });
+      if (cardAt(after, 6)?.owner === 'player') flipped++;
+    }
+    // Equal cards: the attacker should win a little under half the time (ties go to the defender).
+    expect(flipped / trials).toBeGreaterThan(0.25);
+    expect(flipped / trials).toBeLessThan(0.5);
   });
 });
 

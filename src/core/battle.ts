@@ -9,7 +9,8 @@
 
 import { STAT_SPAN } from './constants';
 import { lowestStat, highestStat, statInterval } from './card';
-import type { Card, StatIndex, StatKey } from './types';
+import type { Rng } from './rng';
+import type { BattleOutcome, BattleResolver, Card, StatIndex, StatKey } from './types';
 
 /** Which stat each side contributes to a battle. */
 export interface StatPick {
@@ -80,6 +81,55 @@ export interface BattleOdds {
 export function baseValue(index: StatIndex, roll: () => number): number {
   const { min, max } = statInterval(index);
   return min + Math.floor(roll() * (max - min + 1));
+}
+
+/**
+ * Fights one battle (PLAN.md §1.6). This is where the game's famous randomness lives.
+ *
+ * The order of draws is fixed and deliberate, because it is what makes a seeded match
+ * reproducible:
+ *
+ *   1. the attacker's base, from its stat's interval
+ *   2. the defender's base, from its stat's interval
+ *   3. the attacker's roll, uniform in [0, atkBase]
+ *   4. the defender's roll, uniform in [0, defBase]
+ *
+ * Both `actual` values are `base − roll`, so they are uniform on [0, base] and never negative.
+ * A tie goes to the defender (§1.6.2), which is why the comparison is strict.
+ *
+ * Note the consequence: a *higher roll is worse*. The strongest card can lose to the weakest,
+ * and will occasionally lose to a card many intervals below it. That is faithful, and it is why
+ * `winProbability` exists — to let the player see the odds before committing.
+ */
+export function rollBattle(attacker: Card, defender: Card, rng: Rng): BattleOutcome {
+  const pick = resolveStats(attacker, defender);
+
+  const atkBase = baseValue(pick.atkIndex, () => rng.next());
+  const defBase = baseValue(pick.defIndex, () => rng.next());
+
+  // Computed before rolling, so the UI can show the real odds before the outcome exists.
+  const probability = winProbability(atkBase, defBase);
+
+  const atkRoll = rng.int(atkBase + 1);
+  const defRoll = rng.int(defBase + 1);
+  const atkActual = atkBase - atkRoll;
+  const defActual = defBase - defRoll;
+
+  return {
+    attackerWins: atkActual > defActual, // ties go to the defender
+    atkBase,
+    atkRoll,
+    atkActual,
+    defBase,
+    defRoll,
+    defActual,
+    probability,
+  };
+}
+
+/** A {@link BattleResolver} bound to an RNG, ready to hand to `resolvePlacement`. */
+export function rngResolver(rng: Rng): BattleResolver {
+  return (attacker, defender) => rollBattle(attacker, defender, rng);
 }
 
 /**

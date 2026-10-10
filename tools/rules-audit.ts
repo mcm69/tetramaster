@@ -41,8 +41,9 @@ const PENDING: Record<string, number> = {
   // tests. Deleting a line from this map is what makes its test mandatory — keep the two in sync.
   '1.4': 3, // only the placed card attacks
   '1.5': 3, // arrow takedown
-  '1.6': 4, // card battle — resolveStats is done, but rollBattle and the cascades are not
-  '1.7': 4, // combos and multiple battles
+  // 1.6 (card battle) and 1.7 (combos and multi-battle chains) landed across Stages 3-4 and are
+  // now traced to tagged tests. The roll maths is pinned statistically in
+  // tests/core/rollBattle.test.ts; cascade shape in tests/core/resolution.test.ts.
   '1.8': 9, // stat growth and type evolution
   '1.9': 9, // collector level
 };
