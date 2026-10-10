@@ -91,6 +91,48 @@ export interface BattleOutcome {
 export type BattleResolver = (attacker: Card, defender: Card) => BattleOutcome;
 
 /**
+ * A card held in the persistent collection (§1.8).
+ *
+ * Structurally identical to a {@link Card}, but its stats and type *change between matches*, which
+ * is why it is a distinct type: a `Card` in a match is a rolled, immutable snapshot, while an
+ * `OwnedCard` is the thing that grows. The split keeps the match engine unable to mutate anything
+ * that is not copied out of the save first.
+ */
+export interface OwnedCard {
+  /**
+   * A stable identity for this instance, unique across the collection.
+   *
+   * Two copies of one figure are genuinely different cards that grow independently, and claiming a
+   * card inserts into the middle of the array — so progression and the deck cannot refer to a card
+   * by position. `uid` is what they refer to instead.
+   */
+  readonly uid: number;
+  readonly figureId: number;
+  readonly arrows: number;
+  atk: StatIndex;
+  type: CardType;
+  pdef: StatIndex;
+  mdef: StatIndex;
+}
+
+/** What one card became after a match, so the results screen can show it (§1.8). */
+export interface CardChange {
+  readonly uid: number;
+  readonly figureId: number;
+  readonly stat: StatKey;
+  readonly from: StatIndex;
+  readonly to: StatIndex;
+  /**
+   * True when the random stat choice landed on one already at its ceiling. The point is gone
+   * forever — the roll does not reroll, which is exactly why §1.8 calls it "deliberately
+   * frustrating".
+   */
+  readonly wasted: boolean;
+  /** Set when the card evolved type during the match. */
+  readonly evolvedTo?: CardType;
+}
+
+/**
  * A card as it exists in a match.
  *
  * `figureId` picks the artwork and identity; `arrows` is an 8-bit mask where bit `d` is set when
@@ -170,7 +212,18 @@ export type TakedownReason = 'arrow' | 'combo' | 'battle';
  * `switch (event.t)` in the animator to handle it.
  */
 export type GameEvent =
-  | { t: 'place'; cell: Cell; owner: Owner; figureId: number }
+  | {
+      t: 'place';
+      cell: Cell;
+      owner: Owner;
+      figureId: number;
+      /**
+       * Index into the hand *as it was at that moment*. The hand shrinks as cards are played, so
+       * this is not a deck position — but replaying the placements in order does recover which
+       * card was used, which is what §1.8 stat growth needs to know.
+       */
+      cardIndex: number;
+    }
   | { t: 'takedown'; cell: Cell; owner: Owner; from: Cell }
   | { t: 'combo'; cell: Cell; owner: Owner; from: Cell }
   | { t: 'battle'; attacker: Cell; defender: Cell; atkIndex: number; defIndex: number }

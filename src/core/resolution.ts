@@ -193,12 +193,13 @@ export function beginPlacement(state: GameState, cell: Cell): ResolveResult {
     const finished: GameState = {
       ...next,
       pendingBattles: [],
-      history: [...state.history, ...events],
+      history: state.history,
     };
     return { state: finished, events, pendingBattles: [] };
   }
   // Battles are pending. Record the takedowns so far and leave the queue for `continuePlacement`.
-  const partial: GameState = { ...next, history: [...state.history, ...events] };
+  // History is appended by applyAction, so the intermediate states here leave it alone.
+  const partial: GameState = { ...next };
   return { state: partial, events, pendingBattles: pending };
 }
 
@@ -299,7 +300,7 @@ export function continuePlacement(
     ...state,
     board,
     pendingBattles: [],
-    history: [...state.history, ...events],
+    history: state.history,
   };
   return { state: next, events, pendingBattles: [] };
 }

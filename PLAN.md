@@ -374,9 +374,12 @@ tetramaster/
 │   │   ├── battle.ts        # §1.6: type resolution, base draw, roll, win probability
 │   │   ├── resolution.ts    # §1.5/§1.7: the placement cascade (the heart of the game)
 │   │   ├── match.ts         # GameState factory + reducer (applyAction), turn flow
+│   ├── game/               # persistent player state; sits above core and data (see note below)
 │   │   ├── progression.ts   # §1.8 stat growth + type evolution
 │   │   ├── collector.ts     # §1.9 points + level lookup + 1700 glitch
-│   │   └── save.ts          # localStorage serialize/deserialize + migration guard
+│   │   ├── save.ts          # localStorage serialize/deserialize + migration guard
+│   │   ├── report.ts        # replays the event log to recover §1.8 credits
+│   │   └── profile.ts       # collection + deck + record; the only thing that outlives a match
 │   ├── ai/
 │   │   ├── evaluate.ts      # static position scoring (exposure, corners, quarantine)
 │   │   ├── moves.ts         # enumerate (cell, card) pairs with predicted outcome
@@ -807,6 +810,24 @@ These improve the game and must be listed in the README, not silently shipped:
 3. **Battle-target selection is always offered** when multiple battles are pending (the original let
    the machine choose in some paths); we let the player decide, per the documented rule.
 4. **No save-scumming of card rolls is prevented** — acquisition rolls are shown before you accept.
+5. **A new save is seeded with a 12-card starter collection** (`src/game/profile.ts`). Without it a
+   fresh install has an empty deck and the game cannot start at all. A collection that is _short_
+   rather than empty is topped up for the same reason — a migrated save can land in that state.
+
+### 7.4a Why `src/game/` exists
+
+Stage 9's modules (`progression`, `collector`, `save`) sit in `src/game/` rather than in
+`src/core/`, which is a change from the file tree this plan originally drew. `progression` needs the
+figure catalog for stat caps, and `src/data/` already imports `src/core/` — putting these in core
+would make the dependency graph cyclic. The resulting order is:
+
+```
+core  →  data  →  game  →  ui
+```
+
+The engine stays free of any knowledge that cards persist, and `src/game` stays free of the DOM, so
+the same rules can be exercised from Node in tests. `DECK_SIZE` moved to `src/core/constants.ts` for
+the same reason: both layers need it, so neither owns it.
 
 ### 7.5 Art & audio policy
 

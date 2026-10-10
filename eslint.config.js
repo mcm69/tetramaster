@@ -26,7 +26,7 @@ export default tseslint.config(
   },
   {
     // Architecture rules from PLAN.md §9.3 — static enforcement of the layering.
-    files: ['src/core/**/*.ts', 'src/ai/**/*.ts', 'src/data/**/*.ts'],
+    files: ['src/core/**/*.ts', 'src/ai/**/*.ts', 'src/data/**/*.ts', 'src/game/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

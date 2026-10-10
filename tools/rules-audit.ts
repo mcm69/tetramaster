@@ -35,13 +35,17 @@ interface RuleSection {
  *
  * `--strict` fails while any entry remains; CI switches to it once Stage 11 lands.
  */
-const PENDING: Record<string, number> = {
-  // 1.1 (match setup) landed in Stage 5, traced to tests/core/match.test.ts, with the cross-match
-  // invariants checked by tools/verify.ts. 1.2-1.7 landed across Stages 1-4.
-  // Deleting a line from this map is what makes its test mandatory — keep the two in sync.
-  '1.8': 9, // stat growth and type evolution
-  '1.9': 9, // collector level
-};
+/**
+ * Rules not yet implemented, mapped to the stage that will implement them.
+ *
+ * Empty. 1.1 landed in Stage 5, 1.2-1.7 across Stages 1-4, and 1.8 (progression) and 1.9 (collector
+ * level) in Stage 9 — which is the first time every paragraph of §1 has a test behind it.
+ *
+ * Deleting a line from this map is what makes its test mandatory, so the map and the suite have to
+ * be changed together. Keeping it empty is the point: a rule nobody is tracking is a rule nobody
+ * implemented.
+ */
+const PENDING: Record<string, number> = {};
 
 const STRICT = process.argv.includes('--strict');
 

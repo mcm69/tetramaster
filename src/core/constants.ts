@@ -15,6 +15,13 @@ export const MAX_BLOCKED = 6;
 /** Each player commits five cards (§1.1). */
 export const HAND_SIZE = 5;
 
+/**
+ * How many cards a deck must hold to be playable. Same number as a hand, but a distinct concept:
+ * the hand is what you play from this match, the deck is what you bring to it. Lives here rather
+ * than in the UI because the game layer has to validate it too.
+ */
+export const DECK_SIZE = 5;
+
 /** Total cards in a match: ten, which is also the final score total. */
 export const TOTAL_CARDS = HAND_SIZE * 2;
 

@@ -14,10 +14,17 @@ beforeAll(() => {
   canvasStub.reset();
 });
 
-/** The elements main.ts queries, in the shape index.html provides them. */
+/**
+ * The elements main.ts queries, in the shape index.html provides them.
+ *
+ * Kept in step with index.html by hand: boot is the one test that catches an element the app needs
+ * but the page does not have, and it can only do that if the fixture really does mirror the page.
+ */
 function page(): void {
   document.body.innerHTML = `
+    <div class="collection-panel" id="collection" hidden></div>
     <canvas id="board" width="560" height="560"></canvas>
+    <div class="toolbar"><button type="button" class="rematch" id="toggle-collection">Collection (C)</button></div>
     <p class="status" id="status"></p>
     <p class="hint" id="hint"></p>
     <div class="hand" id="hand"></div>
@@ -47,8 +54,9 @@ describe('boot', () => {
 
     // The hand tray is populated from the initial view, so the player can see their cards.
     expect(document.querySelectorAll('#hand button.hand-card')).toHaveLength(5);
-    // The key bindings are documented on the page.
+    // The key bindings are documented on the page, including the collection shortcut.
     expect(document.querySelector('#keys')?.textContent).toMatch(/Move the board cursor/);
+    expect(document.querySelector('#keys')?.textContent).toMatch(/C — collection/);
     expect(document.querySelector('#status')?.textContent).toMatch(/Pick a card/);
 
     // Run one frame: the board should actually be painted, not merely mounted.

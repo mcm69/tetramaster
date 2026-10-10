@@ -195,6 +195,21 @@ export function applyAction(
   state: GameState,
   action: Action,
 ): { state: GameState; events: GameEvent[] } {
+  const step = reduce(state, action);
+  // An illegal action changed nothing, so it must not even grow the log — and returning the very
+  // same state object is what lets a caller detect a rejected action by identity.
+  if (step.events.some((event) => event.t === 'illegal')) return step;
+  // History is appended here and only here, so it holds exactly the events of this action and
+  // nothing else. Resolution used to append its own, which quietly left `place`, `turn` and
+  // `game-over` out of the log — and PLAN.md §3.2 promises a log a match can be replayed from.
+  // Stage 9 needs exactly that to work out which cards were used (§1.8).
+  return {
+    state: { ...step.state, history: [...state.history, ...step.events] },
+    events: step.events,
+  };
+}
+
+function reduce(state: GameState, action: Action): { state: GameState; events: GameEvent[] } {
   switch (action.t) {
     case 'place':
       return place(state, action.cell, action.cardIndex);
@@ -238,7 +253,7 @@ function place(
   const rng = rngFor(placed);
   const begun = beginPlacement(placed, cell);
   const events: GameEvent[] = [
-    { t: 'place', cell, owner, figureId: card.figureId },
+    { t: 'place', cell, owner, figureId: card.figureId, cardIndex },
     ...begun.events,
   ];
 

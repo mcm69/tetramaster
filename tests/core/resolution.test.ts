@@ -529,15 +529,17 @@ describe('cascade mechanics', () => {
     expect(JSON.stringify(state.board)).toBe(before);
   });
 
-  it('appends its events to the state history', () => {
+  it('returns events without recording them; applyAction owns the history', () => {
+    // Resolution is a pure function and leaves the log alone. `applyAction` is the single place
+    // that appends, which is what makes the log complete — `place`, `turn` and `game-over` included.
     const state = buildState({
       pieces: { 6: { owner: 'ai', arrows: [] } },
       play: 5,
       playedArrows: ['E'],
     });
     const { state: after, events } = resolvePlacement(state, 5);
-    expect(after.history.length).toBe(events.length);
-    expect(after.history).toEqual(events);
+    expect(events.length).toBeGreaterThan(0);
+    expect(after.history).toEqual(state.history);
   });
 
   it('clears pendingBattles after resolution', () => {

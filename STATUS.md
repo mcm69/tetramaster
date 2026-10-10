@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 11 · **Current stage:** 9 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 12 · **Current stage:** 10 — ready to start
 
 ---
 
@@ -45,10 +45,10 @@
 | 4     | Battle math + multi-battle chains     | ✅ Done        | ✅      | 163 tests; §1.6 traced           |
 | 5     | Match state machine                   | ✅ Done        | ✅      | 201 tests; §1.1 traced           |
 | 6     | Rendering                             | ✅ Done        | ✅      | 248 tests; board on screen       |
-| 7     | Playable match UI                     | ⬜ Not started | ☐       | **next up** — first playable     |
-| 8     | Opponent AI                           | 🔒 Blocked     | ☐       |                                  |
-| 9     | Progression, collection, save         | 🔒 Blocked     | ☐       |                                  |
-| 10    | Modes & polish                        | 🔒 Blocked     | ☐       |                                  |
+| 7     | Playable match UI                     | ✅ Done        | ✅      | mouse + keyboard match           |
+| 8     | Opponent AI                           | ✅ Done        | ✅      | 10 NPCs; beats random by 12-18   |
+| 9     | Progression, collection, save         | ✅ Done        | ✅      | 468 tests; **all §1 traced**     |
+| 10    | Modes & polish                        | ⬜ Not started | ☐       | **next up**                      |
 | 11    | Hardening & docs                      | 🔒 Blocked     | ☐       | `verify --strict` green here     |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 waiting on earlier stage
@@ -69,125 +69,111 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 9 — Progression, collection, save. Stages 0–8 are complete, and the game is finished as a game.**
+**Stage 10 — Modes & polish. Stages 0–9 are complete, and every paragraph of §1 now has a test.**
 
-You now play a full match against an opponent. It scores every legal placement by free captures,
-battle odds weighted by probability, combo reach, corner value, exposure and quarantine, across ten
-distinct personalities in three difficulty tiers. It beats a random-move baseline by 12–18 points
-and it is still very much beatable.
+`npm run rules:audit` reports **9 traced · 0 pending · 0 untested**. That is the first time the spec
+and the implementation are provably in agreement rather than merely consistent by inspection.
 
-**Nothing persists.** Cards do not grow between matches, there is no collection to browse, and a
-reload loses everything. Those are the last two missing rules: §1.8 (stat growth and type evolution)
-and §1.9 (collector level).
+The game is complete as a game: you keep a collection, cards grow between matches (§1.8 — and a
+point can still be thrown away, faithfully), you level up by completing the catalogue rather than by
+winning (§1.9), and completing it reproduces the original's `Would you like to discard?` glitch.
+Progress survives a reload through a versioned save that migrates an older format rather than
+discarding it.
 
 ## Next Actions
 
-- [ ] `progression.ts` (§1.8) — after a **won** match, each used card gains +1 to one of its three
-      stats, chosen at random, **wasting the roll if that stat is already capped**
-- [ ] Type evolution: a card that **wins any battle** has a 1/32 chance P/M→X and 1/256 chance X→A
-- [ ] `collector.ts` (§1.9) — +10 unique figure, +5 unique arrow pattern, +1 X, +2 A; the full
-      threshold table, and the `>= 1700` "Would you like to discard?" glitch
-- [ ] `save.ts` — versioned localStorage schema with a migration guard
-- [ ] Tests: 1/32 and 1/256 rates over 100k trials; collector points against hand-computed cases;
-      save round-trip and migration; cap-wasting asserted explicitly
-- [ ] Collection and deck-editor screens
-- [ ] Remove `1.8` and `1.9` from `PENDING` — this is the last stage that claims rules
-- [ ] Update this file and commit as `stage(9): ...` (§7.2)
+- [ ] `tools/balance.ts` — add a progression sweep: how long does a card take to max, and does §1.8's
+      cap-wasting actually slow a player down as intended?
+- [ ] Tournament mode — the counter-deck ladder the original has, using `master` as the ceiling
+- [ ] Master Tournament opponent weighting (PLAN.md §6, Stage 10)
+- [ ] Title screen, rules screen, opponent-select screen (`src/ui/screens/` per the §5 tree)
+- [ ] Progression roll-off animation on the results screen, so a wasted point is _seen_ rather than
+      inferred from a hint line
+- [ ] Responsive layout down to 1280×720; DPR-aware canvas
+- [ ] `README.md` — the §7.4 deviations list, which the plan requires be shipped, not just noted
+- [ ] Stage 11: `verify --strict` green, then the hardening pass
 
 ## Blocked On
 
-Nothing. Stage 9 depends only on Stages 1–8.
+Nothing. Stage 10 depends only on Stages 1–9.
 
-## Two lessons from Stage 8 worth keeping
+## Lessons worth keeping
+
+### From Stage 9
+
+- **The "append-only log for replay" could not actually be replayed.** `place`, `turn` and
+  `game-over` were returned by the reducer but never written to `state.history`, because the
+  resolution layer appended its own events and nothing else did. §1.8 needs to know which cards were
+  used and how many battles each won, and that lives only in the log. `applyAction` is now the single
+  place history is written — but an illegal action still returns the _identical_ state object, so
+  "nothing happened" stays detectable by identity.
+- **Two mutations survived my first attempt at testing battle credit.** Crediting the loser instead
+  of the winner, and ignoring defensive wins entirely, both passed — because every test happened to
+  run on matches where the player only ever attacked. Those rules are now stated on synthetic
+  histories built from a board I control, which is the only way to test a case real play rarely
+  produces.
+- **A migrated save could leave the game unplayable.** A v1 save holding one card loaded perfectly
+  fine and then handed the engine a one-card deck. The starter grant now tops a short collection up
+  rather than only filling an empty one.
+
+### From Stage 8
 
 - **My balance harness was wrong twice before the AI was.** First it confined the AI to the `player`
   seat, which loses ~39% of matches; then it reported `win / decided` straight from the outcome, so
-  a strong AI playing the `ai` seat registered as _losing_. Both times the AI looked mediocre and
-  I nearly "fixed" a healthy evaluation. Instrument first, then judge.
+  a strong AI playing the `ai` seat registered as _losing_. Both times the AI looked mediocre and I
+  nearly "fixed" a healthy evaluation. Instrument first, then judge.
 - **The AI had a rule error, not a tuning error.** Its risk term counted enemy arrows already aimed
   at a square — but §1.4 says only the just-placed card attacks, so those arrows can never do
   anything. The AI was fleeing a threat that does not exist, and the penalty outweighed a capture,
   so it played a passive game and lost to random. Correcting the _model_ fixed it; the reweighting I
   tried first had done nothing.
 
-## Blocked On
+## Note on the busy guard — now live
 
-Nothing. Stage 8 depends only on Stages 1–7.
-
-## Note on the busy guard
-
-`MatchController.dispatch()` refuses actions while the board is animating. Through the UI this is
-currently unreachable, because `selectCard` already refuses during an animation and a placement
-clears the selection — the test pins the _behaviour_ (no second card is ever placed mid-animation),
-not that specific line. The guard is kept deliberately as defence-in-depth at the single choke point,
-because the AI in Stage 8 will dispatch without holding a selected card. Reassess once the AI lands.
-
-## Blocked On
-
-Nothing. Stage 7 depends only on Stages 1–6.
-
-## Blocked On
-
-Nothing. Stage 6 depends only on Stages 1–5.
+`MatchController.dispatch()` refuses actions while the board is animating. As of Stage 8 that guard
+is genuinely reachable: the opponent drives `submitExternal()` without holding a selected card, and
+`main.ts` also gates it behind `thinking` so the AI takes exactly one decision per turn rather than
+a burst of them as the animation settles. The guard stays.
 
 ## Balance Note for Stage 8
 
-A side observation from this stage's sweeps, recorded so it is not rediscovered later:
+A side observation from that stage's sweeps, recorded so it is not rediscovered later:
 
 - Matched decks, both sides playing the same policy, give a near-even split (39.9% / 38.5%), so
   **turn order carries no positional bias**. Good.
 - **Clustering cards raises the perfect-game rate roughly 1.7x** (10.0% vs 5.9% for a corner-greedy
   policy). This is a genuine strategic property — dense adjacency maximises combo cascades — and
-  matches the community advice to avoid bunching up. Not a bug, but Stage 8's `balance.ts` should
-  check the AI does not fall into it.
-
-## Blocked On
-
-Nothing. Stage 5 depends only on Stages 1–4.
-
-## Blocked On
-
-Nothing. Stage 4 depends only on Stages 1–3.
-
-## Blocked On
-
-Nothing. Stage 2 depends only on Stage 1.
-
-## Next Stage Preview
-
-Stage 6 is **rendering** — the canvas board, procedural card art, arrow sprites, and the animator
-that replays the event log. Everything it needs already exists: `GameEvent` is an exhaustive
-discriminated union, and a full match produces a complete, ordered log of it. HMR is already
-wired, so visual work will iterate quickly. Note that `src/render/**` is gated at only 60%
-coverage (§9.2) — pixel output is deliberately not asserted (§9.4); smoke plus manual play.
-
----
+  matches the community advice to avoid bunching up. Not a bug, and `balance.ts` checks the AI does
+  not fall into it.
 
 ## Decisions
 
 Settled. Do not revisit without a strong reason; if you do, log it here with the new date.
 
-| Date       | Decision                                                                                                | Rationale                                                                                                                                                                                         |
-| ---------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-10-10 | **TypeScript + Vite** (switched from vanilla ES modules)                                                | Type safety is the main defence for a rules engine this branch-heavy; Vite gives HMR and a real production build                                                                                  |
-| 2026-10-10 | `strict` + `noUncheckedIndexedAccess`, `any` banned                                                     | The grid is `Cell[]` indexed 0–15; the flag forces honest handling of out-of-range and undefined                                                                                                  |
-| 2026-10-10 | **Vitest**, replacing `node:test`                                                                       | Shares Vite's transform pipeline, one config for tests and coverage, native ESM                                                                                                                   |
-| 2026-10-10 | Two Vitest projects: `node` env for core/ai, `jsdom` for ui                                             | Keeps the DOM-free guarantee of `core`/`ai` mechanically enforced                                                                                                                                 |
-| 2026-10-10 | Coverage is three signals, not one number: rule traceability + gated coverage % + simulation invariants | Line coverage can't tell you a rule is inverted; traceability is the real bar (`PLAN.md` §9)                                                                                                      |
-| 2026-10-10 | Tests tagged `[§1.6]`-style; `rules:audit` fails CI if a §1 paragraph is untested                       | Makes "is this rule covered?" a build failure instead of a review comment                                                                                                                         |
-| 2026-10-10 | `src/core`/`src/ai` coverage ≥ 95% lines / 90% branches; UI/render ≥ 60%                                | Floors to catch new untested code; not the definition of done                                                                                                                                     |
-| 2026-10-10 | Zero **runtime** dependencies; devDependencies expected                                                 | Nothing ships to the browser from `node_modules`                                                                                                                                                  |
-| 2026-10-10 | All randomness via injectable seeded RNG; no `Math.random()` in `core`/`ai`                             | Battle outcomes are ~random by design; determinism is what makes §1 testable                                                                                                                      |
-| 2026-10-10 | `src/core/` and `src/ai/` must be DOM-free                                                              | Lets the rules engine run headless for the 10k-match verification                                                                                                                                 |
-| 2026-10-10 | Engine as a pure reducer returning an event log; renderer consumes events                               | Testable rules, animatable presentation, no coupling                                                                                                                                              |
-| 2026-10-10 | Rules sourced from Trifthen's GameFAQs doc (2000/2001), cross-checked vs. xvw.lol and Caves of Narshe   | The three sources agree; the original in-game rules are undocumentable                                                                                                                            |
-| 2026-10-10 | Show exact stats and win probability in the UI                                                          | Deliberate deviation from the original, which hid this information — see `PLAN.md` §7.4                                                                                                           |
-| 2026-10-10 | Card art and audio are 100% procedural                                                                  | No copyrighted FF9 assets may enter the repo                                                                                                                                                      |
-| 2026-10-10 | Include a player-facing rules screen                                                                    | The original shipped none, which is the game's single most-cited flaw                                                                                                                             |
-| 2026-10-10 | **All 8 open questions resolved to their defaults**                                                     | User sign-off, 2026-10-10. Defaults are recorded per-question below                                                                                                                               |
-| 2026-10-10 | `rules:audit` tracks **PENDING** rules by stage instead of failing on every untested rule               | An always-red gate gets ignored. Implementing a rule means deleting its `PENDING` entry, which is what makes the test mandatory. Verified: removing an entry without a test makes the tool exit 1 |
-| 2026-10-10 | `src/core` coverage enforced **per file** (95/90/95), not just in aggregate                             | Subsumes the plan's "five hardest files" clause without special-casing filenames                                                                                                                  |
-| 2026-10-10 | Node 26 runs `.ts` directly; no `tsx` dependency                                                        | `node tools/rules-audit.ts` works natively under type stripping                                                                                                                                   |
+| Date       | Decision                                                                                                | Rationale                                                                                                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-10-10 | **TypeScript + Vite** (switched from vanilla ES modules)                                                | Type safety is the main defence for a rules engine this branch-heavy; Vite gives HMR and a real production build                                                                                                         |
+| 2026-10-10 | `strict` + `noUncheckedIndexedAccess`, `any` banned                                                     | The grid is `Cell[]` indexed 0–15; the flag forces honest handling of out-of-range and undefined                                                                                                                         |
+| 2026-10-10 | **Vitest**, replacing `node:test`                                                                       | Shares Vite's transform pipeline, one config for tests and coverage, native ESM                                                                                                                                          |
+| 2026-10-10 | Two Vitest projects: `node` env for core/ai, `jsdom` for ui                                             | Keeps the DOM-free guarantee of `core`/`ai` mechanically enforced                                                                                                                                                        |
+| 2026-10-10 | Coverage is three signals, not one number: rule traceability + gated coverage % + simulation invariants | Line coverage can't tell you a rule is inverted; traceability is the real bar (`PLAN.md` §9)                                                                                                                             |
+| 2026-10-10 | Tests tagged `[§1.6]`-style; `rules:audit` fails CI if a §1 paragraph is untested                       | Makes "is this rule covered?" a build failure instead of a review comment                                                                                                                                                |
+| 2026-10-10 | `src/core`/`src/ai` coverage ≥ 95% lines / 90% branches; UI/render ≥ 60%                                | Floors to catch new untested code; not the definition of done                                                                                                                                                            |
+| 2026-10-10 | Zero **runtime** dependencies; devDependencies expected                                                 | Nothing ships to the browser from `node_modules`                                                                                                                                                                         |
+| 2026-10-10 | All randomness via injectable seeded RNG; no `Math.random()` in `core`/`ai`                             | Battle outcomes are ~random by design; determinism is what makes §1 testable                                                                                                                                             |
+| 2026-10-10 | `src/core/` and `src/ai/` must be DOM-free                                                              | Lets the rules engine run headless for the 10k-match verification                                                                                                                                                        |
+| 2026-10-10 | Engine as a pure reducer returning an event log; renderer consumes events                               | Testable rules, animatable presentation, no coupling                                                                                                                                                                     |
+| 2026-10-10 | Rules sourced from Trifthen's GameFAQs doc (2000/2001), cross-checked vs. xvw.lol and Caves of Narshe   | The three sources agree; the original in-game rules are undocumentable                                                                                                                                                   |
+| 2026-10-10 | Show exact stats and win probability in the UI                                                          | Deliberate deviation from the original, which hid this information — see `PLAN.md` §7.4                                                                                                                                  |
+| 2026-10-10 | Card art and audio are 100% procedural                                                                  | No copyrighted FF9 assets may enter the repo                                                                                                                                                                             |
+| 2026-10-10 | Include a player-facing rules screen                                                                    | The original shipped none, which is the game's single most-cited flaw                                                                                                                                                    |
+| 2026-10-10 | **All 8 open questions resolved to their defaults**                                                     | User sign-off, 2026-10-10. Defaults are recorded per-question below                                                                                                                                                      |
+| 2026-10-10 | `rules:audit` tracks **PENDING** rules by stage instead of failing on every untested rule               | An always-red gate gets ignored. Implementing a rule means deleting its `PENDING` entry, which is what makes the test mandatory. Verified: removing an entry without a test makes the tool exit 1                        |
+| 2026-10-10 | `src/core` coverage enforced **per file** (95/90/95), not just in aggregate                             | Subsumes the plan's "five hardest files" clause without special-casing filenames                                                                                                                                         |
+| 2026-10-10 | Node 26 runs `.ts` directly; no `tsx` dependency                                                        | `node tools/rules-audit.ts` works natively under type stripping                                                                                                                                                          |
+| 2026-10-10 | **A third layer, `src/game/`**, above `core` and `data`, holding everything that outlives a match       | `progression` needs the figure catalog for stat caps and `data/` already imports `core/`, so the plan's placement in `core/` would have made the graph cyclic. Order is now core → data → game → ui. See `PLAN.md` §7.4a |
+| 2026-10-10 | `applyAction` is the **single writer of `state.history`**                                               | The resolution layer used to append its own events, which silently left `place`/`turn`/`game-over` out of a log `PLAN.md` §3.2 promises is replayable. An illegal action still returns the identical state object        |
+| 2026-10-10 | A new save is seeded with a 12-card starter collection, and a _short_ collection is topped up           | Without it a fresh install cannot start, and a migrated v1 save can load fine and still leave the engine with fewer than five cards                                                                                      |
 
 ## Open Questions
 
@@ -229,6 +215,12 @@ wrong during implementation, change `PLAN.md` §1 and log it here — don't sile
    message untypeable. A no-op predicate buys nothing and costs clarity.
 7. **`Family` gained a `'dragon'` member** in Stage 2, for the late-game figures. The plan listed
    the union without enumerating it; the catalog chose the members.
+8. **Stage 9's modules live in `src/game/`, not `src/core/`.** `progression.ts`, `collector.ts` and
+   `save.ts` moved out, plus two new files (`report.ts`, `profile.ts`). See `PLAN.md` §7.4a for the
+   dependency argument. `DECK_SIZE` moved to `src/core/constants.ts` because both layers need it.
+9. **The `place` event gained a `cardIndex` field** in Stage 9. Without it the log cannot say _which_
+   card was played, which §1.8 growth depends on. It indexes the hand as it was at that moment, not a
+   deck position, because the hand shrinks as cards are played.
 
 ## Corrections to the Plan
 
@@ -242,6 +234,10 @@ Found while implementing, fixed in `PLAN.md` in the same commit:
 2. **The grid edge count was wrong.** The plan said 48 on-grid adjacencies; the correct figure for a
    4×4 board with eight directions is **84 directed (42 undirected)**, plus 44 off-grid steps.
    Corrected in `PLAN.md` §6 and here.
+3. **The event log did not contain the whole match.** `PLAN.md` §3.2 describes `history` as an
+   append-only log for replay, but `place`, `turn` and `game-over` were only ever returned from
+   `applyAction`, never written to state — so nothing could be replayed. Fixed in Stage 9 by making
+   `applyAction` the one writer. The plan's description was right; the code was not.
 
 ## Known Issues
 
@@ -712,3 +708,53 @@ as two tests — not as a claim someone has to verify by hand.
   **Files touched:** `src/ai/{evaluate,moves,opponent,personalities}.ts` (new), `tools/balance.ts`
   (new), `tests/ai/opponent.test.ts` (new), `src/ui/app.ts` (submitExternal), `src/main.ts`,
   `STATUS.md`
+
+---
+
+### S12 — 2026-10-10 — Stage 9 complete: every rule in §1 is now traced
+
+**Stage:** 9 (Progression, collection, save) · **Status:** ⬜ → ✅
+**Did:** `src/game/{progression,collector,save,report,profile}.ts` (new layer), `src/ui/components/{collection,deckEditor}.ts`,
+the collection screen wired into `main.ts` and `index.html`, and `src/game/**` added to the test and coverage config.
+`PENDING` in `tools/rules-audit.ts` is now **empty**. **468 tests.**
+
+**Learned:**
+
+- **The "append-only log for replay" could not be replayed.** `place`, `turn` and `game-over` were
+  returned by the reducer but never written to `state.history` — `resolution.ts` appended its own
+  events and nothing else appended anything else. §1.8 needs to know which cards were used and how
+  many battles each won, and that information exists nowhere else. `PLAN.md` §3.2 described the log
+  correctly all along; the code did not implement it. Fixed by making `applyAction` the single
+  writer, while an illegal action still returns the _identical_ state object so "nothing happened"
+  stays detectable by identity. Adding `cardIndex` to the `place` event was also needed: the log
+  could not say _which_ card was played, because the hand shrinks and the index is not a deck slot.
+- **Two mutations survived my first attempt at testing §1.8 battle credit.** Crediting the loser
+  instead of the winner passed; ignoring defensive wins entirely passed. Every test happened to run
+  on matches where the player only ever attacked, so neither error was observable. The rules are now
+  stated on synthetic histories built from a board the test controls — the only way to exercise a
+  case real play rarely produces. §1.8 credits _any_ battle won, so a defender that holds its ground
+  earns exactly what an attacker earns; getting that backwards would quietly reward turtling.
+- **A migrated save could leave the game unplayable.** A v1 save containing one card parsed cleanly,
+  and then `Profile.matchDeck()` handed the engine a one-card deck. The starter grant now tops a
+  _short_ collection up, not just an empty one. Found by a test I wrote for a different reason.
+- **Two temporal dead zones in `main.ts`, in two consecutive stages.** Stage 8 built the controller
+  before the opponent was declared; Stage 9 reset `settled` from `newController`, which runs during
+  initialisation, before `settled` was declared. Same failure mode twice, in the one file with no
+  import-time safety net. State a module's initialisation depends on **before** the call that
+  depends on it.
+- **`defaultStorage()` handed back a fresh in-memory store on every call.** Every write was silently
+  discarded. The memoisation is now the fix, and the test that caught it is named for the symptom a
+  player would see — "saving does nothing" — rather than for the implementation.
+- Nine further mutations confirmed the rules are really pinned: rerolling a capped stat, both
+  evolution rates transposed, `P → A` skipping the `X` step, the §1.9 dedup fused into one pass
+  instead of two, the glitch threshold off by two, migration disabled, and a uid collision surviving
+  a load.
+- Measured: 1/32 and 1/256 verified over 100k and 200k trials; the `Master` title at 1698 and the
+  glitch at 1700 are two points apart and both are pinned.
+
+**Next:** Stage 10 — modes and polish. Tournament ladder, screens, progression roll-off animation.
+`rules:audit` now reports **9 traced · 0 pending · 0 untested** for the first time.
+**Files touched:** `src/game/*` (new), `src/ui/components/{collection,deckEditor}.ts` (new),
+`src/core/{types,match,constants}.ts`, `src/main.ts`, `index.html`, `vite.config.ts`,
+`eslint.config.js`, `tests/game/*` (new), `tests/ui/collection.test.ts` (new),
+`tools/rules-audit.ts`, `PLAN.md`, `STATUS.md`

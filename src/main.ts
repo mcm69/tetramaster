@@ -13,14 +13,25 @@ import { createMatch } from './core/match.ts';
 import { rollInstance } from './core/card.ts';
 import { createRng } from './core/rng.ts';
 import { figuresOfTier } from './data/cards.ts';
+import { personalityById } from './ai/personalities.ts';
 import { drawBoard, boardLayout, drawScoreBar } from './render/boardView.ts';
 import { COLORS, FONTS } from './render/theme.ts';
 import { clickToAction, hitTest, KEY_BINDINGS } from './input/pointer.ts';
 import { MatchController } from './ui/app.ts';
 import { Opponent } from './ai/opponent.ts';
-import { PERSONALITIES, personalityById } from './ai/personalities.ts';
 import { renderBattlePicker } from './ui/components/picker.ts';
 import { renderHand, renderResults, statusText } from './ui/components/hand.ts';
+import {
+  DEFAULT_FILTER,
+  buildRows,
+  renderCollection,
+  renderCollectorHeader,
+  toggleDeck,
+  type CollectionFilter,
+} from './ui/components/collection.ts';
+import { renderDeckEditor, suggestDeck } from './ui/components/deckEditor.ts';
+import { Profile } from './game/profile.ts';
+import { describeChange } from './game/progression.ts';
 import type { Card, Tier } from './core/types.ts';
 
 const BOARD_SIZE = 560;
@@ -43,6 +54,8 @@ function boot(): void {
   const pickerEl = query('#picker');
   const resultsEl = query('#results');
   const keysEl = query('#keys');
+  const collectionEl = query('#collection');
+  const toggleCollectionEl = query('#toggle-collection') as HTMLButtonElement;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('boot: 2d canvas context unavailable');
@@ -54,21 +67,35 @@ function boot(): void {
   canvas.style.height = `${BOARD_SIZE}px`;
   ctx.scale(dpr, dpr);
 
+  // Stage 9: the collection, deck and record survive a reload. Loaded before the controller,
+  // which builds its deck from them.
+  const profile = new Profile();
+
   let seed = 20261010;
   // Stage 8: the opponent plays its own side. Swap `personalityById` to face a different NPC.
   // Declared before `controller`, which is built by `newController` below and touches it.
-  const opponent = new Opponent(personalityById('vivi'), seed + 101);
+  const opponent = new Opponent(personalityById(profile.save.opponent), seed + 101);
   let thinking = false;
+  let filter: CollectionFilter = DEFAULT_FILTER;
+  let deckSlots: number[] = [...profile.save.deck];
+  let showingCollection = false;
+  // Progression runs exactly once per finished match. Declared up here because `newController`
+  // resets it and is called during initialisation, below this point.
+  let settled = false;
   const layout = boardLayout(BOARD_SIZE - 40, 20, 20);
   let controller = newController(seed);
 
   function newController(nextSeed: number): MatchController {
     opponent.reset(nextSeed + 101);
     thinking = false;
+    settled = false;
+    hintEl.textContent = '';
+    // The player's deck is now the saved one; the opponent keeps drawing from the catalogue so a
+    // new save does not silently weaken the opposition.
     return new MatchController(
       createMatch({
         seed: nextSeed,
-        playerDeck: demoDeck(nextSeed, 2),
+        playerDeck: profile.matchDeck(),
         aiDeck: demoDeck(nextSeed + 1, 3),
       }),
     );
@@ -76,7 +103,7 @@ function boot(): void {
 
   keysEl.textContent =
     KEY_BINDINGS.map((b) => `${b.keys} — ${b.action}`).join('   ·   ') +
-    `   ·   N — new match (vs ${PERSONALITIES[3]?.name ?? 'the house'})`;
+    `   ·   N — new match (vs ${personalityById(profile.save.opponent).name})   ·   C — collection`;
 
   // ── rendering ─────────────────────────────────────────────────────────────────────────────
 
@@ -106,7 +133,20 @@ function boot(): void {
 
   // ── DOM sync ──────────────────────────────────────────────────────────────────────────────
 
+  /** Progression runs once per finished match, the first time the results appear. */
+  const settleIfFinished = (): void => {
+    if (settled) return;
+    const result = controller.state.result;
+    if (result === null) return;
+    settled = true;
+    const growth = profile.finishMatch(controller.state, result.outcome).growth;
+    if (growth.changes.length > 0) {
+      hintEl.textContent = growth.changes.map(describeChange).join('   ·   ');
+    }
+  };
+
   const syncDom = (): void => {
+    settleIfFinished();
     const view = controller.view;
     statusEl.textContent = statusText(view);
     hintEl.textContent = view.hint ?? '';
@@ -128,7 +168,10 @@ function boot(): void {
         view.result,
         controller.taken,
         (index) => {
+          const card = controller.taken[index];
           controller.claim(index);
+          // §1.1: a won card joins the collection for good, which is how it ever grows.
+          if (card !== undefined) profile.claim(card);
           syncDom();
         },
         () => {
@@ -142,6 +185,81 @@ function boot(): void {
       resultsEl.hidden = true;
     }
   };
+
+  // ── the collection screen ─────────────────────────────────────────────────────────────────
+
+  const renderProfileScreen = (): void => {
+    collectionEl.textContent = '';
+
+    const header = document.createElement('div');
+    renderCollectorHeader(header, profile.save);
+    collectionEl.append(header);
+
+    const deck = document.createElement('div');
+    renderDeckEditor(
+      deck,
+      { ...profile.save, deck: deckSlots },
+      {
+        onSelect: (slot, uid) => {
+          if (uid === null) {
+            deckSlots = deckSlots.filter((_, index) => index !== slot);
+          } else {
+            const next = [...deckSlots];
+            while (next.length < slot) next.push(uid);
+            next[slot] = uid;
+            deckSlots = next;
+          }
+          profile.setDeck(deckSlots);
+          renderProfileScreen();
+        },
+        onAuto: () => {
+          deckSlots = suggestDeck(profile.save);
+          profile.setDeck(deckSlots);
+          renderProfileScreen();
+        },
+        onPlay: () => {
+          showCollection(false);
+          seed += 1;
+          controller = newController(seed);
+          resultsEl.hidden = true;
+          syncDom();
+        },
+      },
+    );
+    collectionEl.append(deck);
+
+    const rows = buildRows(profile.save, filter);
+    const grid = document.createElement('div');
+    renderCollection(grid, rows, filter, deckSlots, profile.save.collection.length > 0, {
+      onFilter: (next) => {
+        filter = next;
+        renderProfileScreen();
+      },
+      onToggleDeck: (uid) => {
+        deckSlots = toggleDeck(deckSlots, uid);
+        profile.setDeck(deckSlots);
+        renderProfileScreen();
+      },
+    });
+    collectionEl.append(grid);
+  };
+
+  const showCollection = (show: boolean): void => {
+    showingCollection = show;
+    collectionEl.hidden = !show;
+    canvas.hidden = show;
+    handEl.hidden = show;
+    pickerEl.hidden = show || pickerEl.hidden;
+    resultsEl.hidden = show || resultsEl.hidden;
+    toggleCollectionEl.setAttribute('aria-pressed', String(show));
+    toggleCollectionEl.textContent = show ? 'Back to the match (C)' : 'Collection (C)';
+    if (show) renderProfileScreen();
+    else syncDom();
+  };
+
+  toggleCollectionEl.addEventListener('click', () => {
+    showCollection(!showingCollection);
+  });
 
   // ── input ──────────────────────────────────────────────────────────────────────────────────
 
@@ -207,6 +325,9 @@ function boot(): void {
       controller.cancel();
     } else if (event.key === 'h' || event.key === 'H') {
       controller.showHint();
+    } else if (event.key === 'c' || event.key === 'C') {
+      showCollection(!showingCollection);
+      return;
     } else if (event.key === 'n' || event.key === 'N') {
       seed += 1;
       controller = newController(seed);
