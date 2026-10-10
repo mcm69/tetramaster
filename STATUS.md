@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 12 · **Current stage:** 10 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 13 · **Current stage:** 11 — ready to start
 
 ---
 
@@ -36,20 +36,20 @@
 
 ## Stage Progress
 
-| Stage | Name                                  | Status         | DoD met | Notes                            |
-| ----- | ------------------------------------- | -------------- | ------- | -------------------------------- |
-| 0     | Scaffold                              | ✅ Done        | ✅      | toolchain green; `verify` exit 0 |
-| 1     | Grid geometry & stats                 | ✅ Done        | ✅      | 72 tests; §1.2 + §1.3 traced     |
-| 2     | Card catalog                          | ✅ Done        | ✅      | 103 tests; 100 figures           |
-| 3     | Resolution engine (takedown + combos) | ✅ Done        | ✅      | 144 tests; §1.4/§1.5/§1.7 traced |
-| 4     | Battle math + multi-battle chains     | ✅ Done        | ✅      | 163 tests; §1.6 traced           |
-| 5     | Match state machine                   | ✅ Done        | ✅      | 201 tests; §1.1 traced           |
-| 6     | Rendering                             | ✅ Done        | ✅      | 248 tests; board on screen       |
-| 7     | Playable match UI                     | ✅ Done        | ✅      | mouse + keyboard match           |
-| 8     | Opponent AI                           | ✅ Done        | ✅      | 10 NPCs; beats random by 12-18   |
-| 9     | Progression, collection, save         | ✅ Done        | ✅      | 468 tests; **all §1 traced**     |
-| 10    | Modes & polish                        | ⬜ Not started | ☐       | **next up**                      |
-| 11    | Hardening & docs                      | 🔒 Blocked     | ☐       | `verify --strict` green here     |
+| Stage | Name                                  | Status         | DoD met | Notes                              |
+| ----- | ------------------------------------- | -------------- | ------- | ---------------------------------- |
+| 0     | Scaffold                              | ✅ Done        | ✅      | toolchain green; `verify` exit 0   |
+| 1     | Grid geometry & stats                 | ✅ Done        | ✅      | 72 tests; §1.2 + §1.3 traced       |
+| 2     | Card catalog                          | ✅ Done        | ✅      | 103 tests; 100 figures             |
+| 3     | Resolution engine (takedown + combos) | ✅ Done        | ✅      | 144 tests; §1.4/§1.5/§1.7 traced   |
+| 4     | Battle math + multi-battle chains     | ✅ Done        | ✅      | 163 tests; §1.6 traced             |
+| 5     | Match state machine                   | ✅ Done        | ✅      | 201 tests; §1.1 traced             |
+| 6     | Rendering                             | ✅ Done        | ✅      | 248 tests; board on screen         |
+| 7     | Playable match UI                     | ✅ Done        | ✅      | mouse + keyboard match             |
+| 8     | Opponent AI                           | ✅ Done        | ✅      | 10 NPCs; beats random by 12-18     |
+| 9     | Progression, collection, save         | ✅ Done        | ✅      | 468 tests; **all §1 traced**       |
+| 10    | Modes & polish                        | ✅ Done        | ✅      | 3 modes, rules screen, audio, a11y |
+| 11    | Hardening & docs                      | ⬜ Not started | ☐       | **next up** — README + CI          |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 waiting on earlier stage
 
@@ -69,35 +69,53 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 10 — Modes & polish. Stages 0–9 are complete, and every paragraph of §1 now has a test.**
+**Stage 11 — Hardening & docs. Stages 0–10 are complete. The game is finished.**
 
-`npm run rules:audit` reports **9 traced · 0 pending · 0 untested**. That is the first time the spec
-and the implementation are provably in agreement rather than merely consistent by inspection.
+Three modes are playable: a **Match** against a named opponent, **Master Tournament** where the
+computer builds a deck against yours, and **Hotseat** for two players at one keyboard. There is a
+rules screen generated one-entry-per-§1-paragraph and tied to `PLAN.md` by a test, so it cannot
+fall behind the spec. Sound is synthesised and off by default. The board is mirrored into an
+`aria-live` region, motion follows `prefers-reduced-motion`, and ownership is drawn as shape and tint
+rather than tint alone.
 
-The game is complete as a game: you keep a collection, cards grow between matches (§1.8 — and a
-point can still be thrown away, faithfully), you level up by completing the catalogue rather than by
-winning (§1.9), and completing it reproduces the original's `Would you like to discard?` glitch.
-Progress survives a reload through a versioned save that migrates an older format rather than
-discarding it.
+**Measured:** every AI beats random by 12–18 points · the Master Tournament counter has a **12.2-point
+mean advantage** and is better in **100%** of 120 decks · the opening player wins 41.9% of decided
+matches · perfect games ~17.7%.
 
 ## Next Actions
 
-- [ ] `tools/balance.ts` — add a progression sweep: how long does a card take to max, and does §1.8's
-      cap-wasting actually slow a player down as intended?
-- [ ] Tournament mode — the counter-deck ladder the original has, using `master` as the ceiling
-- [ ] Master Tournament opponent weighting (PLAN.md §6, Stage 10)
-- [ ] Title screen, rules screen, opponent-select screen (`src/ui/screens/` per the §5 tree)
-- [ ] Progression roll-off animation on the results screen, so a wasted point is _seen_ rather than
-      inferred from a hint line
-- [ ] Responsive layout down to 1280×720; DPR-aware canvas
-- [ ] `README.md` — the §7.4 deviations list, which the plan requires be shipped, not just noted
-- [ ] Stage 11: `verify --strict` green, then the hardening pass
+- [ ] `README.md` — controls, rules summary, architecture, how to extend (add a figure, add an
+      opponent), and the §7.4 deviations list the plan requires be shipped
+- [ ] CI workflow running `npm run verify` on every push
+- [ ] Performance pass: board render under 4ms/frame; confirm the animator queue stays bounded
+- [ ] `verify --strict` green, then a final `git log` review for a coherent history
+- [ ] Optional, if there is appetite: FF9's per-match card _sale_ economy, and an opponent roster
+      drawn from the real game rather than the project-authored set
 
 ## Blocked On
+
+Nothing. Stage 11 depends only on Stages 1–10.
 
 Nothing. Stage 10 depends only on Stages 1–9.
 
 ## Lessons worth keeping
+
+### From Stage 10
+
+- **A mutation that never applied is worse than no mutation.** Prettier had reformatted the line I
+  was patching, so my "short player deck is not topped up" mutation was a silent no-op and the test
+  suite came back green. I nearly recorded that test as worthless when in fact it was fine. **Confirm
+  the mutation changed the file before believing a result.** Every other mutation in the batch did
+  land, so the habit is worth more than the individual check.
+- **The first measurement of the counter-deck said 1.5 points of advantage, and 60%.** That was
+  real, and it was also an artefact: I had given the counter a five-card pool to choose from, while
+  the mode draws from the player's whole collection. With a realistic collection it is **12.2 points,
+  and better in 100% of 120 decks**. A benchmark built on an unrealistic input is not a weak
+  benchmark, it is a wrong one.
+- **The rules screen is tied to `PLAN.md` by a test.** It asserts the rendered section ids are
+  exactly the §1 headings parsed out of the plan. Add a rule to the spec and the screen's test fails
+  until it is written up. Documentation that can silently fall behind the implementation is worse
+  than none, because it is confidently wrong.
 
 ### From Stage 9
 
@@ -238,6 +256,10 @@ Found while implementing, fixed in `PLAN.md` in the same commit:
    append-only log for replay, but `place`, `turn` and `game-over` were only ever returned from
    `applyAction`, never written to state — so nothing could be replayed. Fixed in Stage 9 by making
    `applyAction` the one writer. The plan's description was right; the code was not.
+4. **`prefers-reduced-motion` was implemented but never read.** The `Animator` had taken a
+   `reduceMotion` option since Stage 6 and nothing ever passed it, so the accessibility requirement
+   existed in the API and nowhere else. Stage 10 wires it to a live watch, not a one-time read, since
+   the setting can change while the page is open.
 
 ## Known Issues
 
@@ -758,3 +780,45 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 `src/core/{types,match,constants}.ts`, `src/main.ts`, `index.html`, `vite.config.ts`,
 `eslint.config.js`, `tests/game/*` (new), `tests/ui/collection.test.ts` (new),
 `tools/rules-audit.ts`, `PLAN.md`, `STATUS.md`
+
+---
+
+### S13 — 2026-10-10 — Stage 10 complete: three modes, a rules screen, sound and access
+
+**Stage:** 10 (Modes & polish) · **Status:** ⬜ → ✅
+**Did:** `src/ai/counterDeck.ts`, `src/game/modes.ts`, `src/audio/synth.ts`,
+`src/ui/screens/{rules,rulesView}.ts`, `src/ui/accessibility.ts`, `src/ui/components/toolbar.ts`, plus
+`main.ts`, `index.html`, and a v3 save with `settings`. **583 tests**, up from 468.
+
+**Learned:**
+
+- **A mutation that never applied is worse than no mutation.** Prettier had reformatted the line I
+  was patching, so "short player deck is not topped up" was a silent no-op and the suite came back
+  green. I nearly wrote the test off as worthless; it was fine, and the mutation was the broken
+  thing. I now assert the file actually changed before believing a mutation result.
+- **The first measurement of the counter-deck said 1.5 points of advantage, 60% of decks.** Real,
+  and an artefact: I had given the counter a five-card pool while the mode draws from the whole
+  collection. With a realistic collection it is **12.2 points, better in 100% of 120 decks**. The
+  benchmark was wrong, not the feature.
+- **The rules screen is pinned to `PLAN.md` by a test.** It asserts its section ids are exactly the §1
+  headings parsed out of the plan, so adding a rule without writing it up fails the build.
+- **`prefers-reduced-motion` had been in the API since Stage 6 and read by nothing.** The
+  requirement existed in a constructor option and nowhere else; it is now a live watch rather than a
+  one-time read, because the OS setting can change while the page is open.
+- **`defaultStorage()`-style silence again, in a new place.** `planDecks` handed back whatever the
+  player had saved, so a collection of three produced a three-card deck and `createMatch` threw —
+  the game would not start. Both sides now top up. Found by the test I wrote for an unrelated reason.
+- The counter-deck deliberately scores with the _exact_ `winProbability` rather than a heuristic, so
+  there is no second copy of the battle maths to drift. Nine mutations confirm it: greedy inverted,
+  band midpoints replaced by raw indices, hotseat handed to the computer, the counter bypassed, the
+  top-up removed, audio defaulting to on, a v2 save migrating to sound already enabled, a losing
+  battle playing the winning cue, and audio playing while switched off.
+- Not done and stated rather than implied: the DoD asked for "no console errors in a full session",
+  and that was checked headlessly (`tests/game/session.test.ts` drives all three modes, ten
+  personalities and sixty matches) plus `tests/ui/boot.test.ts`, not in a real browser.
+
+**Next:** Stage 11 — README, CI workflow, performance pass, `verify --strict`.
+**Files touched:** `src/ai/counterDeck.ts`, `src/game/{modes,save,profile}.ts`, `src/audio/synth.ts`,
+`src/ui/screens/*`, `src/ui/accessibility.ts`, `src/ui/components/toolbar.ts`, `src/main.ts`,
+`index.html`, `vite.config.ts`, `tests/{ai/counterDeck,game/modes,game/session,audio/synth,ui/rules,ui/toolbar,ui/collection,ui/boot}.test.ts`,
+`tools/balance.ts`, `PLAN.md`, `STATUS.md`

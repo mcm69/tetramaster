@@ -22,9 +22,16 @@ beforeAll(() => {
  */
 function page(): void {
   document.body.innerHTML = `
+    <div class="toolbar-bar" id="toolbar"></div>
     <div class="collection-panel" id="collection" hidden></div>
+    <div class="collection-panel" id="rules" hidden></div>
     <canvas id="board" width="560" height="560"></canvas>
-    <div class="toolbar"><button type="button" class="rematch" id="toggle-collection">Collection (C)</button></div>
+    <div class="toolbar">
+      <button type="button" class="rematch" id="toggle-collection">Collection (C)</button>
+      <button type="button" class="rematch" id="toggle-rules">How to play (R)</button>
+    </div>
+    <p class="mode-note" id="mode-note"></p>
+    <p class="sr-only" id="announcer" role="status" aria-live="polite" aria-atomic="true"></p>
     <p class="status" id="status"></p>
     <p class="hint" id="hint"></p>
     <div class="hand" id="hand"></div>
@@ -47,16 +54,29 @@ describe('boot', () => {
 
     const board = document.querySelector<HTMLCanvasElement>('#board');
     expect(board).not.toBeNull();
-    // Backing store is sized from devicePixelRatio, which is 1 under jsdom.
+    // The backing store is sized from devicePixelRatio (1 under jsdom); the CSS size is scaled to
+    // fit the viewport, so it is at most the design size and never below the legibility floor.
     expect(board?.width).toBeGreaterThanOrEqual(560);
-    expect(board?.style.width).toBe('560px');
-    expect(canvasStub.recorder.calls['scale']).toBeGreaterThan(0);
+    const cssWidth = Number.parseInt(board?.style.width ?? '0', 10);
+    expect(cssWidth).toBeLessThanOrEqual(560);
+    expect(cssWidth).toBeGreaterThanOrEqual(420);
+    // The DPR/CSS scale is applied with setTransform rather than scale, so it cannot compound on
+    // every resize.
+    expect(canvasStub.recorder.calls['setTransform']).toBeGreaterThan(0);
 
     // The hand tray is populated from the initial view, so the player can see their cards.
     expect(document.querySelectorAll('#hand button.hand-card')).toHaveLength(5);
+    // The mode bar offers all three modes, and the board is mirrored into a live region.
+    expect(document.querySelectorAll('#toolbar button.mode-button')).toHaveLength(3);
+    // The canvas is opaque to a screen reader, so the turn must be mirrored into a live region.
+    const announcer = document.querySelector('#announcer');
+    expect(announcer?.getAttribute('aria-live')).toBe('polite');
+    expect(announcer?.textContent).toMatch(/turn/);
     // The key bindings are documented on the page, including the collection shortcut.
     expect(document.querySelector('#keys')?.textContent).toMatch(/Move the board cursor/);
     expect(document.querySelector('#keys')?.textContent).toMatch(/C — collection/);
+    expect(document.querySelector('#keys')?.textContent).toMatch(/R — how to play/);
+    expect(document.querySelector('#keys')?.textContent).toMatch(/M — next mode/);
     expect(document.querySelector('#status')?.textContent).toMatch(/Pick a card/);
 
     // Run one frame: the board should actually be painted, not merely mounted.

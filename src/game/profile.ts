@@ -15,11 +15,14 @@ import {
   emptySave,
   loadSave,
   recordOutcome,
+  withSettings,
   writeSave,
   type SaveData,
+  type Settings,
   type StorageLike,
 } from './save.ts';
 import { DECK_SIZE } from '../core/constants.ts';
+import type { ModeId } from './modes.ts';
 import { createRng, type Rng } from '../core/rng.ts';
 import { figuresOfTier } from '../data/cards.ts';
 import type { Card, GameState, Outcome, OwnedCard, Tier } from '../core/types.ts';
@@ -175,6 +178,25 @@ export class Profile {
   setOpponent(id: string): void {
     this.data = { ...this.data, opponent: id };
     this.persist();
+  }
+
+  get settings(): Settings {
+    return this.data.settings;
+  }
+
+  /** Updates one or more preferences and saves them at once. */
+  updateSettings(patch: Partial<Settings>): Settings {
+    this.data = withSettings(this.data, patch);
+    this.persist();
+    return this.data.settings;
+  }
+
+  get mode(): ModeId {
+    return this.data.settings.mode;
+  }
+
+  setMode(mode: ModeId): void {
+    this.updateSettings({ mode });
   }
 
   /** Wipes the save. Used by the reset control and by tests. */

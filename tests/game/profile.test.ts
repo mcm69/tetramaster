@@ -290,6 +290,36 @@ describe('persistence', () => {
   });
 });
 
+describe('settings', () => {
+  it('starts with sound off, because the player never asked for it', () => {
+    expect(new Profile(storage()).settings.audio).toBe(false);
+  });
+
+  it('updates and persists', () => {
+    const store = storage();
+    const profile = new Profile(store);
+    profile.updateSettings({ audio: true, volume: 0.25 });
+    expect(new Profile(store).settings).toMatchObject({ audio: true, volume: 0.25 });
+  });
+
+  it('merges rather than replacing', () => {
+    const profile = new Profile(storage());
+    profile.updateSettings({ audio: true });
+    profile.updateSettings({ volume: 0.9 });
+    const settings = profile.settings;
+    expect(settings.audio).toBe(true);
+    expect(settings.volume).toBe(0.9);
+  });
+
+  it('remembers the mode across a reload', () => {
+    const store = storage();
+    const profile = new Profile(store);
+    expect(profile.mode).toBe('match');
+    profile.setMode('hotseat');
+    expect(new Profile(store).mode).toBe('hotseat');
+  });
+});
+
 describe('reset', () => {
   it('wipes the record and re-deals', () => {
     const store = storage();

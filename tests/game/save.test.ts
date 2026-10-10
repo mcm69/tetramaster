@@ -16,8 +16,11 @@ import {
   defaultStorage,
   emptySave,
   loadSave,
+  DEFAULT_SETTINGS,
   memoryStorage,
   parseSave,
+  parseSettings,
+  withSettings,
   profile,
   recordOutcome,
   serialiseSave,
@@ -219,6 +222,96 @@ describe('migration', () => {
   it('leaves a current payload untouched', () => {
     const data = { ...emptySave(), collection: [owned(7, 3, 3)], nextUid: 8 };
     expect(parseSave(serialiseSave(data))).toEqual(data);
+  });
+});
+
+describe('settings', () => {
+  it('comes up silent, with audio off and motion unresolved', () => {
+    const settings = parseSave(null).settings;
+    expect(settings.audio).toBe(false);
+    expect(settings.reduceMotion).toBeNull();
+    expect(settings.mode).toBe('match');
+  });
+
+  it('round-trips', () => {
+    const store = memoryStorage();
+    const data = {
+      ...emptySave(),
+      settings: { audio: true, volume: 0.3, reduceMotion: true, mode: 'tournament' as const },
+    };
+    writeSave(data, store);
+    expect(loadSave(store).settings).toEqual(data.settings);
+  });
+
+  it('rejects a bad field without discarding the good ones', () => {
+    const settings = parseSettings({
+      audio: 'yes',
+      volume: 7,
+      reduceMotion: true,
+      mode: 'nonsense',
+    });
+    // A string is not consent to make noise.
+    expect(settings.audio).toBe(false);
+    expect(settings.volume).toBe(DEFAULT_SETTINGS.volume);
+    expect(settings.reduceMotion).toBe(true);
+    expect(settings.mode).toBe('match');
+  });
+
+  it('only accepts a real mode', () => {
+    for (const mode of ['match', 'tournament', 'hotseat'] as const) {
+      expect(parseSettings({ mode }).mode).toBe(mode);
+    }
+  });
+
+  it('merges a patch without dropping the rest', () => {
+    const merged = withSettings(emptySave(), { audio: true });
+    expect(merged.settings.audio).toBe(true);
+    expect(merged.settings.volume).toBe(DEFAULT_SETTINGS.volume);
+    expect(merged.settings.mode).toBe('match');
+  });
+});
+
+describe('v2 to v3', () => {
+  const v2 = JSON.stringify({
+    version: 2,
+    collection: [{ uid: 1, figureId: 3, arrows: 1, atk: 4, pdef: 5, mdef: 6, type: 'P' }],
+    deck: [1],
+    record: { matches: 2, wins: 1, losses: 1, draws: 0, perfects: 0 },
+    nextUid: 2,
+    opponent: 'gil',
+  });
+
+  it('loads a v2 save rather than discarding it', () => {
+    const result = parseSave(v2);
+    expect(result.version).toBe(SAVE_VERSION);
+    expect(result.collection).toHaveLength(1);
+    expect(result.record.matches).toBe(2);
+    expect(result.opponent).toBe('gil');
+  });
+
+  it('fills in default settings, with sound off', () => {
+    // A save written before the setting existed must not arrive with sound already on: the player
+    // never asked for it.
+    expect(parseSave(v2).settings).toEqual(DEFAULT_SETTINGS);
+    expect(parseSave(v2).settings.audio).toBe(false);
+  });
+
+  it('migrates a v1 save through both steps', () => {
+    const v1 = JSON.stringify({
+      version: 1,
+      collection: [{ figureId: 4, arrows: 2, atk: 5, pdef: 6, mdef: 7, type: 'P' }],
+      deck: [0],
+    });
+    const result = parseSave(v1);
+    expect(result.version).toBe(SAVE_VERSION);
+    expect(result.collection.map((c) => c.uid)).toEqual([1]);
+    expect(result.deck).toEqual([1]);
+    expect(result.settings.audio).toBe(false);
+  });
+
+  it('leaves a current payload untouched', () => {
+    const current = serialiseSave(emptySave());
+    expect(parseSave(current)).toEqual(emptySave());
   });
 });
 

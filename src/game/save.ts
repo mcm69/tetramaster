@@ -18,10 +18,11 @@
  */
 
 import { scoreCollection, type CollectorScore } from './collector.ts';
+import type { ModeId } from './modes.ts';
 import type { CardType, OwnedCard, Outcome, StatIndex } from '../core/types.ts';
 
 /** Bump when the shape changes, and add a case to {@link migrate}. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /** The localStorage key. Namespaced so it cannot collide with anything else on the origin. */
 export const SAVE_KEY = 'tetramaster.save.v1';
@@ -34,6 +35,31 @@ export interface MatchRecord {
   readonly perfects: number;
 }
 
+/**
+ * Player preferences (PLAN.md §6, Stage 10).
+ *
+ * `audio` defaults to **off**. Sound that starts on its own is startling and, for some people,
+ * genuinely painful; the player turns it on, never the game.
+ *
+ * `reduceMotion` starts as `null` and is resolved from `prefers-reduced-motion` at boot, then kept
+ * as an explicit choice. `null` means "not yet decided", which is why it is not a plain boolean.
+ */
+export interface Settings {
+  readonly audio: boolean;
+  /** 0–1. */
+  readonly volume: number;
+  readonly reduceMotion: boolean | null;
+  /** Which of the three modes to open on (PLAN.md §6). */
+  readonly mode: ModeId;
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  audio: false,
+  volume: 0.6,
+  reduceMotion: null,
+  mode: 'match',
+};
+
 export interface SaveData {
   readonly version: number;
   readonly collection: readonly OwnedCard[];
@@ -44,6 +70,7 @@ export interface SaveData {
   readonly nextUid: number;
   /** Personality id of the last opponent faced. */
   readonly opponent: string;
+  readonly settings: Settings;
 }
 
 /** Just enough of the `Storage` API, so tests can pass a plain object and Node needs no shim. */
@@ -61,6 +88,7 @@ export function emptySave(): SaveData {
     record: { matches: 0, wins: 0, losses: 0, draws: 0, perfects: 0 },
     nextUid: 1,
     opponent: 'vivi',
+    settings: DEFAULT_SETTINGS,
   };
 }
 
@@ -122,6 +150,26 @@ function parseCard(value: unknown, fallbackUid: number): OwnedCard | null {
   };
 }
 
+/** Validates a settings blob, falling back field by field rather than wholesale. */
+export function parseSettings(value: unknown): Settings {
+  const raw = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>;
+  const volume =
+    typeof raw.volume === 'number' && raw.volume >= 0 && raw.volume <= 1
+      ? raw.volume
+      : DEFAULT_SETTINGS.volume;
+  const mode =
+    raw.mode === 'match' || raw.mode === 'tournament' || raw.mode === 'hotseat'
+      ? raw.mode
+      : DEFAULT_SETTINGS.mode;
+  return {
+    // Explicitly not `Boolean(raw.audio)`: a save with no settings must come up silent.
+    audio: raw.audio === true,
+    volume,
+    reduceMotion: typeof raw.reduceMotion === 'boolean' ? raw.reduceMotion : null,
+    mode,
+  };
+}
+
 function parseRecord(value: unknown): MatchRecord {
   const raw = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>;
   const num = (key: string): number => (typeof raw[key] === 'number' ? raw[key] : 0);
@@ -137,11 +185,26 @@ function parseRecord(value: unknown): MatchRecord {
 /**
  * Migrates an older payload to the current shape.
  *
- * Only v1 → v2 exists so far. v1 cards had no `uid`; the array position became the identity.
+ * Two steps so far.
+ *
+ * **v1 → v2.** v1 cards had no `uid`; the array position became the identity. That is unavoidable —
+ * a v1 save referred to cards by index and nothing else survived to recover them from.
+ *
+ * **v2 → v3.** v2 had no `settings`. Unlike uids, these have defaults that are simply *correct*, so
+ * the migration is a fill rather than a recovery. Notably `audio` defaults to **off**: a save written
+ * before the setting existed must not arrive with sound already on, because the player never asked
+ * for it.
  */
 function migrate(payload: Record<string, unknown>): Record<string, unknown> {
   const version = typeof payload.version === 'number' ? payload.version : 1;
   if (version >= SAVE_VERSION) return payload;
+
+  // Every step below is applied in order; `payload` is carried forward so a v1 save picks up both.
+  let carried: Record<string, unknown> = payload;
+  if (version < 3) {
+    carried = { ...carried, settings: parseSettings(carried.settings) };
+  }
+  payload = carried;
 
   const raw = Array.isArray(payload.collection) ? payload.collection : [];
   const collection = raw.map((entry, index) => {
@@ -201,6 +264,7 @@ export function parseSave(text: string | null): SaveData {
     record: parseRecord(migrated.record),
     nextUid,
     opponent: typeof migrated.opponent === 'string' ? migrated.opponent : emptySave().opponent,
+    settings: parseSettings(migrated.settings),
   };
 }
 
@@ -245,6 +309,11 @@ export function recordOutcome(record: MatchRecord, outcome: Outcome): MatchRecor
     draws: record.draws + (outcome === 'draw' ? 1 : 0),
     perfects: record.perfects + (outcome === 'perfect' ? 1 : 0),
   };
+}
+
+/** Replaces the settings, persisting immediately. */
+export function withSettings(data: SaveData, patch: Partial<Settings>): SaveData {
+  return { ...data, settings: { ...data.settings, ...patch } };
 }
 
 /** Adds cards to the collection, stamping fresh uids. Returns the new save. */

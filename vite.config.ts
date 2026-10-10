@@ -12,7 +12,12 @@ export default defineConfig({
         test: {
           name: 'node',
           environment: 'node',
-          include: ['tests/core/**/*.test.ts', 'tests/ai/**/*.test.ts', 'tests/game/**/*.test.ts'],
+          include: [
+            'tests/core/**/*.test.ts',
+            'tests/ai/**/*.test.ts',
+            'tests/game/**/*.test.ts',
+            'tests/audio/**/*.test.ts',
+          ],
         },
       },
       {
@@ -47,6 +52,9 @@ export default defineConfig({
         'src/core/**': { lines: 95, branches: 90, functions: 95, perFile: true },
         'src/ai/**': { lines: 85, branches: 80, functions: 85, perFile: true },
         'src/game/**': { lines: 95, branches: 90, functions: 95, perFile: true },
+        // The synthesis half of `src/audio/` is DOM and WebAudio code; only the cue mapping is
+        // asserted headlessly, and that is where the mistakes would be.
+        'src/audio/**': { lines: 80, branches: 75, functions: 80, perFile: true },
         'src/data/**': { lines: 100, branches: 100, functions: 100, perFile: true },
         'src/ui/**': { lines: 60, branches: 50, functions: 60 },
         'src/render/**': { lines: 60, branches: 50, functions: 60 },

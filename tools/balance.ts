@@ -20,12 +20,14 @@ import { createMatch, legalCells, playMatch, score } from '../src/core/match.ts'
 import { createRng } from '../src/core/rng.ts';
 import { rollInstance } from '../src/core/card.ts';
 import { Opponent } from '../src/ai/opponent.ts';
+import { counterAdvantage, counterDeck } from '../src/ai/counterDeck.ts';
 import { PERSONALITIES, personalityById } from '../src/ai/personalities.ts';
 import type { Personality } from '../src/ai/opponent.ts';
 import { FIGURES } from '../src/data/cards.ts';
+import { acquireCard } from '../src/game/progression.ts';
 import { HAND_SIZE } from '../src/core/constants.ts';
 import type { Action } from '../src/core/match.ts';
-import type { Card, GameState, Owner, Tier } from '../src/core/types.ts';
+import type { Card, GameState, OwnedCard, Owner, Tier } from '../src/core/types.ts';
 
 function decks(seed: number, tierA: Tier, tierB: Tier): { a: Card[]; b: Card[] } {
   const rng = createRng(seed);
@@ -159,6 +161,16 @@ function mirror(personality: Personality, matches: number): SweepResult {
   });
 }
 
+/** A collection of `size` catalog cards, as a real save would hold after a while. */
+function collectionOf(seed: number, size: number): OwnedCard[] {
+  const rng = createRng(seed * 977 + 5);
+  return Array.from({ length: size }, () => {
+    const figure = FIGURES[rng.int(FIGURES.length)];
+    if (figure === undefined) throw new Error('empty catalog');
+    return acquireCard(0, figure.id, rng);
+  }).map((card, index) => ({ ...card, uid: index + 1 }));
+}
+
 function main(): void {
   const matches = Number(process.argv[2] ?? 200);
   console.log(`\nBalance sweep — ${matches} matches per pairing\n`);
@@ -195,6 +207,28 @@ function main(): void {
   );
 
   const failures: string[] = [];
+  // Master Tournament (PLAN.md §6, Stage 10). The mode exists to punish a deck, so the only
+  // question worth asking is whether the counter is actually better against that deck than the
+  // challenger's own cards would be.
+  console.log('\n  Master Tournament — is the counter actually a counter?');
+  const advantages: number[] = [];
+  for (let seed = 0; seed < Math.min(matches, 120); seed++) {
+    const challengerCards = matchAt(seed).players.player.deck;
+    // A real collection, not a five-card hand: the mode draws its counter from everything the player
+    // owns, and a five-card pool gives it almost no room to choose.
+    const counter = counterDeck(challengerCards, collectionOf(seed, 30), 5);
+    advantages.push(counterAdvantage(challengerCards, counter));
+  }
+  const meanAdvantage = advantages.reduce((sum, n) => sum + n, 0) / advantages.length;
+  const wins = advantages.filter((n) => n > 0).length;
+  console.log(
+    `    mean advantage ${(meanAdvantage * 100).toFixed(1)} points · better in ${((wins / advantages.length) * 100).toFixed(0)}% of ${advantages.length} decks`,
+  );
+  if (meanAdvantage <= 0) {
+    failures.push(
+      `the Master Tournament counter is not better than the deck it counters (mean ${(meanAdvantage * 100).toFixed(1)} points)`,
+    );
+  }
 
   // 1. Turn order must not be structurally decisive.
   if (openingRate < 0.35 || openingRate > 0.65) {

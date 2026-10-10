@@ -383,12 +383,15 @@ tetramaster/
 │   ├── ai/
 │   │   ├── evaluate.ts      # static position scoring (exposure, corners, quarantine)
 │   │   ├── moves.ts         # enumerate (cell, card) pairs with predicted outcome
-│   │   ├── opponent.ts      # pick move; difficulty tiers; Master Tournament counter-deck
+│   │   ├── counterDeck.ts   # Master Tournament: weighted counter built from your collection (Q8)
+│   │   ├── opponent.ts      # pick move; difficulty tiers
 │   │   └── personalities.ts # per-opponent stat bias + aggression weights
 │   ├── data/
 │   │   ├── cards.ts         # 100 figures: name, caps, base type, tier
 │   │   ├── arrowSets.ts     # curated arrow masks for hand-authored figures
 │   │   └── opponents.ts     # NPC roster, decks, dialogue
+│   ├── audio/
+│   │   ├── synth.ts           # procedural WebAudio cues; off by default; no-op without AudioContext
 │   ├── render/
 │   │   ├── theme.ts         # palette, fonts, spacing tokens
 │   │   ├── sprites.ts       # procedural card art (canvas → offscreen cache)
@@ -398,9 +401,10 @@ tetramaster/
 │   │   ├── layers.ts        # card pile + score HUD
 │   │   └── animator.ts      # event-log → tween queue; owns the single rAF loop
 │   ├── ui/
-│   │   ├── app.ts           # screen router
-│   │   ├── screens/title.ts, deckSelect.ts, match.ts, collection.ts,
-│   │   │          results.ts, rules.ts, opponents.ts
+│   │   ├── app.ts           # MatchController: the DOM-free driver
+│   │   ├── accessibility.ts # reduced-motion watch, aria-live announcer, board description
+│   │   ├── components/toolbar.ts      # mode bar, opponent picker, sound/motion toggles
+│   │   ├── screens/rules.ts, rulesView.ts   # §1, one entry per rule, tied to the spec by test
 │   │   ├── components/cardView.ts   # DOM card component (menus/deck)
 │   │   ├── components/picker.ts     # battle-target chooser modal
 │   │   ├── components/tooltip.ts    # card inspector w/ exact stats + win %
@@ -713,6 +717,8 @@ produces a working `dist/`; canvas paints a placeholder.
 **DoD:** win a match, reload the page, and the evolved cards and collection are intact.
 
 ### Stage 10 — Modes & polish
+
+**Status:** complete. All three modes playable; `npm run verify` green at 583 tests.
 
 **Goal:** The game is finished-feeling.
 
