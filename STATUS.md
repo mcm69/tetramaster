@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 8 · **Current stage:** 6 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 9 · **Current stage:** 7 — ready to start
 
 ---
 
@@ -44,8 +44,8 @@
 | 3     | Resolution engine (takedown + combos) | ✅ Done        | ✅      | 144 tests; §1.4/§1.5/§1.7 traced |
 | 4     | Battle math + multi-battle chains     | ✅ Done        | ✅      | 163 tests; §1.6 traced           |
 | 5     | Match state machine                   | ✅ Done        | ✅      | 201 tests; §1.1 traced           |
-| 6     | Rendering                             | ⬜ Not started | ☐       | **next up**                      |
-| 7     | Playable match UI                     | 🔒 Blocked     | ☐       |                                  |
+| 6     | Rendering                             | ✅ Done        | ✅      | 248 tests; board on screen       |
+| 7     | Playable match UI                     | ⬜ Not started | ☐       | **next up** — first playable     |
 | 8     | Opponent AI                           | 🔒 Blocked     | ☐       |                                  |
 | 9     | Progression, collection, save         | 🔒 Blocked     | ☐       |                                  |
 | 10    | Modes & polish                        | 🔒 Blocked     | ☐       |                                  |
@@ -69,30 +69,31 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 6 — Rendering. Stages 0–5 are complete and every gate is green.**
+**Stage 7 — Playable match UI. Stages 0–6 are complete and every gate is green.**
 
-A whole match now runs headless: `createMatch` builds a real board from a seed, `applyAction`
-reduces it, and `tools/verify.ts` asserts ten cards placed, a score summing to ten, one
-game-over, and no illegal placements across 10,000 matches in ~120ms.
-**7 rules traced · 2 pending · 0 untested** — only §1.8 and §1.9 remain, both Stage 9.
+The board is on screen. `main.ts` plays a scripted match through `applyAction`, and the animator
+replays each action's event log on a single rAF loop — the engine's output genuinely drives the
+canvas. Card art is generated procedurally from figure ids; nothing is sourced from FF9.
 
-Nothing is on screen yet beyond a placeholder canvas. This stage makes the board visible and
-animates the event log the engine already produces.
+**What still stands between you and a match:** the driver is scripted. There is no way to click a
+card or choose a cell. Everything needed for that already exists in `src/input/pointer.ts`
+(hit-testing, click-to-action, keyboard cursor movement) and is tested.
 
 ## Next Actions
 
-- [ ] `render/theme.ts` — palette, spacing, type scale
-- [ ] `render/arrowSprite.ts` — draws an 8-direction arrow mask onto a card face
-- [ ] `render/sprites.ts` — **procedural** card art seeded by `figureId`, cached to an offscreen
-      canvas. No FF9 artwork (§7.5)
-- [ ] `render/boardView.ts` — the 4x4 grid, blocked-cell styling, legal-move highlights, hover
-- [ ] `render/cardView.ts` — card face: art, stat code, ownership indicator (**shape + tint**, never
-      tint alone — colourblind safety, §6 Stage 10)
-- [ ] `render/animator.ts` — the single rAF loop; consumes `GameEvent[]` and produces tweens. Its
-      `switch (event.t)` must be exhaustive or the compiler says so
-- [ ] `input/pointer.ts` — canvas hit-testing → cell indices
-- [ ] DoD: a headless-driven match animates correctly, and **no render code mutates state**
-- [ ] `src/render/**` is gated at 60% coverage only (§9.2); pixel output is not asserted (§9.4)
+- [ ] `ui/app.ts` — screen router; replace the scripted driver in `main.ts` with a real controller
+- [ ] Hand tray: pick a card (click or 1–5), show the selected state
+- [ ] Click a cell to play; hover highlight and cursor feedback via `hitTest`
+- [ ] `components/picker.ts` — the **battle-order chooser** (§1.7). List pending battles, show each
+      one's win odds, dispatch `{t:'chooseBattle'}`. This is the one piece with no UI yet
+- [ ] Keyboard parity: WASD/arrows move the cursor, Enter plays, Esc deselects, H hints (§9.5)
+- [ ] Results screen: win/draw/perfect, and the capture choice (`MatchResult.claimable`)
+- [ ] DoD: **complete a match by mouse only, then again by keyboard only**
+- [ ] `tests/ui/` jsdom tests for the picker and the controller
+
+## Blocked On
+
+Nothing. Stage 7 depends only on Stages 1–6.
 
 ## Blocked On
 
@@ -563,3 +564,42 @@ every `npm test`. **201 tests, 7 rules traced, 2 pending, 0 untested.**
   `MatchResult.claimable`), `src/core/resolution.ts` (split), `tools/verify.ts` (new),
   `tests/core/match.test.ts` (new), `tests/core/verify.test.ts` (new), `tests/fixtures.ts`,
   `tsconfig.json`, all relative imports, `tools/rules-audit.ts`, `package.json`, `STATUS.md`
+
+---
+
+### S9 — 2026-10-10 — Stage 6 complete: the board is on screen
+
+**Stage:** 6 (Rendering) · **Status:** ⬜ → ✅
+**Did:** `render/theme.ts` (all colour/size/type tokens in one place), `sprites.ts` (procedural
+card art seeded by figure id, cached offscreen), `arrowSprite.ts` (8-direction arrows),
+`cardView.ts`, `boardView.ts`, `animator.ts` (single rAF loop consuming `GameEvent[]`), and
+`input/pointer.ts`. `main.ts` now plays a **scripted match** through the real engine and animates
+it — the Stage 6 DoD ("a headless-driven match animates correctly"). **248 tests.**
+**Learned:**
+
+- **A real animation bug, caught by the convergence test.** `push()` queued every event, but
+  cell-less events (`turn`, `game-over`) fell through to `cell: 0` with a `null` target — so each
+  turn-passing event **erased whatever sat in cell 0**. Playing a card in the corner made it
+  vanish one beat later. The test that caught it asserts the display board _converges on the true
+  board_, which is the property that actually matters; a test that merely checked "the queue
+  emptied" would have passed happily. Mutation-tested by reinstating the exact defect: 2 failures.
+- **My first mutation attempt was a false negative.** I "broke" `push` to route cell-less events
+  through `event.cell`, but `undefined` is not `0`, so the bug didn't reproduce and the suite passed.
+  Only when I injected the _faithful_ defect did it fail. A mutation test that doesn't fail proves
+  nothing about the mutation — worth remembering before trusting a green result from one.
+- **`src/input/pointer.ts` sat at 0% coverage** and dragged the global branch gate under 80%. The
+  fix was 15 real tests, not a threshold change: hit-testing, click-to-action, and keyboard cursor
+  movement are pure functions that deserve them anyway, and Stage 7 needs exactly this surface.
+- Two of my input tests encoded **wrong premises**: I assumed cell 6 was empty in seed 2 (it was
+  blocked) and that a match can fill the board (it cannot — ten cards, at least ten free cells).
+  Fixed by testing movement on a deliberately unblocked board and building a synthetic full board
+  for the null case, with a comment explaining why it is synthetic.
+- Ownership is encoded as **colour plus shape** (square pip vs hexagon) from the start, not retrofitted
+  later — the shape channel is asserted via observable path construction, not just a constant.
+- jsdom has no canvas backend, so both UI test files now share one recording context stub
+  (`tests/ui/canvasStub.ts`) that counts draw calls. Pixels stay unasserted by design (§9.4).
+  **Next:** Stage 7 — the last stage before the game is genuinely playable. Replace the scripted
+  driver with a controller: hand tray, click-to-play, keyboard parity, and the battle-order chooser.
+  **Files touched:** `src/render/{theme,sprites,arrowSprite,cardView,boardView,animator}.ts`,
+  `src/input/pointer.ts`, `src/main.ts`, `tests/ui/{render,canvasStub,boot}.test.ts`,
+  `tests/core/input.test.ts`, `STATUS.md`
