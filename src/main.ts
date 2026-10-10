@@ -17,6 +17,8 @@ import { drawBoard, boardLayout, drawScoreBar } from './render/boardView.ts';
 import { COLORS, FONTS } from './render/theme.ts';
 import { clickToAction, hitTest, KEY_BINDINGS } from './input/pointer.ts';
 import { MatchController } from './ui/app.ts';
+import { Opponent } from './ai/opponent.ts';
+import { PERSONALITIES, personalityById } from './ai/personalities.ts';
 import { renderBattlePicker } from './ui/components/picker.ts';
 import { renderHand, renderResults, statusText } from './ui/components/hand.ts';
 import type { Card, Tier } from './core/types.ts';
@@ -53,10 +55,16 @@ function boot(): void {
   ctx.scale(dpr, dpr);
 
   let seed = 20261010;
-  let controller = newController(seed);
+  // Stage 8: the opponent plays its own side. Swap `personalityById` to face a different NPC.
+  // Declared before `controller`, which is built by `newController` below and touches it.
+  const opponent = new Opponent(personalityById('vivi'), seed + 101);
+  let thinking = false;
   const layout = boardLayout(BOARD_SIZE - 40, 20, 20);
+  let controller = newController(seed);
 
   function newController(nextSeed: number): MatchController {
+    opponent.reset(nextSeed + 101);
+    thinking = false;
     return new MatchController(
       createMatch({
         seed: nextSeed,
@@ -66,7 +74,9 @@ function boot(): void {
     );
   }
 
-  keysEl.textContent = KEY_BINDINGS.map((b) => `${b.keys} — ${b.action}`).join('   ·   ');
+  keysEl.textContent =
+    KEY_BINDINGS.map((b) => `${b.keys} — ${b.action}`).join('   ·   ') +
+    `   ·   N — new match (vs ${PERSONALITIES[3]?.name ?? 'the house'})`;
 
   // ── rendering ─────────────────────────────────────────────────────────────────────────────
 
@@ -200,6 +210,7 @@ function boot(): void {
     } else if (event.key === 'n' || event.key === 'N') {
       seed += 1;
       controller = newController(seed);
+      syncDom();
     } else {
       return;
     }
@@ -208,10 +219,22 @@ function boot(): void {
 
   // ── the one loop ───────────────────────────────────────────────────────────────────────────
 
+  // The opponent's turn: hand it to the AI once the board is still. `thinking` keeps it to one
+  // decision per turn rather than a burst of them as the animation settles.
+  const stepOpponent = (): void => {
+    if (thinking || controller.busy) return;
+    const state = controller.state;
+    if (state.phase === 'over' || state.turn !== 'ai') return;
+    thinking = true;
+    const action = opponent.act(state, 'ai') ?? { t: 'forfeit' as const };
+    if (controller.submitExternal(action)) syncDom();
+  };
+
   const loop = (): void => {
     const wasBusy = controller.busy;
     controller.advance(16);
     if (wasBusy && !controller.busy) syncDom();
+    stepOpponent();
     draw();
     requestAnimationFrame(loop);
   };

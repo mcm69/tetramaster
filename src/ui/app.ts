@@ -169,6 +169,16 @@ export class MatchController {
   }
 
   /**
+   * Submits an action produced elsewhere — by the AI, a replay, or a script.
+   *
+   * This is the seam the opponent uses, and it is also why the busy guard lives in `dispatch`:
+   * an external caller holds no selected card, so nothing else would stop it acting mid-animation.
+   */
+  submitExternal(action: Action): boolean {
+    return this.dispatch(action);
+  }
+
+  /**
    * Enter/Space: play at the cursor if a card is held, otherwise fight the contested card under
    * the cursor. Identical in effect to clicking there.
    */

@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 10 · **Current stage:** 8 — ready to start
+> **Last updated:** 2026-10-10 · **Session count:** 11 · **Current stage:** 9 — ready to start
 
 ---
 
@@ -69,29 +69,46 @@ Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 w
 
 ## Current Focus
 
-**Stage 8 — Opponent AI. Stages 0–7 are complete, and the game is playable.**
+**Stage 9 — Progression, collection, save. Stages 0–8 are complete, and the game is finished as a game.**
 
-You can now play: click a card in the hand, click a square, or press 1–5 then Enter. The board
-animates, the score updates, and when a card points back the **battle chooser** appears with each
-contested card's odds before you commit. That chooser is the one piece the original had and this
-clone adds — §1.7 promises the choice, the original never explains its consequences.
+You now play a full match against an opponent. It scores every legal placement by free captures,
+battle odds weighted by probability, combo reach, corner value, exposure and quarantine, across ten
+distinct personalities in three difficulty tiers. It beats a random-move baseline by 12–18 points
+and it is still very much beatable.
 
-**Nothing plays against you yet.** Every action has to come from you. Stage 8 gives the opponent a
-turn.
+**Nothing persists.** Cards do not grow between matches, there is no collection to browse, and a
+reload loses everything. Those are the last two missing rules: §1.8 (stat growth and type evolution)
+and §1.9 (collector level).
 
 ## Next Actions
 
-- [ ] `ai/evaluate.ts` — position scoring: cell exposure (how many unblocked edges an enemy arrow can
-      reach), corner/edge value, low-defence-side penalty, combo potential, quarantine detection
-- [ ] `ai/moves.ts` — enumerate every (cell, cardIndex) pair and predict the outcome using
-      `resolveStats` + `winProbability`. **Never peek at future rolls**
-- [ ] `ai/opponent.ts` — weighted score plus a seeded tiebreak; 3 difficulty tiers
-- [ ] `ai/personalities.ts` — 6–10 NPCs with distinct biases
-- [ ] Wire the AI into `MatchController` behind a `policy` callback, so the same controller serves a
-      human, the AI, and the verifier
-- [ ] `tools/balance.ts` — sweep that asserts the AI beats a random-move baseline by a real margin
-      and is still beatable
-- [ ] Update this file and commit as `stage(8): ...` (§7.2)
+- [ ] `progression.ts` (§1.8) — after a **won** match, each used card gains +1 to one of its three
+      stats, chosen at random, **wasting the roll if that stat is already capped**
+- [ ] Type evolution: a card that **wins any battle** has a 1/32 chance P/M→X and 1/256 chance X→A
+- [ ] `collector.ts` (§1.9) — +10 unique figure, +5 unique arrow pattern, +1 X, +2 A; the full
+      threshold table, and the `>= 1700` "Would you like to discard?" glitch
+- [ ] `save.ts` — versioned localStorage schema with a migration guard
+- [ ] Tests: 1/32 and 1/256 rates over 100k trials; collector points against hand-computed cases;
+      save round-trip and migration; cap-wasting asserted explicitly
+- [ ] Collection and deck-editor screens
+- [ ] Remove `1.8` and `1.9` from `PENDING` — this is the last stage that claims rules
+- [ ] Update this file and commit as `stage(9): ...` (§7.2)
+
+## Blocked On
+
+Nothing. Stage 9 depends only on Stages 1–8.
+
+## Two lessons from Stage 8 worth keeping
+
+- **My balance harness was wrong twice before the AI was.** First it confined the AI to the `player`
+  seat, which loses ~39% of matches; then it reported `win / decided` straight from the outcome, so
+  a strong AI playing the `ai` seat registered as _losing_. Both times the AI looked mediocre and
+  I nearly "fixed" a healthy evaluation. Instrument first, then judge.
+- **The AI had a rule error, not a tuning error.** Its risk term counted enemy arrows already aimed
+  at a square — but §1.4 says only the just-placed card attacks, so those arrows can never do
+  anything. The AI was fleeing a threat that does not exist, and the penalty outweighed a capture,
+  so it played a passive game and lost to random. Correcting the _model_ fixed it; the reweighting I
+  tried first had done nothing.
 
 ## Blocked On
 
@@ -652,3 +669,46 @@ as two tests — not as a claim someone has to verify by hand.
   **Next:** Stage 8 — the opponent AI, which is what turns this from a solo puzzle into a game.
   **Files touched:** `src/ui/app.ts` (new), `src/ui/components/{picker,hand}.ts` (new),
   `src/main.ts`, `index.html`, `tests/ui/{controller,boot}.test.ts`, `STATUS.md`
+
+---
+
+### S11 — 2026-10-10 — Stage 8 complete: the opponent plays
+
+**Stage:** 8 (Opponent AI) · **Status:** ⬜ → ✅
+**Did:** `ai/evaluate.ts` (position scoring), `ai/moves.ts` (move enumeration), `ai/opponent.ts`
+(choice + difficulty + an `Opponent` handle with its own RNG), `ai/personalities.ts` (10 NPCs), and
+`tools/balance.ts` (sweep with a random-move control group). Wired into `main.ts` via a new
+`MatchController.submitExternal()` seam. **309 tests.**
+**Learned:**
+
+- **I broke the boot path and almost shipped it.** `main.ts` called `newController(seed)` before
+  `const opponent` was initialised — a temporal dead zone crash, so the page would not have started
+  at all. The boot test caught it immediately. It passed on the previous stage because there was no
+  opponent to declare.
+- **The AI had a _rule_ error, not a tuning error.** Its risk term counted enemy arrows already
+  aimed at a square, which per §1.4 can never do anything — only a just-placed card attacks. The AI
+  was fleeing a threat that does not exist, and that penalty (21) outweighed a capture (10), so it
+  played a passive, capture-free game and lost to a random opponent that simply bumped into people.
+  Reweighting alone did nothing; replacing the risk model with _playable neighbours_ (where the
+  enemy could actually place next turn) fixed it. **A heuristic that encodes an impossible threat is
+  worse than no heuristic, because it looks principled.**
+- **My measurement was wrong twice, and both times the AI looked bad for the wrong reason.** The
+  harness first confined the AI to the `player` seat, which loses ~39% of matches; then it reported
+  `win / decided` straight from the match outcome, so a strong AI in the `ai` seat registered as
+  _losing_. I was one tuning pass away from "fixing" a perfectly healthy evaluation. Measuring the
+  AI's actual behaviour — 1766 captures to random's 1110, winning 57%/71% by seat — showed it was
+  already strong before I touched anything. **Instrument first, then judge.**
+- The anti-cheating property is mutation-tested: injecting a real cheat (drawing from the match RNG
+  to decide) fails `does not advance the match RNG`. An earlier attempt at the same mutation passed,
+  because `rngState > -1` is always true — a mutation that does not actually cheat proves nothing.
+- The "sharp beats casual" test compared against a tolerance band, which a noisy opponent could
+  satisfy by landing on any of several near-equal moves. Rewritten to compare against the exact
+  argmax, which is what volatility actually controls.
+- Measured for the record: every AI beats random by 12–18 points, the opening player wins 40.6% of
+  decided matches (a real second-player advantage, authentic to the original), and perfect games
+  occur ~17.6% of the time.
+  **Next:** Stage 9 — progression, collection and save. The last stage that claims new rules: §1.8 and
+  §1.9, after which `rules:audit` reports every paragraph traced.
+  **Files touched:** `src/ai/{evaluate,moves,opponent,personalities}.ts` (new), `tools/balance.ts`
+  (new), `tests/ai/opponent.test.ts` (new), `src/ui/app.ts` (submitExternal), `src/main.ts`,
+  `STATUS.md`
