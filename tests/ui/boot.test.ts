@@ -5,6 +5,11 @@
  * paints a frame.
  */
 
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+/** Vitest runs from the project root, as `tools/*.ts` do. */
+const ROOT = process.cwd();
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { installCanvasStub } from './canvasStub.ts';
 
@@ -93,6 +98,21 @@ describe('boot', () => {
     vi.resetModules();
 
     await expect(import('../../src/main')).rejects.toThrow(/#board is missing/);
+  });
+
+  it('links a favicon that is actually there', () => {
+    // A referenced-but-missing asset is silent: the page still loads, the tab just shows a broken
+    // glyph. Same family as the key binding that was documented and never wired (S14) — something
+    // named in one place and absent from another.
+    const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+    const href = /<link[^>]+rel="icon"[^>]+href="([^"]+)"/.exec(html)?.[1];
+    if (href === undefined) throw new Error('index.html declares no icon');
+
+    // Vite serves `public/` at the root, so the href is the path inside `dist/`.
+    expect(href).toMatch(/^\//);
+    const onDisk = join(ROOT, 'public', href);
+    expect(existsSync(onDisk), `${href} is linked but there is no ${onDisk}`).toBe(true);
+    expect(readFileSync(onDisk, 'utf8')).toContain('<svg');
   });
 
   it('surfaces a clear error when a panel is missing', async () => {
