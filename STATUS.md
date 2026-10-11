@@ -805,7 +805,7 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 **Stage:** 10 (Modes & polish) · **Status:** ⬜ → ✅
 **Did:** `src/ai/counterDeck.ts`, `src/game/modes.ts`, `src/audio/synth.ts`,
 `src/ui/screens/{rules,rulesView}.ts`, `src/ui/accessibility.ts`, `src/ui/components/toolbar.ts`, plus
-`main.ts`, `index.html`, and a v3 save with `settings`. **660 tests**, up from 468.
+`main.ts`, `index.html`, and a v3 save with `settings`. **655 tests**, up from 468.
 
 **Learned:**
 
@@ -842,9 +842,60 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S17 — 2026-10-11 — the cursor is a rook: rings, skipping and wrap-around
+
+**Status:** post-completion fix, replacing S16's model wholesale. **655 tests** (down from 660 — the
+file is simpler).
+
+**The change.** My first fix made the cursor walk like a chess king under a four-rule cascade: straight
+ahead, then a forward diagonal, then a slide along the axis. It worked, and it was over-engineered:
+the rules needed _explaining_, which is the sign of a rule that should be _discovered_. The user's
+version is better and simpler:
+
+> each row and each column is a **ring**; a direction key advances along that ring to the next playable
+> square, wrapping at the edges and stepping over blocked cells.
+
+On the reported board — `left from (0,0) wraps to (0,2); left again skips the blocked (0,1) and
+returns to (0,0); down from (0,2) skips the blocked (1,2) and lands on (2,2)` — that is exactly what it
+does. The implementation went from 190 lines to 122, and dropped four concepts (candidate ranking,
+alignment scoring, the trap check, the mirror-diagonal tie-break) in favour of one loop.
+
+**Measured over all 2,096,128 presses:**
+
+|                                | first fix | rook rings |
+| ------------------------------ | --------- | ---------- |
+| dead presses                   | 15.2%     | **12.5%**  |
+| moves leaving the pressed line | 0         | **0**      |
+| walking into a trap            | 0         | **0**      |
+
+The 12.5% that do nothing are rows and columns with _every_ square blocked — genuinely nowhere to go.
+Rings also remove a whole class of problem rather than shrinking it: a square with no playable
+neighbour is no longer a trap, because you arrive along its row or column instead of stepping in from
+next door, and movement is reversible because a ring is a cycle.
+
+**Learned:**
+
+- **Simpler is not a downgrade, and I would not have found it on my own.** I had already declared the
+  cascade "four rules, in order" and written a paragraph defending it. The user's proposal had none of
+  the machinery and did strictly more. The lesson is not "ask for simpler" — it is that a rule which
+  needs a paragraph of justification is usually a sign the problem was framed wrong.
+- **The exhaustive tests survived the rewrite unchanged in spirit and caught all three mutations**: no
+  wrap-around, not skipping blocked cells, and drifting sideways off the pressed line. Rewriting the
+  _implementation_ did not mean rewriting the _guarantees_, which is what made the change cheap to
+  verify.
+- Two consequences worth _knowing_ rather than discovering: pressing a direction at an edge wraps
+  instead of stopping, and there are no diagonals, so the square diagonally across from you takes two
+  presses. Both are the user's explicit trade, and both are now the first thing the module's header
+  comment says.
+
+**Next:** nothing required.
+**Files touched:** `src/ui/cursor.ts` (rewritten), `tests/ui/cursor.test.ts` (rewritten), `STATUS.md`
+
+---
+
 ### S16 — 2026-10-11 — the keyboard cursor could get stuck, and could walk into traps
 
-**Status:** post-completion fix. **660 tests**, up from 636.
+**Status:** post-completion fix. **655 tests**, up from 636.
 
 **Fixed.** Arrow keys moved the cursor by searching the **whole board** for the legal cell nearest the
 clamped target, and breaking ties by board order. That had two failure modes:
@@ -891,7 +942,7 @@ on two sides is entered rather than passed by.
 
 ### S15 — 2026-10-10 — bugfixes: overlapping score text, and arrows you could not see
 
-**Status:** post-completion fixes. **660 tests**, up from 610.
+**Status:** post-completion fixes. **655 tests**, up from 610.
 
 **Fixed:**
 
@@ -944,7 +995,7 @@ on two sides is entered rather than passed by.
 **Stage:** 11 (Hardening & docs) · **Status:** ⬜ → ✅ · **All 11 stages complete.**
 **Did:** `tools/perf.ts` (a real performance gate), `.github/workflows/verify.yml`, a rewritten
 `README.md`, and `src/input/keys.ts` merging the documented key bindings with the handler.
-**660 tests**, up from 583.
+**655 tests**, up from 583.
 
 **Learned:**
 
