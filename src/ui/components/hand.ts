@@ -47,7 +47,7 @@ export function renderHand(
     );
 
     // The pattern first: it is the thing that decides where this card should go.
-    button.append(arrowPreviewCanvas(entry.card.arrows, { size: 56 }));
+    button.append(arrowPreviewCanvas(entry.card.arrows, { size: PREVIEW_SIZE }));
 
     const name = document.createElement('span');
     name.className = 'hand-name';
@@ -77,6 +77,49 @@ export function renderHand(
       onSelect(entry.index);
     });
     container.append(button);
+  }
+
+  // Now that the tray is in the document the cards have a width, and the sprites can be sized.
+  sizeArrowPreviews(container);
+}
+
+/** Full-size arrow sprite, for a card with room for it. */
+export const PREVIEW_SIZE = 56;
+/** The reduced sprite, for a card too narrow for the full one. */
+export const PREVIEW_SIZE_SMALL = 34;
+/** Below this card width the sprite shrinks. Measured on a 360px phone, where cards are 57px. */
+export const PREVIEW_NARROW_PX = 96;
+
+/**
+ * The sprite size for a card `widthPx` wide.
+ *
+ * Pure, and exported, because the *policy* is testable even though the measurement is not: jsdom
+ * reports zero for every width, so nothing in Node can check that the right size was chosen — and
+ * the harness cannot catch it either, since a 22px change is smaller than the slack at the tightest
+ * device in the matrix. This is the one piece of M3 the unit suite can actually hold.
+ */
+export function previewSizeFor(widthPx: number): number {
+  return widthPx > 0 && widthPx < PREVIEW_NARROW_PX ? PREVIEW_SIZE_SMALL : PREVIEW_SIZE;
+}
+
+/**
+ * Sizes the arrow sprites now that the tray is in the document.
+ *
+ * This has to be a second pass. The first attempt asked the card its width while the sprite was
+ * being built, at which point the card had no layout at all — `getBoundingClientRect()` returned
+ * zero, every card measured as "no width known", and the sprite stayed at its full size on exactly
+ * the narrow screens it was meant to shrink on. A detached element measures nothing; that is not an
+ * edge case, it is the normal state of a component being constructed.
+ */
+function sizeArrowPreviews(container: HTMLElement): void {
+  for (const card of container.querySelectorAll<HTMLElement>('.hand-card')) {
+    const width = card.getBoundingClientRect().width;
+    if (width <= 0) continue;
+    const size = previewSizeFor(width);
+    const sprite = card.querySelector<HTMLCanvasElement>('canvas.arrow-preview');
+    if (sprite === null || sprite.style.width === `${size}px`) continue;
+    sprite.style.width = `${size}px`;
+    sprite.style.height = `${size}px`;
   }
 }
 

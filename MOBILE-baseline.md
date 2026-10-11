@@ -10,157 +10,147 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 
 ## Summary
 
-- **iPhone SE (1st gen) (320×568)** — hand tray below the fold, 8 control(s) under 44px.
-- **small Android (360×640)** — hand tray below the fold, 8 control(s) under 44px.
-- **iPhone SE (2nd/3rd) (375×667)** — hand tray below the fold, 8 control(s) under 44px.
-- **iPhone 12/13/14 (390×844)** — hand tray below the fold, 8 control(s) under 44px.
-- **iPhone XR/11 (414×896)** — hand tray below the fold, 8 control(s) under 44px.
-- **phone landscape (844×390)** — board not fully visible, hand tray below the fold, 8 control(s) under 44px.
-- **iPad portrait (768×1024)** — hand tray below the fold, 8 control(s) under 44px.
-- **laptop (1280×720)** — hand tray below the fold, 8 control(s) under 44px.
-- **desktop (1440×900)** — hand tray below the fold, 8 control(s) under 44px.
+- **iPhone SE (1st gen) (320×568)** — 6 control(s) under 44px.
+- **small Android (360×640)** — 6 control(s) under 44px.
+- **iPhone SE (2nd/3rd) (375×667)** — 6 control(s) under 44px.
+- **iPhone 12/13/14 (390×844)** — 6 control(s) under 44px.
+- **iPhone XR/11 (414×896)** — 6 control(s) under 44px.
+- **phone landscape (844×390)** — page 612px too tall, board not fully visible, hand tray below the fold, 8 control(s) under 44px.
+- **iPad portrait (768×1024)** — 6 control(s) under 44px.
+- **laptop (1280×720)** — page 224px too tall, hand tray below the fold, 8 control(s) under 44px.
+- **desktop (1440×900)** — page 147px too tall, hand tray below the fold, 8 control(s) under 44px.
 
 ## Detail
 
 ## iPhone SE (1st gen) — 320×568 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 320×568                                |
-| reported viewport                 | 320×568                                |
-| board                             | 288×288 at (16, 241.3)                 |
-| fully visible                     | yes                                    |
-| hand tray                         | 288×121.7 at (16, 654.8)               |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 563px                                  |
-| page height                       | 568 — **283px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 8 of 14                                |
+|                                   |                         |
+| --------------------------------- | ----------------------- |
+| requested viewport                | 320×568                 |
+| reported viewport                 | 320×568                 |
+| board                             | 300×300 at (10, 51.8)   |
+| fully visible                     | yes                     |
+| hand tray                         | 300×99.7 at (10, 458.1) |
+| hand visible                      | yes                     |
+| board and hand together           | yes                     |
+| sideways overflow                 | none                    |
+| chrome (everything but the board) | 268px                   |
+| page height                       | 568 — fits vertically   |
+| overlapping regions               | none                    |
+| targets under 44px                | 6 of 14                 |
 
 Controls too small to tap comfortably:
 
 - `button mode-button Match. Play a named opponent over one board. Match` — 63.6×33.6
 - `button mode-button Master Tournament. Your saved deck against one built to counter it. Master Tournament` — 99.7×33.6
 - `button mode-button Hotseat. Two players, one board, alternating. Hotseat` — 73.8×33.6
-- `select opponent-select  Bibi · A card for a card! A ` — 288×27
-- `label toolbar-toggle  Sound` — 63.8×19.2
-- `label toolbar-toggle  Reduce motion` — 115.3×19.2
-- `button #toggle-collection rematch  Collection (C)` — 120×40.5
-- `button #toggle-rules rematch  How to play (R)` — 129.4×40.5
+- `button #settings-trigger menu-trigger  Settings` — 27.6×33.6
+- `button #toggle-collection rematch  Collection (C)` — 120×32
+- `button #toggle-rules rematch  How to play (R)` — 120×32
 
 ## small Android — 360×640 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 360×640                                |
-| reported viewport                 | 360×640                                |
-| board                             | 328×328 at (16, 241.3)                 |
-| fully visible                     | yes                                    |
-| hand tray                         | 328×121.7 at (16, 694.8)               |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 563px                                  |
-| page height                       | 640 — **251px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 8 of 14                                |
+|                                   |                         |
+| --------------------------------- | ----------------------- |
+| requested viewport                | 360×640                 |
+| reported viewport                 | 360×640                 |
+| board                             | 340×340 at (10, 67.8)   |
+| fully visible                     | yes                     |
+| hand tray                         | 340×99.7 at (10, 514.1) |
+| hand visible                      | yes                     |
+| board and hand together           | yes                     |
+| sideways overflow                 | none                    |
+| chrome (everything but the board) | 300px                   |
+| page height                       | 640 — fits vertically   |
+| overlapping regions               | none                    |
+| targets under 44px                | 6 of 14                 |
 
 Controls too small to tap comfortably:
 
 - `button mode-button Match. Play a named opponent over one board. Match` — 63.6×33.6
 - `button mode-button Master Tournament. Your saved deck against one built to counter it. Master Tournament` — 99.7×33.6
 - `button mode-button Hotseat. Two players, one board, alternating. Hotseat` — 73.8×33.6
-- `select opponent-select  Bibi · A card for a card! A ` — 288×27
-- `label toolbar-toggle  Sound` — 63.8×19.2
-- `label toolbar-toggle  Reduce motion` — 115.3×19.2
-- `button #toggle-collection rematch  Collection (C)` — 120×40.5
-- `button #toggle-rules rematch  How to play (R)` — 129.4×40.5
+- `button #settings-trigger menu-trigger  Settings` — 27.6×33.6
+- `button #toggle-collection rematch  Collection (C)` — 120×32
+- `button #toggle-rules rematch  How to play (R)` — 120×32
 
 ## iPhone SE (2nd/3rd) — 375×667 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 375×667                                |
-| reported viewport                 | 375×667                                |
-| board                             | 343×343 at (16, 241.3)                 |
-| fully visible                     | yes                                    |
-| hand tray                         | 343×121.7 at (16, 709.8)               |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 563px                                  |
-| page height                       | 667 — **239px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 8 of 14                                |
+|                                   |                         |
+| --------------------------------- | ----------------------- |
+| requested viewport                | 375×667                 |
+| reported viewport                 | 375×667                 |
+| board                             | 355×355 at (10, 73.8)   |
+| fully visible                     | yes                     |
+| hand tray                         | 355×99.7 at (10, 535.1) |
+| hand visible                      | yes                     |
+| board and hand together           | yes                     |
+| sideways overflow                 | none                    |
+| chrome (everything but the board) | 312px                   |
+| page height                       | 667 — fits vertically   |
+| overlapping regions               | none                    |
+| targets under 44px                | 6 of 14                 |
 
 Controls too small to tap comfortably:
 
 - `button mode-button Match. Play a named opponent over one board. Match` — 63.6×33.6
 - `button mode-button Master Tournament. Your saved deck against one built to counter it. Master Tournament` — 99.7×33.6
 - `button mode-button Hotseat. Two players, one board, alternating. Hotseat` — 73.8×33.6
-- `select opponent-select  Bibi · A card for a card! A ` — 288×27
-- `label toolbar-toggle  Sound` — 63.8×19.2
-- `label toolbar-toggle  Reduce motion` — 115.3×19.2
-- `button #toggle-collection rematch  Collection (C)` — 120×40.5
-- `button #toggle-rules rematch  How to play (R)` — 129.4×40.5
+- `button #settings-trigger menu-trigger  Settings` — 27.6×33.6
+- `button #toggle-collection rematch  Collection (C)` — 120×32
+- `button #toggle-rules rematch  How to play (R)` — 120×32
 
 ## iPhone 12/13/14 — 390×844 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 390×844                                |
-| reported viewport                 | 390×844                                |
-| board                             | 358×358 at (16, 241.3)                 |
-| fully visible                     | yes                                    |
-| hand tray                         | 358×121.7 at (16, 755.5)               |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 719px                                  |
-| page height                       | 844 — **233px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 8 of 14                                |
+|                                   |                         |
+| --------------------------------- | ----------------------- |
+| requested viewport                | 390×844                 |
+| reported viewport                 | 390×844                 |
+| board                             | 370×370 at (10, 102.8)  |
+| fully visible                     | yes                     |
+| hand tray                         | 370×99.7 at (10, 579.1) |
+| hand visible                      | yes                     |
+| board and hand together           | yes                     |
+| sideways overflow                 | none                    |
+| chrome (everything but the board) | 474px                   |
+| page height                       | 844 — fits vertically   |
+| overlapping regions               | none                    |
+| targets under 44px                | 6 of 14                 |
 
 Controls too small to tap comfortably:
 
 - `button mode-button Match. Play a named opponent over one board. Match` — 63.6×33.6
 - `button mode-button Master Tournament. Your saved deck against one built to counter it. Master Tournament` — 99.7×33.6
 - `button mode-button Hotseat. Two players, one board, alternating. Hotseat` — 73.8×33.6
-- `select opponent-select  Bibi · A card for a card! A ` — 288×27
-- `label toolbar-toggle  Sound` — 63.8×19.2
-- `label toolbar-toggle  Reduce motion` — 115.3×19.2
-- `button #toggle-collection rematch  Collection (C)` — 120×40.5
-- `button #toggle-rules rematch  How to play (R)` — 129.4×40.5
+- `button #settings-trigger menu-trigger  Settings` — 27.6×33.6
+- `button #toggle-collection rematch  Collection (C)` — 120×32
+- `button #toggle-rules rematch  How to play (R)` — 120×32
 
 ## iPhone XR/11 — 414×896 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 414×896                                |
-| reported viewport                 | 414×896                                |
-| board                             | 382×382 at (16, 241.3)                 |
-| fully visible                     | yes                                    |
-| hand tray                         | 382×121.7 at (16, 779.5)               |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 701px                                  |
-| page height                       | 896 — **187px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 8 of 14                                |
+|                                   |                         |
+| --------------------------------- | ----------------------- |
+| requested viewport                | 414×896                 |
+| reported viewport                 | 414×896                 |
+| board                             | 394×394 at (10, 116.8)  |
+| fully visible                     | yes                     |
+| hand tray                         | 394×99.7 at (10, 617.1) |
+| hand visible                      | yes                     |
+| board and hand together           | yes                     |
+| sideways overflow                 | none                    |
+| chrome (everything but the board) | 502px                   |
+| page height                       | 896 — fits vertically   |
+| overlapping regions               | none                    |
+| targets under 44px                | 6 of 14                 |
 
 Controls too small to tap comfortably:
 
 - `button mode-button Match. Play a named opponent over one board. Match` — 63.6×33.6
 - `button mode-button Master Tournament. Your saved deck against one built to counter it. Master Tournament` — 99.7×33.6
 - `button mode-button Hotseat. Two players, one board, alternating. Hotseat` — 73.8×33.6
-- `select opponent-select  Bibi · A card for a card! A ` — 288×27
-- `label toolbar-toggle  Sound` — 63.8×19.2
-- `label toolbar-toggle  Reduce motion` — 115.3×19.2
-- `button #toggle-collection rematch  Collection (C)` — 120×40.5
-- `button #toggle-rules rematch  How to play (R)` — 129.4×40.5
+- `button #settings-trigger menu-trigger  Settings` — 27.6×33.6
+- `button #toggle-collection rematch  Collection (C)` — 120×32
+- `button #toggle-rules rematch  How to play (R)` — 120×32
 
 ## phone landscape — 844×390 (touch)
 
@@ -174,8 +164,8 @@ Controls too small to tap comfortably:
 | hand visible                      | **NO**                                 |
 | board and hand together           | **NO**                                 |
 | sideways overflow                 | none                                   |
-| chrome (everything but the board) | 500px                                  |
-| page height                       | 390 — **670px taller than the screen** |
+| chrome (everything but the board) | 442px                                  |
+| page height                       | 390 — **612px taller than the screen** |
 | overlapping regions               | none                                   |
 | targets under 44px                | 8 of 14                                |
 
@@ -192,31 +182,29 @@ Controls too small to tap comfortably:
 
 ## iPad portrait — 768×1024 (touch)
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 768×1024                                |
-| reported viewport                 | 768×1024                                |
-| board                             | 560×560 at (104, 195.8)                 |
-| fully visible                     | yes                                     |
-| hand tray                         | 736×121.7 at (16, 911.9)                |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 620px                                   |
-| page height                       | 1024 — **156px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 8 of 14                                 |
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| requested viewport                | 768×1024                 |
+| reported viewport                 | 768×1024                 |
+| board                             | 560×560 at (104, 104.8)  |
+| fully visible                     | yes                      |
+| hand tray                         | 748×121.7 at (10, 771.1) |
+| hand visible                      | yes                      |
+| board and hand together           | yes                      |
+| sideways overflow                 | none                     |
+| chrome (everything but the board) | 464px                    |
+| page height                       | 1024 — fits vertically   |
+| overlapping regions               | none                     |
+| targets under 44px                | 6 of 14                  |
 
 Controls too small to tap comfortably:
 
 - `button mode-button Match. Play a named opponent over one board. Match` — 63.6×33.6
 - `button mode-button Master Tournament. Your saved deck against one built to counter it. Master Tournament` — 146.9×33.6
 - `button mode-button Hotseat. Two players, one board, alternating. Hotseat` — 73.8×33.6
-- `select opponent-select  Bibi · A card for a card! A ` — 288×27
-- `label toolbar-toggle  Sound` — 63.8×19.2
-- `label toolbar-toggle  Reduce motion` — 115.3×19.2
-- `button #toggle-collection rematch  Collection (C)` — 120×40.5
-- `button #toggle-rules rematch  How to play (R)` — 129.4×40.5
+- `button #settings-trigger menu-trigger  Settings` — 76.4×33.6
+- `button #toggle-collection rematch  Collection (C)` — 120×32
+- `button #toggle-rules rematch  How to play (R)` — 120×32
 
 ## laptop — 1280×720
 
@@ -230,8 +218,8 @@ Controls too small to tap comfortably:
 | hand visible                      | **NO**                                 |
 | board and hand together           | **NO**                                 |
 | sideways overflow                 | none                                   |
-| chrome (everything but the board) | 442px                                  |
-| page height                       | 720 — **282px taller than the screen** |
+| chrome (everything but the board) | 384px                                  |
+| page height                       | 720 — **224px taller than the screen** |
 | overlapping regions               | none                                   |
 | targets under 44px                | 8 of 14                                |
 
@@ -258,8 +246,8 @@ Controls too small to tap comfortably:
 | hand visible                      | **NO**                                 |
 | board and hand together           | **NO**                                 |
 | sideways overflow                 | none                                   |
-| chrome (everything but the board) | 545px                                  |
-| page height                       | 900 — **205px taller than the screen** |
+| chrome (everything but the board) | 487px                                  |
+| page height                       | 900 — **147px taller than the screen** |
 | overlapping regions               | none                                   |
 | targets under 44px                | 8 of 14                                |
 

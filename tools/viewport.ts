@@ -174,8 +174,6 @@ function summarise(rows: readonly Row[]): string[] {
     }
     const board = r.board;
     const tooSmall = r.tooSmall;
-    const pageHeight = r.chromeHeight + (board?.height ?? 0);
-    const taller = Math.round(pageHeight - r.viewport.height);
     lines.push(
       '| | |',
       '|---|---|',
@@ -190,7 +188,7 @@ function summarise(rows: readonly Row[]): string[] {
       `| board and hand together | ${r.boardAndHandVisible ? 'yes' : '**NO**'} |`,
       `| sideways overflow | ${r.horizontalOverflow === 0 ? 'none' : `**${r.horizontalOverflow}px**`} |`,
       `| chrome (everything but the board) | ${r.chromeHeight}px |`,
-      `| page height | ${r.viewport.height}${taller > 0 ? ` — **${taller}px taller than the screen**` : ' — fits vertically'} |`,
+      `| page height | ${r.viewport.height}${r.pageOverflowPx > 0 ? ` — **${r.pageOverflowPx}px taller than the screen**` : ' — fits vertically'} |`,
       `| overlapping regions | ${r.overlaps.length === 0 ? 'none' : `**${r.overlaps.map((o) => `${o.a} / ${o.b} (${o.area}px²)`).join(', ')}**`} |`,
       `| targets under ${MIN_TARGET_PX}px | ${tooSmall.length} of ${r.interactive} |`,
       '',
@@ -215,6 +213,7 @@ function verdicts(rows: readonly Row[]): string[] {
       return `- **${name}** — could not measure: ${row.failure ?? 'unknown'}`;
     const r = row.report;
     const faults: string[] = [];
+    if (r.pageOverflowPx > 0) faults.push(`page ${r.pageOverflowPx}px too tall`);
     if (!r.boardFullyVisible) faults.push('board not fully visible');
     if (!r.handFullyVisible) faults.push('hand tray below the fold');
     else if (!r.boardAndHandVisible) faults.push('board and hand not visible together');

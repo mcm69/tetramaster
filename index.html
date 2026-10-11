@@ -240,6 +240,12 @@
         color: var(--muted);
         font-size: 0.9rem;
       }
+      /* An empty hint was costing 19px plus its gap on every screen — which is 27px of a 667px
+         phone spent on saying nothing. `:empty` rather than a narrow-screen rule, because it is
+         wasted space everywhere, and the hint is genuinely empty most of the time. */
+      .hint:empty {
+        display: none;
+      }
       .hint {
         min-height: 1.4em;
         color: var(--accent);
@@ -614,6 +620,38 @@
          first attempt sat next to `.hand` and was silently overridden by `.hand-card` eleven lines
          below it, so the five cards kept their 7.5rem minimum, overflowed the 361px tray, and two
          of them were clipped away by `overflow-x: clip` without a scrollbar to explain it. */
+      /* The chrome the board cannot spare on a phone.
+         Measured at 375x667 with the tray on one row and the settings collapsed, the page was 97px
+         too tall. These cost 98px, which is the whole of it: the title is 38 with its gap, the mode
+         note 32, and every gap trimmed from 12px to 8px saves 4px across seven of them.
+
+         The title goes because a phone tab already says "Tetra Master" and carries the icon, and a
+         letter-spaced heading is the first thing that should yield when the board needs the room.
+         The mode note is the mode's own blurb, which is on the mode button's `title` and in its
+         accessible name, and is said again in the results at the end of a match. */
+      @media (max-width: 48rem) {
+        body {
+          gap: 0.5rem;
+          /* The board's own padding. 16px of body padding is a lot on a screen that is being asked
+             to hold a board and a hand tray at once. */
+          padding-top: max(0.625rem, env(safe-area-inset-top));
+          padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
+          padding-left: max(0.625rem, env(safe-area-inset-left));
+          padding-right: max(0.625rem, env(safe-area-inset-right));
+        }
+        h1 {
+          display: none;
+        }
+        .mode-note {
+          display: none;
+        }
+        /* Two full-size buttons for two secondary destinations. They keep their labels and their
+           order; they just stop being padded like desktop buttons. */
+        .toolbar .rematch {
+          padding: 0.3rem 0.55rem;
+          font-size: 0.85rem;
+        }
+      }
       /* The disclosure becomes a panel rather than part of the bar. Whether it collapses at all is
          decided by `main.ts` with `matchMedia`, so that `hidden` and `aria-expanded` agree; this is
          only how the open panel is arranged. */
@@ -640,12 +678,29 @@
       /* "Master Tournament" is 146px on its own, which is what pushed the mode bar onto a second row
          at 320px. The full name stays in `title` and in the accessible name. */
       @media (max-width: 30rem) {
+        /* "Master Tournament" is 146px on its own. Abbreviated to 100px, which is what lets the
+           mode bar share a row with the Settings button rather than taking one of its own — worth
+           45px of page height at 360px wide. The full name stays in `title` and in the accessible
+           name. */
         .mode-button[data-mode='tournament'] {
           font-size: 0;
         }
         .mode-button[data-mode='tournament']::before {
           content: 'Tournament';
           font-size: 0.85rem;
+        }
+        /* And the Settings button gives up its label for a glyph, for the same reason. `\FE0E`
+           forces text presentation so the gear does not arrive as a colour emoji. */
+        .menu-trigger {
+          padding: 0.35rem 0.5rem;
+        }
+        .menu-trigger span {
+          display: none;
+        }
+        .menu-trigger::before {
+          content: '⚙\FE0E';
+          font-size: 1rem;
+          line-height: 1;
         }
       }
       @media (max-height: 760px) {

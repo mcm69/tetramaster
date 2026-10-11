@@ -77,6 +77,16 @@ export interface LayoutReport {
   readonly boardAndHandVisible: boolean;
   /** Vertical space consumed by everything that is not the board, in CSS pixels. */
   readonly chromeHeight: number;
+  /**
+   * How much taller than the visible viewport the page is, or 0 when it fits.
+   *
+   * Separate from `handFullyVisible` on purpose. A page can be 30px too tall and still leave the
+   * hand tray on screen, and every fault in this report was missed while that was true: four
+   * separate regressions to the chrome all left the board and the hand comfortably visible, and the
+   * harness called every one of them healthy. "Fits" and "the important parts are on screen" are
+   * different claims, and only one of them is what M2 promised.
+   */
+  readonly pageOverflowPx: number;
   /** Interactive elements measured, and how many of them are under the touch minimum. */
   readonly interactive: number;
   readonly tooSmall: readonly ProbeTarget[];
@@ -235,6 +245,7 @@ export function collectLayout(
     boardAndHandVisible:
       within(board, visibleWidth, visibleHeight) && within(hand, visibleWidth, visibleHeight),
     chromeHeight: board === null ? scrollHeight : Math.max(0, scrollHeight - board.height),
+    pageOverflowPx: Math.max(0, Math.round(scrollHeight - visibleHeight)),
     interactive: elements.length,
     tooSmall,
     overlaps,
@@ -296,6 +307,9 @@ export function formatReport(report: LayoutReport): string[] {
       : `overlaps: **${overlaps.length}**  ${overlaps.map((o) => `${o.a} / ${o.b} (${o.area}px²)`).join(', ')}`,
   );
   lines.push(`chrome ${report.chromeHeight}px (everything that is not the board)`);
+  lines.push(
+    `page ${report.pageOverflowPx === 0 ? 'fits' : `**${report.pageOverflowPx}px too tall**`}`,
+  );
   const tooSmall = report.tooSmall;
   lines.push(
     `targets under ${MIN_TARGET_PX}px: ${tooSmall.length} of ${report.interactive}` +

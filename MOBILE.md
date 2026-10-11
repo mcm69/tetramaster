@@ -213,17 +213,53 @@ nine sizes. Every portrait phone from 375px up has the board and the hand tray o
 | iPad, laptop, desktop     | hand tray below the fold | the page scrolls, as it always did; M3 and M4 shorten it                       |
 | every size                | 8 controls under 44px    | M5                                                                             |
 
-### M3 — Narrow-screen layout
+### M3 — Narrow-screen layout — **done**
 
-The hand tray is **already done**, in M2, because M0 showed it was the single largest item in the
-chrome and no viewport work fixes a tray that wraps. What is left here is the rest of the chrome.
+Measured first, then spent. At 375×667 with the tray on one row and the settings collapsed, the page
+was **97px too tall**. The cuts, with what each cost and why it is safe to cut:
 
-- The first `@media (max-width: …)` in the project used for layout rather than for hiding things.
-- Hide `.mode-note` and `.keys` by width as well as by height.
-- Tighten the flex `gap` and the `h1` at narrow widths.
-- The toolbar's own height is M4's problem.
+|                                                        | saved             | why it is safe                                                                                                             |
+| ------------------------------------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `h1` hidden below 48rem                                | 38px with its gap | a phone tab already says "Tetra Master" and carries the icon                                                               |
+| `.mode-note` hidden by width as well as height         | 32px              | it is the mode's blurb, which is on the button's `title`, in its accessible name, and in the results at the end of a match |
+| gaps 12px → 8px                                        | 28px              | nothing to lose                                                                                                            |
+| body padding 16px → 10px, safe areas kept              | 12px              | the board was asking for the room                                                                                          |
+| `.hint:empty { display: none }`                        | 27px              | **it was empty.** An empty paragraph still holds a line box, and it was doing that on every screen including desktop       |
+| "Master Tournament" → "Tournament" below 30rem         | —                 | 146px → 100px, which is what lets the mode bar share a row with the Settings button                                        |
+| Settings button → a gear glyph below 30rem             | 45px at 360       | `\FE0E` forces text presentation so it does not arrive as a colour emoji                                                   |
+| the arrow sprite 56px → 34px on a card under 96px wide | 22px              | the same arrows, and the tray is on one row so all five cards stay visible                                                 |
 
-**Done when** the board at 390×844 is larger than it is after M2, measured by the M0 harness.
+**Every portrait device in the matrix now fits**, 320×568 upwards, and the board is _larger_ than it
+was before any of this: 300px at 320 wide, 370px at 390.
+
+**The harness got a verdict it was missing.** Every mutation in the table above initially passed,
+because "the board and the hand are on screen" leaves headroom below the hand — and "fits" is a
+different claim. `pageOverflowPx` is now measured and flagged, which is the criterion M2 promised in
+the first place. Four of the six are caught by it.
+
+**Two are not, and the reason is worth stating.** Reverting the arrow sprite (22px) or the body
+padding (12px) individually still fits at 320px, because that device has ~23px of slack. Measuring at
+a boundary only catches changes larger than the boundary's headroom. So the _policy_ — which card
+width shrinks the sprite — was pulled out as a pure `previewSizeFor(widthPx)` and pinned in Node,
+which is the only level that can hold it. Two mutations caught there: always full size, and the
+threshold moved so nothing ever shrinks.
+
+**Learned:**
+
+- **A seventh silent `python` replace.** The anchor was a comment sitting _before_ an `@media`, and I
+  matched it as if it were inside the braces. Nothing applied, nothing errored, and I read the
+  unchanged viewport numbers as "the cuts weren't enough". They had never run. Every multi-line
+  replace now asserts its anchor exists first.
+- **`npm run viewport` builds; `npm run verify` does not.** After reverting a mutation I served a
+  `dist/` that still contained it, and spent a while debugging a `matchMedia` that was working
+  perfectly well. A stale build looks exactly like a live bug.
+- **A first pass cannot measure the thing it is about to create.** The arrow sprite asked its own card
+  for a width while the card was still being built, so every card measured zero and every sprite
+  stayed full size — on exactly the narrow screens the change was for. A detached element measures
+  nothing; that is the normal state of a component under construction, not an edge case.
+- **An empty element still reserves a line.** `.hint` cost 19px plus its gap on every screen in the
+  matrix, desktop included, while saying nothing. The cheapest 27px on the page, and it was not in
+  the plan.
 
 ### M4 — Toolbar overflow menu — **done**
 

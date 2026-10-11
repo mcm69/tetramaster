@@ -842,6 +842,54 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S28 — 2026-10-11 — M3: every portrait phone fits, and the board got bigger
+
+**Status:** mobile stage M3 complete. **745 tests** (up from 743).
+
+**Measured first, then spent.** At 375×667 the page was **97px too tall**. The cuts, with a reason
+each is safe, are tabulated at the top of M3 in `MOBILE.md`. The cheapest was not in the plan: an
+empty `.hint` was holding a line box, 19px plus its gap, on every screen including desktop — 27px on
+a phone spent saying nothing.
+
+**Every portrait device in the matrix now fits**, 320×568 upwards, and the board is **larger** than
+before any of this: 300px at 320 wide, 370px at 390.
+
+**The harness was missing a verdict it should have had.** Every one of these changes initially passed
+the mutation check, because the harness asked "are the board and the hand on screen" and there is
+headroom below the hand. "Fits" is a different claim. `pageOverflowPx` is now measured and flagged —
+which is the criterion M2 promised in the first place and had never encoded. Four of the six changes
+are caught by it.
+
+**Two are still not, and the reason is worth writing down rather than hiding.** Reverting the arrow
+sprite (22px) or the body padding (12px) individually still fits at 320px, which has ~23px of slack.
+**Measuring at a boundary only catches changes larger than the boundary's headroom.** So the _policy_
+— which card width shrinks the sprite — was pulled out as a pure `previewSizeFor(widthPx)` and pinned
+in Node, the only level that can hold it.
+
+**Learned:**
+
+- **A seventh silent replace.** The anchor was a comment sitting _before_ an `@media`, matched as if
+  it were inside the braces. Nothing applied, nothing errored, and I read the unchanged numbers as
+  "the cuts weren't enough" — they had never run. Every multi-line replace now asserts its anchor.
+- **`npm run viewport` builds; `npm run verify` does not.** After reverting a mutation I served a
+  `dist/` that still contained it and spent a while debugging a `matchMedia` that was working fine.
+  A stale build is indistinguishable from a live bug.
+- **A first pass cannot measure the thing it is about to create.** The arrow sprite asked its card for
+  a width while the card was still being built, so every card measured zero and every sprite stayed
+  full size — on exactly the screens the change was for. A detached element measures nothing; that is
+  the normal state of a component under construction.
+
+**Verified by mutation**, all caught: empty hint restored (52px over at 320), title kept (33px),
+Settings label kept (44px), gaps back to 12px (14px), sprite policy always full size, sprite threshold
+moved so nothing shrinks. The last two are caught by `tests/ui/hand.test.ts` rather than the harness,
+for the reason above.
+
+**Next:** M5, touch targets — six controls are still under 44px, on phones and desktop alike.
+**Files touched:** `index.html`, `src/ui/components/hand.ts`, `src/ui/layoutProbe.ts`,
+`tools/viewport.ts`, `tests/ui/hand.test.ts` (new), `MOBILE.md`, `MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S27 — 2026-10-11 — M4: the settings disclosure, and §5.4 settled by arithmetic
 
 **Status:** mobile stage M4 complete. **743 tests** (up from 729).
