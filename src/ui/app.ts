@@ -14,7 +14,7 @@
  *    Enter calls. They reach the same function, so the two input modes cannot drift apart.
  */
 
-import { Animator } from '../render/animator.ts';
+import { Animator, type EventSlot } from '../render/animator.ts';
 import { applyAction, legalCells, opponentOf, score, type Action } from '../core/match.ts';
 import { previewPendingBattles } from '../core/resolution.ts';
 import { figureById } from '../data/cards.ts';
@@ -22,7 +22,16 @@ import { resolveStats, winProbability } from '../core/battle.ts';
 import { statCode } from '../core/card.ts';
 import { arrowCount } from '../core/direction.ts';
 import { legalPredicate, stepCursor } from './cursor.ts';
-import type { BoardCard, Card, Cell, GameState, MatchResult, Owner, Phase } from '../core/types.ts';
+import type {
+  BoardCard,
+  Card,
+  Cell,
+  GameEvent,
+  GameState,
+  MatchResult,
+  Owner,
+  Phase,
+} from '../core/types.ts';
 
 /** A card as the UI shows it. */
 export interface CardView {
@@ -84,12 +93,23 @@ export interface ControllerOptions {
    * Hotseat passes both seats, because there the opponent genuinely is a person.
    */
   readonly humanSeats?: readonly Owner[];
+
+  /**
+   * Called with the event log of every action that lands, whoever made it.
+   *
+   * This exists because sound was being played from exactly one place in the program — the end of
+   * the match — so a whole match was silent and then arrived all at once. The trigger belongs next
+   * to the dispatch that produced the events rather than in whichever screen happens to notice.
+   */
+  readonly onAction?: (events: readonly GameEvent[], schedule: readonly EventSlot[]) => void;
 }
 
 export class MatchController {
   private current: GameState;
   private readonly anim: Animator;
   private readonly humanSeats: readonly Owner[];
+  private readonly onAction:
+    ((events: readonly GameEvent[], schedule: readonly EventSlot[]) => void) | null;
   private selected: number | null = null;
   private hoverCell: Cell | null = null;
   private hintText: string | null = null;
@@ -103,6 +123,7 @@ export class MatchController {
     this.current = initial;
     this.anim = animator;
     this.humanSeats = options.humanSeats ?? ['player'];
+    this.onAction = options.onAction ?? null;
     this.anim.syncTo(initial.board);
   }
 
@@ -338,6 +359,10 @@ export class MatchController {
 
     this.current = result.state;
     this.anim.push(result.events, result.state);
+    // Handed the schedule `push` just built rather than being told to go and read it back. A
+    // read-after-write on shared mutable state is a footgun with no test around it: anything that
+    // queued something in between would quietly desynchronise sound from picture.
+    this.onAction?.(result.events, this.anim.lastSchedule);
     this.selected = null;
     this.hintText = null;
     // A placement invalidates the old cursor position, so re-seat it on something legal.

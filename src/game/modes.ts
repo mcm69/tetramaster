@@ -66,6 +66,9 @@ export const MODES: Readonly<Record<ModeId, Mode>> = {
 
 export const MODE_ORDER: readonly ModeId[] = ['match', 'tournament', 'hotseat'];
 
+/** Turn order. A mode's human seats are reported in this order. */
+export const SEAT_ORDER: readonly Owner[] = ['player', 'ai'];
+
 export function modeById(id: ModeId): Mode {
   return MODES[id];
 }
@@ -78,6 +81,18 @@ export function isAiSeat(mode: Mode, owner: Owner): boolean {
 /** True when `owner` is played by a person sitting at this keyboard. */
 export function isHumanSeat(mode: Mode, owner: Owner): boolean {
   return !isAiSeat(mode, owner);
+}
+
+/**
+ * Every seat a person is sitting at in this mode, in turn order.
+ *
+ * This is what `MatchController` needs, and it was never passed. `isHumanSeat` sat here tested and
+ * correct and called from nowhere, which is the same shape as `Animator.flash`: right, and not
+ * connected to anything. The default in the controller is `['player']`, so every game against the
+ * computer worked by luck and **hotseat was unplayable** — the second seat's turn was always refused.
+ */
+export function humanSeatsFor(mode: Mode): readonly Owner[] {
+  return SEAT_ORDER.filter((owner) => isHumanSeat(mode, owner));
 }
 
 /** Why a mode cannot be entered yet, or null when it can. */

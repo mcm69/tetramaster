@@ -30,6 +30,14 @@ export interface BattleRollFrame {
   readonly probability: number;
 }
 
+/** Where one event's animation sits in time, relative to now. */
+export interface EventSlot {
+  readonly event: GameEvent;
+  /** Milliseconds from now until it begins. */
+  readonly startMs: number;
+  readonly durationMs: number;
+}
+
 /** One cell's current animation state. */
 export interface CardFrame {
   readonly cell: Cell;
@@ -91,6 +99,14 @@ export class Animator {
   /** When the last turn handover started, and whose it was to. */
   private turnStartedAt: number | null = null;
   private turnOwner: Owner | null = null;
+  /**
+   * The schedule built by the last `push`.
+   *
+   * Anything that has to line up with the animation reads this rather than recomputing it. A second
+   * call to `schedule` would answer differently, because the queue has since grown — and sound that
+   * drifted a few hundred milliseconds from the picture it belongs to is worse than no sound.
+   */
+  private schedule0: readonly EventSlot[] = [];
 
   constructor(options: AnimatorOptions = {}) {
     this.reduceMotion = options.reduceMotion ?? 'full';
@@ -122,6 +138,35 @@ export class Animator {
     return this.queue.length;
   }
 
+  /** Where each event of the last pushed log will play. Empty before the first `push`. */
+  get lastSchedule(): readonly EventSlot[] {
+    return this.schedule0;
+  }
+
+  /**
+   * When each event of `events` will animate, starting after anything already queued.
+   *
+   * `push` is built on this rather than the other way round, because a second implementation of the
+   * same schedule is exactly how sound and picture end up disagreeing.
+   */
+  schedule(events: readonly GameEvent[]): readonly EventSlot[] {
+    const slots: EventSlot[] = [];
+    let cursor = this.clock;
+    for (const queued of this.queue) {
+      const end = queued.start + queued.duration;
+      if (end > cursor) cursor = end;
+    }
+    const start = cursor;
+    for (const event of events) {
+      const duration = this.reduceMotion === 'reduced' ? 0 : durationFor(event);
+      slots.push({ event, startMs: cursor - start, durationMs: duration });
+      // Events that animate nothing still occupy their place in the sequence, so the numbers line up
+      // with what is on screen rather than with the events that happen to be visible.
+      cursor += duration;
+    }
+    return slots;
+  }
+
   /**
    * Queues the animations for one action's event log. Order is preserved: it is the sequence.
    *
@@ -134,32 +179,26 @@ export class Animator {
    * succession play in order rather than on top of each other.
    */
   push(events: readonly GameEvent[], state: GameState): void {
-    let cursor = this.clock;
-    for (const queued of this.queue) {
-      const end = queued.start + queued.duration;
-      if (end > cursor) cursor = end;
-    }
+    const slots = this.schedule(events);
+    this.schedule0 = slots;
 
-    for (const event of events) {
-      const duration = this.reduceMotion === 'reduced' ? 0 : durationFor(event);
+    for (const slot of slots) {
+      const event = slot.event;
+      const duration = slot.durationMs;
+      const at = this.clock + slot.startMs;
 
       // A turn handover has no cell, and must never touch one: it would erase the card just played.
       // It gets its own clock entry instead.
       if (event.t === 'turn') {
         // Reduced motion means no decorative motion either, and this is decoration.
         if (duration > 0) {
-          this.turnStartedAt = cursor;
+          this.turnStartedAt = at;
           this.turnOwner = event.owner;
         }
-        cursor += duration;
         continue;
       }
 
-      // A battle names two cards and they fight *together*, so both start at the same cursor. The
-      // cursor advances once per event, after the loop — advancing it per cell made every fight take
-      // twice as long as it is supposed to, and each one twice over again.
-      const cells = cellsFor(event);
-      for (const cell of cells) {
+      for (const cell of cellsFor(event)) {
         // The target is the board as it stands *after* the whole action, which is correct for
         // every cell an event names.
         const target = state.board[cell] ?? null;
@@ -172,13 +211,12 @@ export class Animator {
         this.queue.push({
           cell,
           kind: kindFor(event),
-          start: cursor,
+          start: at,
           duration,
           target,
           roll: rollFor(event, cell),
         });
       }
-      if (cells.length > 0) cursor += duration;
     }
   }
 

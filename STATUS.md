@@ -842,6 +842,95 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S21 — 2026-10-11 — the match was silent, and then it all arrived at once
+
+**Reported:** "it appears that all sounds are played at once at the end of the game." **Correct.**
+
+**Status:** post-completion fix, plus two latent bugs found while fixing it. **713 tests** (up from
+695).
+
+## The sound bug
+
+`playEvents` had exactly one call site in the whole program, and it was the end of the match:
+
+```
+settleIfFinished() → playEvents(controller.state.history, result.outcome)
+```
+
+`history` is the log of the _whole_ match. Measured over 20 greedy matches: **~40 events, ~21 cues**,
+all fired in one burst at the final result — about **1.45 seconds** of beeping, in order, long after
+the cards they belonged to had landed. During the match itself: nothing at all.
+
+`cuesFor` was right throughout, and `tests/audio/synth.test.ts` covers it well — one cue per event,
+the right cue per event, the right ending, silence for imperceptible events. Thirteen tests, all on
+the mapping. **Nothing tested when the cues were played.** The right thing, wired to the wrong moment,
+is indistinguishable from the right thing to a test suite that only asks "which sounds".
+
+**Fix:** sound fires per action, from `MatchController.dispatch` via an `onAction` hook, timed against
+the animation that action just queued. `Animator` now exposes the schedule it actually built
+(`lastSchedule`, and `schedule()` which `push` is built on, so there is one implementation), and
+`planAction` in `src/audio/schedule.ts` turns events + schedule into `{cue, delayMs}`. A battle is now
+heard while its numbers are rolling.
+
+## Two latent bugs, both in hotseat
+
+Found while wiring the fix, both invisible because they are in the seam between the engine and the app:
+
+- **`humanSeats` was never passed.** `MatchController` refused to act for a seat nobody is sitting at
+  (S18). `main.ts` was never told. The default is `['player']`, so games against the computer worked
+  **by luck**, and **hotseat was unplayable** — the second seat's every turn was refused.
+  `isHumanSeat` had sat in `src/game/modes.ts`, correct, tested, and called from nowhere in `src/`.
+  The same shape as `Animator.flash`.
+- **`stepOpponent` hardcoded the computer to the `'ai'` seat.** In hotseat the second seat _is_ `'ai'`
+  and a person is sitting at it, so the computer played that player's turns by itself, the moment the
+  board stopped animating. It now asks the mode which seat, if any, the computer holds.
+
+So hotseat had two faults pointing the same way: unwired, it could not be played; wired naively, the
+computer played half of it.
+
+**Learned:**
+
+- **The second hotseat bug was only findable by fixing the first.** Restoring the second seat's
+  _ability_ to be played immediately exposed that something else was playing it. A bug can hide a bug.
+- **An S18 edit had silently no-op'd.** The `humanSeats` wiring was written, reported as done, and
+  never applied — a `python` string replace that matched nothing, with no error. `grep -rn humanSeats
+src/` would have caught it in one second. **Verify a multi-file edit landed, every time**; a
+  replacement that matches nothing is silent, and a script that exits 0 is not evidence.
+- **A tested function is not a wired function.** `isHumanSeat` passed its tests for the whole life of
+  the bug. The gap was always the call site, and the call site is only observable by booting the app.
+  `tests/ui/hotseat.test.ts` does exactly that: boots `main.ts` in hotseat mode and plays the second
+  seat with real clicks. A mutation putting a literal `['player']` back in `main.ts` left every other
+  test green.
+- **A whole-log function called one event at a time keeps its whole-log behaviour.** `planAction`
+  passed the outcome to `cuesFor` for every event, which triggers `cuesFor`'s "the log did not
+  announce a result, so announce it now" fallback — per event. A five-event log came out as
+  `loss, battle, loss, loss, combo, loss, loss`. The argument now means "only if this event is the
+  ending".
+- **A read-after-write on shared mutable state is a footgun with no test around it.** The hook originally
+  read `animator.lastSchedule` after the fact; a mutation that queued anything in between desynchronised
+  sound from picture and nothing failed. The hook now _receives_ the schedule.
+- **Counting draw calls cannot tell "it is quieter now".** The stub's call total grows every frame
+  whether or not anything happened. The announcer is the witness — `main.ts` rewrites it from the turn
+  and the board, and `seatLabels` already says "Player 1" / "Player 2" in hotseat.
+- **"The turn changed" is not "a card was played".** A contested placement leaves the turn with the
+  attacker (§1.7), so the first `placeSomewhere` helper reported a perfectly good move as a failure. It
+  now compares the whole announcement.
+
+**Verified by mutation.** Caught: per-action sound removed (3), hotseat wiring reverted (1),
+`stepOpponent` seat hardcoded again (2), cues fired instantly (1), outcome leaking into every event
+(3), `playTimeline` ignoring its offsets (1). One survivor that is _not_ a bug: dropping
+`playTimeline`'s own `isEnabled` check, because `play` has one too — the outer check only avoids
+scheduling timers that would do nothing.
+
+**Next:** three user-reported bugs in a row have now all been "wired wrong, tested right". The
+standing recommendation is unchanged and stronger: the browser is the only place this class of defect
+surfaces.
+**Files touched:** `src/audio/schedule.ts` (new), `src/audio/synth.ts`, `src/render/animator.ts`,
+`src/ui/app.ts`, `src/game/modes.ts`, `src/main.ts`, `tests/ui/soundTiming.test.ts` (new),
+`tests/ui/hotseat.test.ts` (new), `tests/audio/synth.test.ts`, `STATUS.md`
+
+---
+
 ### S20 — 2026-10-11 — no animation had ever been seen
 
 **Asked:** "do we have any animations for the turn/battle?" **Answered:** no — and then, on checking,

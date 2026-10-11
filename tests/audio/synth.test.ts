@@ -222,6 +222,56 @@ describe('timers', () => {
     }
   });
 
+  it('honours the offsets a timeline gives it, rather than firing everything now', () => {
+    // `playTimeline` is what the game actually calls. It is the one that replaced the end-of-match
+    // burst, and a version that ignored its offsets would put the whole match's sound back in one
+    // instant — while every test of the *planning* still passed, because the plan is correct long
+    // before anyone plays it.
+    vi.useFakeTimers();
+    try {
+      const audio = fakeAudio();
+      const synth = new Synth({ context: audio.context });
+      synth.setEnabled(true);
+
+      synth.playTimeline([
+        { cue: 'place', delayMs: 0 },
+        { cue: 'battle', delayMs: 240 },
+        { cue: 'capture', delayMs: 480 },
+      ]);
+
+      const total = (['place', 'battle', 'capture'] as Cue[]).reduce(
+        (sum, cue) => sum + notesIn(cue),
+        0,
+      );
+      const immediate = audio.oscillatorStarts();
+      expect(immediate).toBeGreaterThan(0);
+      expect(immediate, 'the later cues played at once').toBeLessThan(total);
+
+      vi.advanceTimersByTime(200);
+      expect(audio.oscillatorStarts(), 'the 240ms cue fired early').toBe(immediate);
+
+      vi.advanceTimersByTime(100);
+      const after240 = audio.oscillatorStarts();
+      expect(after240).toBeGreaterThan(immediate);
+      expect(after240).toBeLessThan(total);
+
+      vi.advanceTimersByTime(500);
+      expect(audio.oscillatorStarts()).toBe(total);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('plays nothing from a timeline when it is switched off', () => {
+    const audio = fakeAudio();
+    const synth = new Synth({ context: audio.context });
+    synth.playTimeline([
+      { cue: 'place', delayMs: 0 },
+      { cue: 'win', delayMs: 100 },
+    ]);
+    expect(audio.oscillatorStarts()).toBe(0);
+  });
+
   it('plays nothing from a sequence when it is switched off', () => {
     const audio = fakeAudio();
     const synth = new Synth({ context: audio.context });

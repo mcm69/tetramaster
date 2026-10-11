@@ -38,12 +38,21 @@ import {
   seatLabels,
   watchReducedMotion,
 } from './ui/accessibility.ts';
-import { MODES, blockedReason, isAiSeat, planDecks, type ModeId } from './game/modes.ts';
+import {
+  MODES,
+  blockedReason,
+  humanSeatsFor,
+  isAiSeat,
+  planDecks,
+  type ModeId,
+} from './game/modes.ts';
 import { Profile } from './game/profile.ts';
 import { describeChange } from './game/progression.ts';
-import { cuesFor, Synth } from './audio/synth.ts';
+import { Synth } from './audio/synth.ts';
+import { planAction } from './audio/schedule.ts';
+import type { EventSlot } from './render/animator.ts';
 import { Animator } from './render/animator.ts';
-import type { Outcome } from './core/types.ts';
+import type { GameEvent, Outcome } from './core/types.ts';
 
 /**
  * The board's design size.
@@ -131,9 +140,25 @@ function boot(): void {
   // Progression runs exactly once per finished match. Declared up here because `newController`
   // resets it and is called during initialisation, below this point.
   let settled = false;
-  // Same reason: `newController` resets the opponent's turn latch. Anything an initialiser touches
-  // has to exist before it runs.
+  // Same reason: `newController` resets the opponent's turn latch and installs the sound hook.
+  // Anything an initialiser touches has to exist before it runs — fifth time on this file.
   const gate = new OpponentGate();
+
+  /**
+   * Sounds for one action, in step with the animation it just queued.
+   *
+   * This used to be called from `settleIfFinished` with `controller.state.history` — the log of the
+   * *entire match*. So the game was silent for its whole length and then played every sound it had
+   * earned in one burst at the final result: around 21 cues in about 1.4 seconds, in order, long
+   * after the cards they belonged to had landed. `cuesFor` was right the whole time; only the
+   * trigger was wrong, and nothing tested the trigger.
+   */
+  const playAction = (events: readonly GameEvent[], schedule: readonly EventSlot[]): void => {
+    if (!synth.isEnabled || events.length === 0) return;
+    const outcome = controller.state.result?.outcome ?? null;
+    const plan = planAction(events, schedule, outcome);
+    if (plan.length > 0) synth.playTimeline(plan);
+  };
   const layout = boardLayout(BOARD_SIZE - 40, 20, 20);
   let controller = newController(seed);
 
@@ -156,6 +181,14 @@ function boot(): void {
         aiDeck: [...plan.aiDeck],
       }),
       new Animator({ reduceMotion: reducedMotion() ? 'reduced' : 'full' }),
+      {
+        // Which seats a person at this keyboard may act for. Hotseat needs both, and without this
+        // the controller refused the second seat's every turn, so hotseat could not be played at all.
+        humanSeats: humanSeatsFor(mode),
+        // Sound belongs to the dispatch that produced the events, so it fires for the computer's
+        // moves as well as the player's.
+        onAction: playAction,
+      },
     );
   }
 
@@ -225,7 +258,6 @@ function boot(): void {
     const result = controller.state.result;
     if (result === null) return;
     settled = true;
-    playEvents(controller.state.history, result.outcome);
     const growth = profile.finishMatch(controller.state, result.outcome).growth;
     if (growth.changes.length > 0) {
       hintEl.textContent = growth.changes.map(describeChange).join('   ·   ');
@@ -346,12 +378,6 @@ function boot(): void {
         labels,
       )}`,
     );
-  };
-
-  const playEvents = (events: readonly { t: string }[], outcome: Outcome | null): void => {
-    if (!synth.isEnabled) return;
-    const cues = cuesFor(events as never, outcome);
-    if (cues.length > 0) synth.playSequence(cues);
   };
 
   // ── the collection screen ─────────────────────────────────────────────────────────────────
@@ -555,6 +581,17 @@ function boot(): void {
   // opponent moved exactly once per match; and because the controller had no turn check either, the
   // player quietly spent the rest of the match playing both sides.
   const stepOpponent = (): void => {
+    // Which seat, if any, the computer is playing in this mode. It was hardcoded to `'ai'`, which is
+    // right for two modes out of three and quietly wrong for the third: in hotseat the second seat
+    // *is* the `ai` seat, but a person is sitting at it. So the computer took that player's turns by
+    // itself, and the second player watched. Ask the mode instead of assuming.
+    const seat = MODES[modeId].aiSeats[0];
+    if (seat === undefined) {
+      // Nobody to play for. Release the latch so a later mode change is not met with a stale one.
+      gate.reset();
+      return;
+    }
+
     const acted = gate.step(
       {
         get busy(): boolean {
@@ -564,7 +601,7 @@ function boot(): void {
         submit: (action) => controller.submitExternal(action),
       },
       controller.state,
-      'ai',
+      seat,
     );
     if (acted) syncDom();
   };

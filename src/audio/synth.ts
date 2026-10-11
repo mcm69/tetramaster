@@ -171,6 +171,29 @@ export class Synth {
   }
 
   /** Plays a run of cues, spaced so a cascade does not collapse into one sound. */
+  /**
+   * Plays sounds at explicit offsets from now.
+   *
+   * `playSequence` spaces cues evenly, which is right for "here is a list, in order" and wrong for
+   * "here is a match's worth of events and here is the picture they go with". The offsets come from
+   * the animator's own schedule, so a battle is heard while its numbers are rolling rather than at
+   * some arbitrary point in a burst.
+   */
+  playTimeline(entries: readonly { readonly cue: Cue; readonly delayMs: number }[]): void {
+    if (!this.isEnabled) return;
+    for (const entry of entries) {
+      const ctx = this.ctx;
+      if (ctx === null) return;
+      if (entry.delayMs <= 0) {
+        this.play(entry.cue);
+        continue;
+      }
+      globalThis.setTimeout(() => {
+        this.play(entry.cue);
+      }, entry.delayMs);
+    }
+  }
+
   playSequence(cues: readonly Cue[], spacing = 0.07): void {
     if (!this.isEnabled) return;
     cues.forEach((cue, index) => {
