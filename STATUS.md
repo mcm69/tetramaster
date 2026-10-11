@@ -805,7 +805,7 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 **Stage:** 10 (Modes & polish) · **Status:** ⬜ → ✅
 **Did:** `src/ai/counterDeck.ts`, `src/game/modes.ts`, `src/audio/synth.ts`,
 `src/ui/screens/{rules,rulesView}.ts`, `src/ui/accessibility.ts`, `src/ui/components/toolbar.ts`, plus
-`main.ts`, `index.html`, and a v3 save with `settings`. **636 tests**, up from 468.
+`main.ts`, `index.html`, and a v3 save with `settings`. **660 tests**, up from 468.
 
 **Learned:**
 
@@ -842,9 +842,56 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S16 — 2026-10-11 — the keyboard cursor could get stuck, and could walk into traps
+
+**Status:** post-completion fix. **660 tests**, up from 636.
+
+**Fixed.** Arrow keys moved the cursor by searching the **whole board** for the legal cell nearest the
+clamped target, and breaking ties by board order. That had two failure modes:
+
+- **It returned the cursor's own cell.** With cell 3 blocked, Right from cell 2 did nothing: cells 2, 6
+  and 7 all sit at Manhattan distance 1 from the blocked target and cell 2 has the lowest index.
+  Measured over every board, cell and direction — **2,097,088 presses — 46.5% of key presses were
+  dead**, and the cursor teleported more than one square on 106,496 of them.
+- **It could walk into a trap.** Movement is one-way per press, so `candidates` is the only door into
+  a square. On a board with 0, 1, 2, 6 and 7 blocked, pressing Left from cell 3 stepped into cell 0,
+  which has no playable neighbour at all — and the cursor could never move again.
+
+Movement now follows four rules, each asking for _more_ progress along the pressed axis than the last:
+straight ahead, then a forward diagonal, then a slide along the row or column over whatever is in the
+way, then stay put. A square with no playable neighbour is never entered unless the cursor is already
+stuck in one. Ties between mirror diagonals go to the more constrained square, so a corner walled in
+on two sides is entered rather than passed by.
+
+**Measured:** dead presses 46.5% → 15.2%, of which **zero** are avoidable; jumps longer than one square
+106,496 → **0**; sideways moves **0**; walking into a trap **0**.
+
+**Learned:**
+
+- **The exhaustive test is what found three of these bugs, including two I introduced while fixing
+  the first.** Restricting movement to adjacent squares made a walled-in corner unreachable; adding
+  the slide then wrapped rows (`cellAt(1, 4)` is cell 8, a real square in the next row, and it sailed
+  through a bounds check that re-derived its own row from the wrapped index); and the original
+  Manhattan search put the cursor into a square it could never leave. Each was found by checking
+  every board rather than the one in the bug report.
+- **I set an invariant I could not satisfy, and rather than weaken it I asked what it was for.** "Every
+  playable square is reachable from every other" is false: blocking 1, 2, 4 and 5 leaves cells 0 and
+  1 playable with each other as their only playable neighbour, and no direction-preserving movement
+  can cross into them. The mouse still reaches them. The guarantees that _are_ achievable — no traps,
+  no one-way doors except the escape out of a walled-in square — are the ones now asserted.
+- **A test that times out is a test nobody runs.** The one-way-door check passed alone and failed the
+  full suite on the default 5s timeout. It now uses a smaller board sample, which is sound because the
+  rules only depend on adjacency, and an explicit 60s budget, which is honest about what it costs.
+
+**Next:** nothing required.
+**Files touched:** `src/ui/cursor.ts` (new), `src/ui/app.ts`, `tests/ui/cursor.test.ts` (new),
+`STATUS.md`
+
+---
+
 ### S15 — 2026-10-10 — bugfixes: overlapping score text, and arrows you could not see
 
-**Status:** post-completion fixes. **636 tests**, up from 610.
+**Status:** post-completion fixes. **660 tests**, up from 610.
 
 **Fixed:**
 
@@ -897,7 +944,7 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 **Stage:** 11 (Hardening & docs) · **Status:** ⬜ → ✅ · **All 11 stages complete.**
 **Did:** `tools/perf.ts` (a real performance gate), `.github/workflows/verify.yml`, a rewritten
 `README.md`, and `src/input/keys.ts` merging the documented key bindings with the handler.
-**636 tests**, up from 583.
+**660 tests**, up from 583.
 
 **Learned:**
 

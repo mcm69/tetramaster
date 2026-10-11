@@ -21,6 +21,7 @@ import { figureById } from '../data/cards.ts';
 import { resolveStats, winProbability } from '../core/battle.ts';
 import { statCode } from '../core/card.ts';
 import { arrowCount } from '../core/direction.ts';
+import { legalPredicate, stepCursor } from './cursor.ts';
 import type { BoardCard, Card, Cell, GameState, MatchResult, Owner, Phase } from '../core/types.ts';
 
 /** A card as the UI shows it. */
@@ -119,32 +120,26 @@ export class MatchController {
   }
 
   /** Moves the keyboard cursor, skipping cells that cannot be played into. */
+  /**
+   * Moves the board cursor one step. Returns the cell it landed on, or null when there is nowhere to
+   * go — which is only ever true at an edge or against a wall of blocked cells.
+   *
+   * The movement rules live in `src/ui/cursor.ts`, which is pure and exhaustively tested. This used
+   * to search the whole board for the nearest legal cell to the clamped target, which could return a
+   * cell three rows away and — because ties went to the lowest board index — could return the
+   * cursor's own cell, leaving the key dead. With one cell blocked that was true for 46% of presses.
+   */
   moveHover(deltaRow: number, deltaCol: number): Cell | null {
+    const isLegal = legalPredicate(this.current);
     const legal = legalCells(this.current);
     if (legal.length === 0) return null;
     const from = this.hoverCell ?? legal[0];
     // Cell 0 is a valid cell and is falsy: an `if (!from)` guard here would strand the cursor.
     if (from === undefined) return null;
 
-    const row = clamp(Math.floor(from / 4) + deltaRow, 0, 3);
-    const col = clamp((from % 4) + deltaCol, 0, 3);
-    const candidate = (row * 4 + col) as Cell;
-    if (legal.includes(candidate)) {
-      this.hoverCell = candidate;
-      return candidate;
-    }
-    // Nearest legal cell in the direction of travel, so the cursor never sticks.
-    let best: Cell = from;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (const cell of legal) {
-      const distance = Math.abs(Math.floor(cell / 4) - row) + Math.abs((cell % 4) - col);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        best = cell;
-      }
-    }
-    this.hoverCell = best;
-    return best;
+    const next = stepCursor(from, { row: deltaRow, col: deltaCol }, isLegal);
+    this.hoverCell = next;
+    return next;
   }
 
   /**
@@ -321,10 +316,6 @@ export class MatchController {
     if (result.state.result) this.claimed = [];
     return true;
   }
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return value < min ? min : value > max ? max : value;
 }
 
 /** Drives a whole match with a policy, ignoring animation timing. Used by tests and tools. */
