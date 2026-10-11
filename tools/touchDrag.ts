@@ -321,6 +321,87 @@ check(
 );
 check('and it left the card selected', (await pressed(0)) === 'true');
 
+// ── 6. rotating mid-match keeps the board playable and loses nothing ────────────────────────────
+// The plan's "done when" for stage M7.
+//
+// Nothing is *placed* before rotating, deliberately. Placing ends the player's turn, and there is
+// no observable in the DOM that says whose turn it is — the status line reads the same throughout.
+// A rotation test that placed a card would spend its budget waiting for the opponent, which is the
+// third time this suite has been bitten by that. A card is picked up instead, which is enough to
+// show that input survived, and leaves the turn where it was.
+legal = await freshBoard();
+p = await points(0, legal[0] ?? 0);
+await touchTap(p.card);
+await until(
+  () => pressed(0),
+  (v) => v === 'true',
+  'the card to be picked up',
+);
+const beforeRotate = await handCount();
+
+await page.setViewportSize({ width: 667, height: 375 });
+await paintedBoard();
+const landscapeBoard = await page.evaluate(() => {
+  const r = document.querySelector('#board')!.getBoundingClientRect();
+  return { w: Math.round(r.width), h: Math.round(r.height), bottom: Math.round(r.bottom) };
+});
+check(
+  'the board is square in landscape',
+  Math.abs(landscapeBoard.w - landscapeBoard.h) <= 1,
+  `${landscapeBoard.w}x${landscapeBoard.h}`,
+);
+check(
+  'the board fits the height in landscape',
+  landscapeBoard.bottom <= 375,
+  `bottom at ${landscapeBoard.bottom} of 375`,
+);
+// "Fits" is not "playable". A board small enough to fit is still useless if its cells are below the
+// 44px floor stage M5 set. `METRICS.cellSize` is 115px inside a 520px board, so a cell is
+// `display / 520 * 115` — which puts the 44px floor at a board of 199px. Anything smaller scrolls
+// zero and plays badly, which is why this check is separate from the one above it.
+const landscapeCell = (landscapeBoard.w / 520) * 115;
+check(
+  'cells are big enough to tap in landscape',
+  landscapeCell >= 44,
+  `${landscapeCell.toFixed(1)}px per cell from a ${landscapeBoard.w}px board`,
+);
+check(
+  'no card is lost by rotating',
+  (await handCount()) === beforeRotate,
+  `${await handCount()} cards`,
+);
+check('the card picked up before rotating is still held', (await pressed(0)) === 'true');
+
+// And it is still playable, with the board and the tray now in different columns: the drag has to
+// find its way from one to the other, through a hit test that depends on the fit having re-run.
+const landLegal = await legalCells();
+const land = await points(0, landLegal[0] ?? 0);
+const beforeSecond = await handCount();
+await touchDrag(land.card, land.cell);
+const afterSecond = await until(handCount, (n) => n <= beforeSecond - 1, 'the tray to lose a card');
+check(
+  'a drag still places after rotating',
+  afterSecond === beforeSecond - 1,
+  `${beforeSecond} -> ${afterSecond}`,
+);
+
+await page.setViewportSize({ width: 390, height: 844 });
+await paintedBoard();
+const backBoard = await page.evaluate(() => {
+  const r = document.querySelector('#board')!.getBoundingClientRect();
+  return { bottom: Math.round(r.bottom), display: getComputedStyle(document.body).display };
+});
+check(
+  'rotating back restores the portrait layout',
+  backBoard.display === 'flex',
+  `body is ${backBoard.display}`,
+);
+check(
+  'the board fits again in portrait',
+  backBoard.bottom <= 844,
+  `bottom at ${backBoard.bottom} of 844`,
+);
+
 console.log(results.join('\n'));
 await browser.close();
 server.close();

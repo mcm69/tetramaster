@@ -179,7 +179,16 @@ function boot(): void {
 
   // Below this width the settings collapse behind one button. The bar measured 141px tall on a
   // 320px phone and 104px from 360 to 560, against 34px on a 1024px window.
-  const NARROW_QUERY = '(max-width: 48rem)';
+  //
+  // **Short as well as narrow.** A phone in landscape is 844px wide and 390px tall, so width alone
+  // says "desktop" and rendered the panel inline — 156px of the 390 it had, with the opponent
+  // select and both toggles stacked under the mode buttons. Height is the scarce axis in landscape,
+  // and 34rem is where the board starts to want what that panel was taking.
+  //
+  // The CSS that *lays the panel out* has to carry the same condition, or `hidden` and
+  // `aria-expanded` (this file) would disagree with how the panel is arranged (index.html). The two
+  // lists below and in the stylesheet are the same list, and that is deliberate.
+  const NARROW_QUERY = '(max-width: 48rem), (max-height: 34rem)';
   // No `matchMedia` under jsdom, and none in very old browsers. Absent means wide, which renders the
   // settings inline — the layout that predates this and that every existing test describes.
   const narrow = matchQuery(NARROW_QUERY);

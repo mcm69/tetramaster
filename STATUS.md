@@ -842,6 +842,54 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S32 — 2026-10-11 — M7: landscape, and a constant I could not argue my way out of
+
+**Status:** mobile stage M7 complete. **767 tests** (unchanged). `npm run touch`: 20 checks.
+
+**Done.** Board and hand tray side by side in landscape; everything else stacks in the second column
+so it costs the board nothing. **844×390, 667×375 and 812×320 all fit.** 844×390 was 643px too tall.
+
+**Orientation is not locked, as the plan recommended — and no `orientationchange` listener was added.**
+M2 already argued that the canvas `ResizeObserver` covers rotation, the URL bar, a font and a zoom
+without guessing which is worth listening for. That held up under measurement rather than assumption:
+rotation mid-match and back is now tested, including that a drag still places across the change.
+
+**Learned:**
+
+- **A `calc` constant survived an argument against it.** M1 deleted hand-measured constants. The
+  no-constant alternative was tried first and **does not work**: a percentage `max-height` is treated
+  as `none` while a grid column's intrinsic width is resolved, so the column took the canvas's
+  unconstrained 560px and the board never shrank. What makes the constant safe is not that it is
+  right — it is that it can only be wrong in one direction, that the arithmetic is written out, and
+  that an `aspect-ratio` backstop makes the board follow its _row_ rather than its column.
+- **A first guess at the constant was wrong by 16px in the dangerous direction.** 142px of chrome
+  over-estimated the budget, the column came out wider than the row, and the board overlapped its
+  neighbour. Under-estimating is free; over-estimating is not. That asymmetry is now the rule.
+- **"Fits" is not "playable".** With the settings panel left open in landscape the board still fit —
+  at 149px, with 33px cells. Every check passed. The check that matters is `display / 520 × 115 >= 44`.
+- **The settings menu collapsed on width alone.** 844px says "desktop", so the panel rendered inline
+  and took 156 of 390 pixels. Height is the scarce axis in landscape. **The JavaScript and the CSS
+  now carry the same media condition**, because one owns `hidden` and `aria-expanded` and the other
+  owns how the panel is arranged — when they disagree, the panel is a disclosure that is not laid out
+  like one.
+- **Two mutations survived every viewport in the matrix and only appeared at 812×320**, where the
+  board overruns its row and paints over the status line. Both the `aspect-ratio` backstop and the
+  slot's stretch were load-bearing; neither was observable at 390 or 375. **That size is now in the
+  matrix for that reason**, and the harness's overlap detector caught both.
+- **Two reasonable layout attempts, both wrong.** Stretching the tray filled its column and produced
+  five cards a third of the screen tall with a void inside each; centring it reads as three things on
+  purpose. And `min-content` for the board column sized it to 100px and the board to 28px, because a
+  replaced element with an `aspect-ratio` has almost no min-content width.
+
+**Verified by mutation, six of six.** Budget ignoring the chrome; `aspect-ratio` removed; slot not
+stretching; menu left open on short viewports; column made `1fr`; the whole landscape block removed.
+
+**Next:** M8, collection and rules on a narrow screen.
+**Files touched:** `index.html`, `src/main.ts`, `tools/viewport.ts`, `tools/touchDrag.ts`,
+`MOBILE.md`, `MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S31 — 2026-10-11 — M6: drag to place, and a touch harness that can disagree with me
 
 **Status:** mobile stage M6 complete. **767 tests** (+19). `npm run touch`: 13 checks.

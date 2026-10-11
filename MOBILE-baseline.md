@@ -15,7 +15,9 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 - **iPhone SE (2nd/3rd) (375×667)** — fits.
 - **iPhone 12/13/14 (390×844)** — fits.
 - **iPhone XR/11 (414×896)** — fits.
-- **phone landscape (844×390)** — page 643px too tall, board not fully visible, hand tray below the fold.
+- **phone landscape (844×390)** — fits.
+- **small landscape (667×375)** — fits.
+- **short landscape (812×320)** — fits.
 - **iPad portrait (768×1024)** — fits.
 - **laptop (1280×720)** — page 238px too tall, hand tray below the fold.
 - **desktop (1440×900)** — page 161px too tall, hand tray below the fold.
@@ -124,23 +126,63 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 
 ## phone landscape — 844×390 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 844×390                                |
-| reported viewport                 | 844×390                                |
-| board                             | 560×560 at (142, 166.4)                |
-| fully visible                     | **NO**                                 |
-| hand tray                         | 812×161.5 at (16, 855.3)               |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 473px                                  |
-| page height                       | 390 — **643px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 14                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+|                                   |                           |
+| --------------------------------- | ------------------------- |
+| requested viewport                | 844×390                   |
+| reported viewport                 | 844×390                   |
+| board                             | 263.6×263.6 at (11.2, 60) |
+| fully visible                     | yes                       |
+| hand tray                         | 550×121.7 at (286, 131)   |
+| hand visible                      | yes                       |
+| board and hand together           | yes                       |
+| sideways overflow                 | none                      |
+| chrome (everything but the board) | 126.39999999999998px      |
+| page height                       | 390 — fits vertically     |
+| overlapping regions               | none                      |
+| targets under 44px                | 0 of 14                   |
+| board touch-action                | manipulation              |
+| hand touch-action                 | none                      |
+| prose selectable                  | yes                       |
+
+## small landscape — 667×375 (touch)
+
+|                                   |                           |
+| --------------------------------- | ------------------------- |
+| requested viewport                | 667×375                   |
+| reported viewport                 | 667×375                   |
+| board                             | 248.6×248.6 at (11.2, 60) |
+| fully visible                     | yes                       |
+| hand tray                         | 388×99.7 at (271, 134.5)  |
+| hand visible                      | yes                       |
+| board and hand together           | yes                       |
+| sideways overflow                 | none                      |
+| chrome (everything but the board) | 126.4px                   |
+| page height                       | 375 — fits vertically     |
+| overlapping regions               | none                      |
+| targets under 44px                | 0 of 14                   |
+| board touch-action                | manipulation              |
+| hand touch-action                 | none                      |
+| prose selectable                  | yes                       |
+
+## short landscape — 812×320 (touch)
+
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| requested viewport                | 812×320                  |
+| reported viewport                 | 812×320                  |
+| board                             | 172×172 at (22, 60)      |
+| fully visible                     | yes                      |
+| hand tray                         | 588×121.7 at (216, 85.2) |
+| hand visible                      | yes                      |
+| board and hand together           | yes                      |
+| sideways overflow                 | none                     |
+| chrome (everything but the board) | 148px                    |
+| page height                       | 320 — fits vertically    |
+| overlapping regions               | none                     |
+| targets under 44px                | 0 of 14                  |
+| board touch-action                | manipulation             |
+| hand touch-action                 | none                     |
+| prose selectable                  | yes                      |
 
 ## iPad portrait — 768×1024 (touch)
 

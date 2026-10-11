@@ -709,7 +709,7 @@
          letter-spaced heading is the first thing that should yield when the board needs the room.
          The mode note is the mode's own blurb, which is on the mode button's `title` and in its
          accessible name, and is said again in the results at the end of a match. */
-      @media (max-width: 48rem) {
+      @media (max-width: 48rem), (max-height: 34rem) {
         /* The mode bar, the Settings button and their gaps came to 302px inside a 300px column at
            320px wide — two pixels over, which put the toolbar on a second row and cost 56px. The gap
            is the only thing there to give. */
@@ -741,7 +741,7 @@
       /* The disclosure becomes a panel rather than part of the bar. Whether it collapses at all is
          decided by `main.ts` with `matchMedia`, so that `hidden` and `aria-expanded` agree; this is
          only how the open panel is arranged. */
-      @media (max-width: 48rem) {
+      @media (max-width: 48rem), (max-height: 34rem) {
         .menu-panel {
           flex-direction: column;
           align-items: stretch;
@@ -804,6 +804,105 @@
           content: '⚙\FE0E';
           font-size: 1rem;
           line-height: 1;
+        }
+      }
+      /* Landscape: the board and the hand tray side by side (MOBILE.md stage M7).
+         Vertical space is the binding constraint here and there is none to spare, so the two tall
+         things stop competing for the same column: the board takes the short axis, the tray takes a
+         column beside it, and everything else stacks in that second column.
+
+         **Where this gives up M1's principle, and why.** Stage M1 deleted hand-measured constants on
+         the grounds that the browser should lay out and JavaScript should observe. Landscape is
+         where that runs out. A square board has to be as tall as the space allows, and there is no
+         CSS that says "no taller than the viewport minus your own chrome" — the only expression of
+         it is `calc(100dvh - N)`. The obvious alternative, letting the grid column size itself and
+         putting `max-height: 100%` on the canvas, does not work: a percentage `max-height` is
+         treated as `none` while the column's intrinsic width is being resolved, so the column took
+         the canvas's unconstrained 560px and the board never shrank at all. Measured, not assumed.
+
+         The constant is an **over**-estimate on purpose. `calc` here sets the board's *budget* and
+         `max-height: 100%` does the precise clamping, so a constant that is too generous costs a
+         little space and one that is too small costs nothing but shrink. Only an over-estimate is
+         safe, which is why the arithmetic is spelled out rather than tuned to the pixel. */
+      @media (orientation: landscape) and (max-height: 34rem) {
+        :root {
+          /* Board budget: the viewport's short axis, less everything that shares a grid *row* with
+             the board. The toolbar (44) sits beside it, the navigation buttons (44) sit beside the
+             status line, and the status line (22) sits under the board itself; add the body's
+             vertical padding (8 + 8) and the two 8px row gaps. 44 + 44 + 22 + 16 + 16 = 142px.
+             Rounded to 8.875rem.
+
+             Getting this wrong is visible rather than subtle, which is the good news: the board
+             comes out either too tall (the page scrolls) or too small (the board shrinks for
+             nothing). The first version of this constant only counted what was *below* the board
+             and produced a 346px board in a 264px row.
+
+             It must be an **under**-estimate of the chrome, never an over-estimate. Too generous
+             and the column is wider than the row, the `aspect-ratio` backstop makes the board the
+             row's height, and the board then overlaps its neighbour by the difference — which is
+             exactly what 8.875rem did. Too mean and the column is the smaller constraint, the
+             board is the column's width, and there is nothing wrong with the picture. 126px is the
+             measured chrome; 120px rounds it down and leaves the backstop in charge. */
+          --land-board: calc(100dvh - 7.5rem);
+        }
+        body {
+          /* Pinned to the value `--land-board` above is computed against. If these drifted apart the
+             constant would be quietly wrong, and the whole point of writing the arithmetic out is
+             that it stays checkable. */
+          padding-top: max(0.5rem, env(safe-area-inset-top));
+          padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+          padding-left: max(0.5rem, env(safe-area-inset-left));
+          padding-right: max(0.5rem, env(safe-area-inset-right));
+          display: grid;
+          grid-template-columns: var(--land-board) minmax(0, 1fr);
+          grid-template-rows: auto minmax(0, 1fr) auto;
+          grid-template-areas:
+            '.      toolbar'
+            'board  hand'
+            'status nav';
+          align-items: start;
+        }
+        h1 {
+          display: none;
+        }
+        #toolbar {
+          grid-area: toolbar;
+        }
+        .board-slot {
+          grid-area: board;
+          justify-self: center;
+          /* `align-items: start` above shrink-wraps every grid item, which leaves this one with a
+             content-height and gives the canvas a percentage of nothing to resolve against.
+             Stretching it back makes the row's height definite. */
+          align-self: stretch;
+          /* A square whose *height* is definite, so its width follows from the row rather than from
+             the column. This is the backstop for the arithmetic above: if the toolbar wraps, or a
+             browser disagrees with `--land-board`, the board shrinks to the row it was given rather
+             than overflowing it. Without this the canvas is a replaced element sized by its own
+             attributes and `max-height` does not touch it — measured, after assuming it would. */
+          aspect-ratio: 1;
+          width: auto;
+        }
+        #hand {
+          grid-area: hand;
+          /* Centred in the column rather than stretched to fill it. Stretching was tried and looked
+             worse: the cards grew to a third of the screen each with its three lines of text at the
+             top and a void beneath them. Centred, the column reads as three things — modes, cards,
+             navigation — with the slack between them on purpose. */
+          align-self: center;
+        }
+        #status {
+          grid-area: status;
+        }
+        .toolbar {
+          grid-area: nav;
+          justify-content: flex-start;
+        }
+        /* The precise clamp. The `calc` above is a budget; this is the truth, and it means the
+           constant can be wrong in only one direction — wasteful, never overflowing. */
+        canvas {
+          max-height: 100%;
+          aspect-ratio: 1;
         }
       }
       @media (max-height: 760px) {

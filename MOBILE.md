@@ -401,16 +401,58 @@ because Chrome emits **no click at all** once a touch passes the slop threshold.
 insuring against nothing. It is gone, replaced by a check that a touch drag emits no click, with a
 companion check that a tap _does_ emit one so the recorder cannot pass vacuously.
 
-### M7 — Orientation
+### M7 — Orientation — **done**
 
-- Portrait is primary and the layout M2–M5 describe is designed for it.
-- Landscape: the board and the hand tray sit side by side, because vertical space is the binding
-  constraint and a landscape phone has none to spare.
-- Handle `orientationchange`; re-run the fit.
-- Decide explicitly whether to lock orientation. **Recommendation: do not.** The browser already
-  lets users rotate, and a lock that fights the user is worse than a layout that handles both.
+Board and tray side by side in landscape; everything else stacks in the second column so it costs the
+board nothing. **844×390, 667×375 and 812×320 all fit with no scrolling**, which 844×390 did not
+before — it was 643px too tall.
 
-**Done when** rotating mid-match keeps the board fully visible and playable, and nothing is lost.
+**Orientation is not locked, as the plan recommended.** Nothing listens for `orientationchange`; the
+`ResizeObserver` on the canvas already covers rotation, the collapsing URL bar, a font arriving and a
+zoom, without guessing which of those is worth listening for. That reasoning was written in stage M2
+and it held up under measurement — rotating mid-match and back again was tested rather than assumed.
+
+**Where this gives up M1's principle, and why.** Stage M1 deleted hand-measured constants because the
+browser should lay out and JavaScript should observe. Landscape is where that runs out: a square
+board has to be as tall as the space allows, and no CSS expression says "no taller than the viewport
+minus your own chrome" other than `calc(100dvh - N)`. The alternative — let the grid column size
+itself and put `max-height: 100%` on the canvas — **does not work, measured**: a percentage
+`max-height` is treated as `none` while a column's intrinsic width is being resolved, so the column
+took the canvas's unconstrained 560px and the board never shrank at all.
+
+So there is a constant, and three things make it safe rather than hopeful:
+
+1. **The arithmetic is written out**, so it can be checked rather than trusted.
+2. **It must be an under-estimate.** 126px is the measured chrome; 120px is used. Too generous and
+   the column is wider than the row and the board overlaps its neighbour — which is exactly what an
+   earlier 142px did. Too mean and the board is simply the column's width, and the picture is fine.
+3. **An `aspect-ratio` backstop** makes the board's width follow its _row_ rather than its column, so
+   a wrong estimate or a wrapped toolbar shrinks the board instead of overrunning the status line.
+
+**"Fits" is not "playable", and it took a third check to notice.** With the settings panel left open
+in landscape — see below — the board still fitted, at 149px, giving 33px cells. Nothing failed. The
+check that matters is `display / 520 × 115 >= 44`, because a board small enough to fit is still
+useless if its squares are below the floor M5 set.
+
+**The settings menu now collapses on short viewports as well as narrow ones.** A phone in landscape is
+844px wide, so width alone said "desktop" and rendered the panel inline: the opponent `<select>` and
+both preference toggles stacked under the mode buttons, 156px of the 390 available. **The JavaScript
+and the CSS carry the same media condition**, because one of them owns `hidden` and `aria-expanded`
+and the other owns how the panel is arranged; when they disagreed the panel would have been a
+disclosure that was not laid out like one.
+
+**Two layout attempts are recorded because both were reasonable.** Stretching the tray to fill its
+column produced five cards a third of the screen tall, each with three lines of text at the top and a
+void beneath — centring it instead reads as three things on purpose: modes, cards, navigation. And a
+`min-content` column sized the board column to 100px and the board to 28px, because a replaced element
+with an `aspect-ratio` has almost no min-content width.
+
+**Verified by mutation, six of six.** The board budget ignoring the chrome; the `aspect-ratio`
+backstop removed; the slot no longer stretching; the menu left open on short viewports; the column
+made `1fr`; and the whole landscape block removed. **Two of them survived every other viewport in the
+matrix** and only showed up at 812×320, where the board overruns its row and paints over the status
+line. That size is now in the matrix for that reason. The playability check and the harness's overlap
+detector each caught two.
 
 ### M8 — Collection and rules on a narrow screen
 

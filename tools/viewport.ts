@@ -57,6 +57,14 @@ const MATRIX: readonly Viewport[] = [
   { label: 'iPhone 12/13/14', width: 390, height: 844, touch: true, dpr: 3 },
   { label: 'iPhone XR/11', width: 414, height: 896, touch: true, dpr: 2 },
   { label: 'phone landscape', width: 844, height: 390, touch: true, dpr: 3 },
+  // The tightest landscape phone there is: 667x375 leaves the board and the side column barely
+  // 390px between them, and is where the mode buttons first come close to wrapping.
+  { label: 'small landscape', width: 667, height: 375, touch: true, dpr: 2 },
+  // A landscape phone with a keyboard or a split view open. This is the size that catches the
+  // landscape board overrunning its row: at 320px tall the chrome leaves the board less room than
+  // the width budget allows, and without the `aspect-ratio` backstop the canvas paints over the
+  // status line. It is in the matrix because two separate mutations survived every other size.
+  { label: 'short landscape', width: 812, height: 320, touch: true, dpr: 3 },
   { label: 'iPad portrait', width: 768, height: 1024, touch: true, dpr: 2 },
   { label: 'laptop', width: 1280, height: 720, touch: false, dpr: 1 },
   { label: 'desktop', width: 1440, height: 900, touch: false, dpr: 2 },
@@ -65,6 +73,8 @@ const MATRIX: readonly Viewport[] = [
 /** Playwright device names, used for `userAgent` so touch-specific behaviour is realistic. */
 const UA_FOR: Readonly<Record<string, keyof typeof devices>> = {
   'phone landscape': 'iPhone 13',
+  'small landscape': 'iPhone SE',
+  'short landscape': 'iPhone X, keyboard open',
 };
 
 const MIME: Readonly<Record<string, string>> = {
