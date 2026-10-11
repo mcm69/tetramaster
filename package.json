@@ -22,7 +22,8 @@
     "simulate": "node tools/verify.ts 10000",
     "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage && npm run rules:audit && npm run simulate && npm run balance && npm run perf",
     "perf": "node tools/perf.ts",
-    "balance": "node tools/balance.ts"
+    "balance": "node tools/balance.ts",
+    "touch": "npm run build && node --experimental-strip-types tools/touchDrag.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -842,6 +842,64 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S31 — 2026-10-11 — M6: drag to place, and a touch harness that can disagree with me
+
+**Status:** mobile stage M6 complete. **767 tests** (+19). `npm run touch`: 13 checks.
+
+**Done.** Drag places a card. Tap-tap is untouched — a gesture that never travels emits `none` and
+leaves selection to the click handler that already existed. The rules live in `src/input/drag.ts`,
+pure, no DOM, no engine, 19 tests in ~130ms.
+
+**Decisions the plan did not settle:**
+
+- **Three phases, not two.** `armed` before `dragging`, and `armed` shows **no ghost**. A ghost that
+  appears and vanishes under a resting thumb reads as a glitch.
+- **Selection lands on `select`, not `arm`.** An armed finger has not yet distinguished itself from a
+  tap, and toggling the card the player is about to drag off the board would leave the drag holding a
+  card that is no longer selected.
+- **Client pixels, not board pixels.** The board draws at about 0.66 scale on a 390px phone, so
+  measuring the 10px threshold in board units would lower it by a third on exactly the devices this
+  stage exists for.
+- **Capture at drag start, not on `pointerdown`.** `setPointerCapture` retargets the follow-up `click`
+  to the capturing element, which breaks the tap path outright.
+
+**`tools/touchDrag.ts` — 13 checks, driven by CDP.** Genuine touch input, not events synthesised by
+`page.evaluate`: the latter only proves the handler agrees with itself. Reads the tray, not internals.
+
+**Learned:**
+
+- **I built a guard against a thing that cannot happen.** The wiring swallowed one canvas click after
+  a drag, on the theory that a stray click would place a second card. Mutating the guard away changed
+  _nothing_. Chrome emits no click at all once a touch passes the slop threshold. The guard was
+  insuring against nothing, so it is deleted and replaced by a check — and that check has a
+  companion, that a tap _does_ emit a click, or "a drag emits no click" would also be satisfied by a
+  recorder that never fires.
+- **A test tool that does not typecheck breaks the build, and a broken build leaves `dist/` stale.**
+  `tools/` is typechecked at full strictness. My first version had implicit `any`s, `tsc` failed,
+  `vite build` never ran, and three rounds of touch testing measured code that was not in the bundle.
+  **This is the same failure as the reverted-mutation one from M0, wearing a different hat: I read
+  "no output" as "no bug" when it meant "nothing was tested".**
+- **Fixed sleeps are the wrong tool and were wrong twice.** A placement starts an animation; sampling
+  250ms later reads the _old_ tray and reports a failure that is not there. Every wait is now on the
+  thing being asserted. The second time, the deeper mistake was **letting one section inherit the
+  previous section's board** — placing ends the player's turn, so section 4 spent its first seconds
+  waiting for the AI. Each section now reloads.
+- **One mutation survives, and I could have hidden it.** `setHover(drag.cell)` — the highlight
+  following the finger — is not caught by anything. The only untested link is that one assignment in
+  `main.ts`; what the hover _is_ is exhaustively unit-tested. A pixel test would have to
+  reverse-engineer the cell origin to find a corner the ghost does not cover, and I decided a brittle
+  test was worse than an admitted gap. Recorded in MOBILE.md rather than papered over.
+
+**Verified by mutation**, eight of nine caught. Reducer: threshold 0, boundary `<`→`<=`, release
+ignoring legality, `deselect`→`none`, `hypot`→axis-wise, a tap placing. Wiring: legality not
+re-checked at drop time, capture never released.
+
+**Next:** M7, orientation.
+**Files touched:** `src/input/drag.ts`, `src/main.ts`, `tests/core/drag.test.ts`,
+`tools/touchDrag.ts`, `package.json`, `MOBILE.md`, `STATUS.md`
+
+---
+
 ### S30 — 2026-10-11 — The Settings button dropping a row, and a guard for the whole bug class
 
 **Status:** post-M5 fix. **748 tests** (+3).

@@ -9,11 +9,19 @@
  * while the board is animating, so the player can never outrun the visuals.
  */
 
-import { createMatch } from './core/match.ts';
+import { createMatch, legalCells } from './core/match.ts';
 import { PERSONALITIES, personalityById } from './ai/personalities.ts';
 import { drawBoard, boardLayout, drawScoreBar } from './render/boardView.ts';
+import { drawCardFace } from './render/cardView.ts';
 import { COLORS, FONTS } from './render/theme.ts';
 import { clickToAction, hitTest } from './input/pointer.ts';
+import {
+  IDLE as DRAG_IDLE,
+  reduce as reduceDrag,
+  type DragEffect,
+  type DragInput,
+  type DragState,
+} from './input/drag.ts';
 import { KEY_BINDINGS, handleKey, resolveKey } from './input/keys.ts';
 import { MatchController } from './ui/app.ts';
 import { matchQuery } from './ui/accessibility.ts';
@@ -285,6 +293,8 @@ function boot(): void {
     });
     drawScoreBar(ctx, controller.state, 20, 14, BOARD_SIZE - 40, controller.animator.turnGlow());
 
+    drawDragGhost(ctx);
+
     ctx.font = FONTS.label;
     ctx.fillStyle = COLORS.inkMuted;
     ctx.textAlign = 'center';
@@ -294,6 +304,40 @@ function boot(): void {
       BOARD_SIZE - 10,
     );
   };
+
+  /**
+   * The card under the finger, drawn on the board (MOBILE.md stage M6).
+   *
+   * Board coordinates like everything else in this renderer, so the ghost sits *on* the cell it is
+   * over rather than floating at some offset from it. Reuses `drawCardFace` unchanged — it is
+   * already a pure function of (card, size, options), and a second card renderer would be a second
+   * thing to keep in step with the first.
+   */
+  function drawDragGhost(ctx: CanvasRenderingContext2D): void {
+    if (drag.phase !== 'dragging' || drag.ghost === null || drag.cardIndex === null) return;
+
+    const card = controller.state.players[controller.state.turn].hand[drag.cardIndex];
+    if (card === undefined) return;
+
+    const size = layout.cellSize;
+    const [gx, gy] = pointerInLayout(drag.ghost.x, drag.ghost.y);
+    const x = gx - size / 2;
+    const y = gy - size / 2;
+
+    // Off the board there is nothing to point at — the finger is over the tray or the chrome — and
+    // the honest answer is no ghost. The hand card it came from is still visible down there.
+    if (x < 0 || y < 0 || x + size > BOARD_SIZE || y + size > BOARD_SIZE) return;
+
+    ctx.save();
+    ctx.translate(x, y);
+    // A hand card has no owner until it is placed, so the ghost claims the local seat's frame. It is
+    // the player's card; drawing it in the opponent's colours would misstate whose move this is.
+    drawCardFace(ctx, { ...card, owner: 'player' }, size, {
+      opacity: drag.legal ? 0.95 : 0.5,
+      highlight: drag.cell === null ? null : drag.legal ? COLORS.accent : COLORS.bad,
+    });
+    ctx.restore();
+  }
 
   // ── DOM sync ──────────────────────────────────────────────────────────────────────────────
 
@@ -565,26 +609,129 @@ function boot(): void {
   // ── input ──────────────────────────────────────────────────────────────────────────────────
 
   /** Pointer position in design coordinates, undoing the CSS scale applied by `fitCanvas`. */
-  const pointerInLayout = (event: MouseEvent): [number, number] => {
+  const pointerInLayout = (clientX: number, clientY: number): [number, number] => {
     const rect = canvas.getBoundingClientRect();
     const scale = cssScale === 0 ? 1 : cssScale;
-    return [(event.clientX - rect.left) / scale, (event.clientY - rect.top) / scale];
+    return [(clientX - rect.left) / scale, (clientY - rect.top) / scale];
   };
 
-  canvas.addEventListener('pointermove', (event) => {
-    const [x, y] = pointerInLayout(event);
+  // ── drag to place (MOBILE.md stage M6) ───────────────────────────────────────────────────
+  //
+  // Added *on top of* tap-tap, never instead of it. The rules are in `src/input/drag.ts`, which is
+  // pure; everything here is the wiring that turns pointer events into those rules and back.
+
+  let drag: DragState = DRAG_IDLE;
+  /** The finger that owns the gesture. Null when none is in progress. */
+  let dragPointer: number | null = null;
+
+  /** A finger position in client pixels, with the cell under it already resolved. */
+  const dragInputAt = (clientX: number, clientY: number): DragInput => {
+    const [x, y] = pointerInLayout(clientX, clientY);
     const cell = hitTest(x, y, layout);
-    controller.setHover(cell);
+    // Legality is asked of the same `legalCells` the engine uses, at the moment of the gesture. A
+    // drag slow enough for the turn to end must not drop a card into a square that has since filled.
+    const legal =
+      cell !== null &&
+      controller.state.phase === 'place' &&
+      legalCells(controller.state).includes(cell);
+    return { x: clientX, y: clientY, cell, legal };
+  };
+
+  /** Carries out whatever the reducer decided. The reducer decides; this only does. */
+  const applyDragEffect = (effect: DragEffect): void => {
+    if (effect.t === 'none') return;
+    if (effect.t === 'select') controller.selectCard(effect.cardIndex);
+    else if (effect.t === 'place') controller.playAt(effect.cell);
+    else controller.selectCard(null);
+    syncDom();
+    draw();
+  };
+
+  handEl.addEventListener('pointerdown', (event) => {
+    // Right-click and middle-click are not drags, and during a battle the tray is not a source.
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    // Defence in depth: `dragInputAt` already refuses to call a square legal outside the `place`
+    // phase, so a drag during a battle could not place a card even without this. It is here because
+    // "the tray does not arm during a battle" is a fact about the tray rather than an accident of
+    // what the legality check happens to say.
+    if (controller.state.phase !== 'place') return;
+    const card = (event.target as Element | null)?.closest('.hand-card');
+    if (!(card instanceof HTMLElement)) return;
+    const index = Number(card.dataset['index']);
+    if (!Number.isInteger(index)) return;
+
+    // Armed only. Deliberately **no** `setPointerCapture` yet and no `preventDefault`: capture
+    // retargets the follow-up `click` to the capturing element, which would break the tap path, and
+    // a gesture that never travels is a tap and must reach the button's own click handler intact.
+    dragPointer = event.pointerId;
+    drag = reduceDrag(DRAG_IDLE, {
+      t: 'arm',
+      cardIndex: index,
+      x: event.clientX,
+      y: event.clientY,
+    }).state;
+  });
+
+  window.addEventListener('pointermove', (event) => {
+    if (dragPointer !== event.pointerId) return;
+    const result = reduceDrag(drag, {
+      t: 'move',
+      input: dragInputAt(event.clientX, event.clientY),
+    });
+    const wasDragging = drag.phase === 'dragging';
+    drag = result.state;
+
+    // The gesture has just become a drag, so it can survive leaving the card it started on. Capture
+    // is taken here rather than at `pointerdown` for the tap reason above, and released on the way
+    // out so a later tap is not captured by a stale pointer.
+    if (!wasDragging && drag.phase === 'dragging' && !handEl.hasPointerCapture(event.pointerId)) {
+      handEl.setPointerCapture(event.pointerId);
+    }
+
+    // The legal-cell highlight follows the finger, so the destination is visible before committing.
+    controller.setHover(drag.cell);
+    applyDragEffect(result.effect);
+    if (drag.phase === 'dragging') draw();
+  });
+
+  window.addEventListener('pointerup', (event) => {
+    if (dragPointer !== event.pointerId) return;
+    const result = reduceDrag(drag, {
+      t: 'release',
+      input: dragInputAt(event.clientX, event.clientY),
+    });
+    endDrag(event.pointerId);
+    controller.setHover(null);
+    applyDragEffect(result.effect);
+  });
+
+  window.addEventListener('pointercancel', (event) => {
+    if (dragPointer !== event.pointerId) return;
+    endDrag(event.pointerId);
+  });
+
+  /** Returns to idle, releasing the capture if this gesture took one. */
+  function endDrag(pointerId: number): void {
+    drag = DRAG_IDLE;
+    dragPointer = null;
+    if (handEl.hasPointerCapture(pointerId)) handEl.releasePointerCapture(pointerId);
+  }
+
+  canvas.addEventListener('pointermove', (event) => {
+    if (dragPointer !== null) return;
+    const [x, y] = pointerInLayout(event.clientX, event.clientY);
+    controller.setHover(hitTest(x, y, layout));
     draw();
   });
 
   canvas.addEventListener('pointerleave', () => {
+    if (dragPointer !== null) return;
     controller.setHover(null);
     draw();
   });
 
   canvas.addEventListener('click', (event) => {
-    const [x, y] = pointerInLayout(event);
+    const [x, y] = pointerInLayout(event.clientX, event.clientY);
     const action = clickToAction(x, y, layout, controller.state, {
       selectedCard: controller.view.selected,
       hover: controller.view.hover,

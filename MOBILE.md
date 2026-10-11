@@ -347,24 +347,59 @@ has no layout, and the probe asks whether things fit, overlap or are big enough.
 stylesheetClasses.test.ts` now checks statically that every class the stylesheet names is a class
 something renders.
 
-### M6 — Drag to place
+### M6 — Drag to place — **done**
 
-Tap-tap stays. Drag is added on top, because it is the gesture a thumb expects (§5.2).
+**Tap-tap is untouched. Drag is added on top of it**, which is the whole design: a gesture that never
+travels emits `none` and leaves selection to the click handler that already existed. Nothing in the
+tap path changed.
 
-- A pure state machine in `src/input/drag.ts` — `idle → dragging(ghost at x,y) → placed | cancelled`
-  — testable in Node with no DOM, in the same spirit as `src/ui/turn.ts` (which exists precisely
-  because game flow used to be unreachable from tests).
-- `pointerdown` on a hand card selects it and begins a drag; `setPointerCapture` keeps it alive when
-  the finger leaves the element.
-- `pointermove` runs the existing `hitTest` and sets the controller's hover, so the legal-cell
-  highlight follows the finger. No new geometry code — `hitTest` is already the single source.
-- `pointerup` over a legal cell places. Over anything else, or back over the hand, cancels and
-  deselects.
-- The ghost reuses `drawCardFace`, which is already a pure function of `(card, size, options)`.
-- Tap-tap is unchanged and still covered.
+**`src/input/drag.ts` is pure and needs no DOM and no engine** — 19 tests, ~130ms. Three phases, not
+the plan's two:
 
-**Done when** a drag from the hand to a legal square places the card, and every input state is
-covered by tests on the pure reducer.
+- `armed` — finger down, hasn't moved 10px. **No ghost**, because a ghost that appears and vanishes
+  under a resting thumb reads as a glitch.
+- `dragging` — past the threshold. Ghost follows the finger; the legal-cell highlight does too.
+- `idle`.
+
+**Selection lands on `select`, not on `arm`.** An armed finger has not yet distinguished itself from
+a tap, and toggling the card the player is about to drag off the board would leave the drag holding a
+card that is no longer selected.
+
+**Coordinates are client pixels, not board pixels.** The board is drawn scaled — about 0.66 on a
+390px phone — so measuring the threshold in board units would quietly lower it by a third on exactly
+the devices this stage exists for.
+
+**Capture is taken when the drag _starts_, not on `pointerdown`.** `setPointerCapture` retargets the
+follow-up `click` to the capturing element, which would break the tap path outright. A tap therefore
+never has a capture, and never had a reason to.
+
+**Where the plan was wrong.** The plan said `pointerup` "over anything else, or back over the hand,
+cancels and deselects". True, and worth restating because it is a decision rather than a default:
+picking a card up and putting it nowhere means you did not mean to play it.
+
+**The ghost reuses `drawCardFace`**, as planned, and a hand card is given `owner: 'player'` for the
+frame colour — it has no owner until placed, and drawing it in the opponent's colours would misstate
+whose move it is. Off the board there is no ghost at all; the answer to "the finger is over the tray"
+is not a card floating at the board's edge.
+
+**`tools/touchDrag.ts` drives real touch through CDP** — 13 checks, `npm run touch`. Not in
+`npm run verify`, which does not build. Pointless events written by `page.evaluate` would only prove
+the handler agrees with itself, so this dispatches genuine touch and reads the tray. §9 should fold
+it in.
+
+**Verified by mutation.** Reducer: threshold to 0, threshold boundary `<`→`<=`, release ignoring
+legality, `deselect`→`none`, `hypot`→axis-wise, a tap placing the card — six, all caught. Wiring:
+legality not re-checked at drop time, capture never released — caught. **`setHover(drag.cell)` not
+following the finger survives**, and the honest reason is that the only untested link is one
+assignment in `main.ts`; the decision of what the hover _is_ is exhaustively unit-tested, and a pixel
+test for the assignment would have to reverse-engineer the cell origin to find a corner the ghost
+does not cover. Recorded rather than papered over.
+
+**A guard I wrote and then deleted.** The first wiring swallowed one canvas click after a drag, on the
+theory that a stray `click` would place a second card. Mutating the guard away changed nothing —
+because Chrome emits **no click at all** once a touch passes the slop threshold. The guard was
+insuring against nothing. It is gone, replaced by a check that a touch drag emits no click, with a
+companion check that a tap _does_ emit one so the recorder cannot pass vacuously.
 
 ### M7 — Orientation
 
