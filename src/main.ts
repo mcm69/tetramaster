@@ -205,7 +205,7 @@ function boot(): void {
       hover: view.hover,
       pendingBattles: view.pending.map((choice) => choice.cell),
     });
-    drawScoreBar(ctx, controller.state, 20, 14, BOARD_SIZE - 40);
+    drawScoreBar(ctx, controller.state, 20, 14, BOARD_SIZE - 40, controller.animator.turnGlow());
 
     ctx.font = FONTS.label;
     ctx.fillStyle = COLORS.inkMuted;

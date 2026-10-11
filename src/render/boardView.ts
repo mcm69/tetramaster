@@ -9,7 +9,7 @@ import { CELLS } from '../core/constants.ts';
 import { legalCells } from '../core/match.ts';
 import { arrowCount } from '../core/direction.ts';
 import type { Cell, GameState, Owner } from '../core/types.ts';
-import { drawCardFace, roundRect } from './cardView.ts';
+import { drawBattleRoll, drawCardFace, roundRect } from './cardView.ts';
 import { COLORS, METRICS, SEATS, seatOf } from './theme.ts';
 import type { CardFrame } from './animator.ts';
 
@@ -154,6 +154,13 @@ function drawCell(
     scale,
     highlight: isPending ? COLORS.accent : null,
   });
+  // The fight overlay rides with the card's own animation, so it scales and fades in step rather
+  // than sliding around independently. Skipped when the card is mid-capture, which is after the
+  // numbers have landed and the roll is null by then.
+  if (frame?.roll) {
+    ctx.globalAlpha = opacity;
+    drawBattleRoll(ctx, rect.size, frame.roll, frame.flash);
+  }
   ctx.restore();
 }
 
@@ -164,9 +171,27 @@ export function drawScoreBar(
   originX: number,
   originY: number,
   width: number,
+  turnGlow?: { readonly owner: Owner; readonly strength: number } | null,
 ): { player: number; ai: number } {
   const counts: Record<Owner, number> = { player: 0, ai: 0 };
   for (const card of state.board) if (card) counts[card.owner]++;
+
+  // A handover used to be three words changing and nothing else. A soft halo behind the seat that
+  // just gained the turn says it without a word, and costs one fill.
+  if (turnGlow !== undefined && turnGlow !== null && turnGlow.strength > 0.01) {
+    const style = SEATS[seatOf(turnGlow.owner)];
+    const centre = turnGlow.owner === 'player' ? originX + width * 0.12 : originX + width * 0.88;
+    ctx.save();
+    ctx.globalAlpha = turnGlow.strength;
+    const glow = ctx.createRadialGradient(centre, originY, 0, centre, originY, width * 0.16);
+    glow.addColorStop(0, style.glow);
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(centre, originY, width * 0.16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   ctx.save();
   ctx.font = '600 13px system-ui, -apple-system, sans-serif';

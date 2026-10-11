@@ -842,6 +842,87 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S20 — 2026-10-11 — no animation had ever been seen
+
+**Asked:** "do we have any animations for the turn/battle?" **Answered:** no — and then, on checking,
+no animation at all had ever rendered. Not the battle, not the turn, not the placement.
+
+**Status:** feature + latent defect fix. **695 tests** (up from 674).
+
+## The big one: the clock was already past the end
+
+`Animator.push` ended with `this.clock = cursor`, where `cursor` was the _end_ of the schedule it had
+just queued. `tick` applies an animation once wall time passes its scheduled end — so every animation
+was complete before the first frame was drawn. A card placement logged `opacity 1, scale 1` and a
+settled display board on the very next read, and `idle` after a single 1ms tick.
+
+```
+immediately after push -> idle: false   frame opacity 1  scale 1  card null? false
+after tick(1)         -> idle: true
+```
+
+Every existing test still passed, because they all asserted **convergence** — that the display ends up
+matching the truth. Convergence holds trivially when everything is applied at once. The assertion
+that was missing is the one that matters for an animation: _it has not converged yet, and looks
+different part way through_. That is now the first test in the file, and it is deliberately blunt.
+
+`clock` is now wall time and `push` does not touch it; the schedule starts after whatever is already
+queued so two quick actions still play in order.
+
+## The battle, which was unreachable twice over
+
+Even with a working clock there was nothing to see. `push` queued per event only when the event had a
+`cell` field, and `battle` / `battle-roll` name `attacker` and `defender` — a fight is two cards. So
+every battle event was dropped, making `kindFor`'s `'battle'` branch, `frameAt`'s `case 'battle'`, and
+`CardFrame.flash` unreachable code. `flash` was additionally read by nothing anywhere: computed every
+frame by the one component that made it, and drawn by none. That is now the whole battle.
+
+**The count runs down.** `atkActual = atkBase - atkRoll` (§1.6) — the attacker subtracts its roll, so a
+bigger ATK is a liability. I wrote the test assuming it counted up and the implementation corrected
+me, which is the right way round, but it is worth writing down: the dramatic beat is a number falling
+from the card's printed stat to what it actually rolled.
+
+**Turn handovers** now get a halo behind the seat that gained the turn. Deliberately _not_ queued: it
+is decorative, and putting it in `queue` would let a slow frame cost somebody a move.
+
+**`totalDuration` was lying.** It counted `turn` and `winner` events, which occupy no screen time — it
+reported 864ms for a fight that occupied 240. Nothing used it, so nothing caught it. It is exported,
+so it can be pinned, and now is.
+
+**Learned:**
+
+- **Convergence is not animation.** Every animator test checked the end state, and the end state was
+  always right. A system that does nothing and a system that animates are indistinguishable if you
+  only assert where they finish. Mid-flight assertions are a different kind of test, and this codebase
+  had none of them.
+- **A component that computes a value nothing reads is a silent no-op.** `flash` was the clearest
+  example I have seen: correct maths, sensible name, a comment about tinting cards, and no reader.
+  Worth treating as a review question on sight — "who draws this?"
+- **Two of my own new tests passed for the wrong reason**, in the exact shape of the bug I was fixing:
+  - "the board renders differently mid-fight than after it" is satisfied by _any_ difference. A
+    mutation that computed the roll perfectly and never drew it **survived**. Fixed by asserting the
+    counting number and the odds line appear as `fillText` on the canvas.
+  - "the glow is on the correct side" counted `arc` calls, and both sides draw exactly one arc. The
+    mutation that moved the glow to the centre **survived**. Fixed by recording arc geometry — the
+    same reason `canvasStub` records text x/y/align.
+- **Two rules, one cause.** `cellsFor` now asks "which cells does this event touch", which is a
+  question about the data. The old question was "does this event have the one field I happened to
+  check", which is a question about my assumptions.
+- Animator queue depth over 200 matches went from 8 to 18 (budget 64) — animations now occupy real
+  time, so they stack. Frame p95 is 0.0005ms against a 4ms budget.
+
+**Verified by mutation**, all caught: clock advanced to end of schedule (6), battle events dropped
+again (3), roll computed but never exposed (2), board never draws the overlay (1), overlay draws
+nothing (5), glow never drawn (2), glow on the wrong side (1), turn glow never recorded (3).
+
+**Next:** this is the first change here that only _adds_. Everything before it was repair. Playing it
+in a browser is now worth more than anything else on the list, because for the first time there is
+something new to see and no test can tell whether it looks right.
+**Files touched:** `src/render/animator.ts`, `src/render/cardView.ts`, `src/render/boardView.ts`,
+`src/main.ts`, `tests/ui/battleMotion.test.ts` (new), `tests/ui/canvasStub.ts`, `STATUS.md`
+
+---
+
 ### S19 — 2026-10-11 — a control on screen that could not be clicked
 
 **Reported:** "after the AI move they don't select the card to fight, and that shows on the UI for the

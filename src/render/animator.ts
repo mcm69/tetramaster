@@ -12,6 +12,24 @@
 import type { BoardCard, Cell, GameEvent, GameState, Owner } from '../core/types.ts';
 import { METRICS } from './theme.ts';
 
+/**
+ * The numbers a card is showing while it is in a battle (§1.7).
+ *
+ * The count runs *down*, because that is the rule: §1.6 has the attacker dice its ATK away
+ * (`atkActual = atkBase - atkRoll`), so a bigger ATK is a liability. Watching the number fall from
+ * the card's printed stat to what it actually rolled is the whole drama of a battle.
+ */
+export interface BattleRollFrame {
+  /** The number on screen right now, mid-count. */
+  readonly value: number;
+  /** Where the count lands. */
+  readonly final: number;
+  readonly side: 'attacker' | 'defender';
+  /** Whether this card won its fight. Drives the colour, not the number. */
+  readonly won: boolean;
+  readonly probability: number;
+}
+
 /** One cell's current animation state. */
 export interface CardFrame {
   readonly cell: Cell;
@@ -20,8 +38,15 @@ export interface CardFrame {
   readonly opacity: number;
   /** Scales about the cell centre; pops in on placement and on capture. */
   readonly scale: number;
-  /** Tinted while a battle's numbers are rolling. */
+  /**
+   * 0-1 brightness for a card in a fight: ramps up as the numbers run, and back down after.
+   *
+   * This was computed here and read nowhere — the whole battle animation was unreachable, because
+   * battle events name `attacker`/`defender` while the queue only accepted events with a `cell`.
+   */
   readonly flash: number;
+  /** The counting numbers, or null when this card is not fighting. */
+  readonly roll: BattleRollFrame | null;
 }
 
 interface Animation {
@@ -32,6 +57,17 @@ interface Animation {
   readonly duration: number;
   /** The card as it should look when the animation ends. */
   readonly target: BoardCard | null;
+  /** Set only on the `battle-roll` step; null for every other animation. */
+  readonly roll: AnimationRoll | null;
+}
+
+/** What one side of a fight is counting, and where to. */
+interface AnimationRoll {
+  readonly base: number;
+  readonly actual: number;
+  readonly side: 'attacker' | 'defender';
+  readonly won: boolean;
+  readonly probability: number;
 }
 
 export type ReduceMotion = 'full' | 'reduced';
@@ -52,6 +88,9 @@ export class Animator {
   private display: (BoardCard | null)[] = Array.from({ length: 16 }, (): BoardCard | null => null);
   private clock = 0;
   private reduceMotion: ReduceMotion;
+  /** When the last turn handover started, and whose it was to. */
+  private turnStartedAt: number | null = null;
+  private turnOwner: Owner | null = null;
 
   constructor(options: AnimatorOptions = {}) {
     this.reduceMotion = options.reduceMotion ?? 'full';
@@ -83,33 +122,64 @@ export class Animator {
     return this.queue.length;
   }
 
-  /** Queues the animations for one action's event log. Order is preserved: it is the sequence. */
+  /**
+   * Queues the animations for one action's event log. Order is preserved: it is the sequence.
+   *
+   * `this.clock` is wall time and is **not** moved here. It used to be advanced to the end of the
+   * schedule, which meant every animation was already finished before the first frame was drawn —
+   * the fade, the pop, the squash, the whole system — because `tick` compares wall time against
+   * schedule times and wall time started past all of them. Nothing had ever been seen move.
+   *
+   * Instead the schedule starts after whatever is already queued, so two actions in quick
+   * succession play in order rather than on top of each other.
+   */
   push(events: readonly GameEvent[], state: GameState): void {
     let cursor = this.clock;
+    for (const queued of this.queue) {
+      const end = queued.start + queued.duration;
+      if (end > cursor) cursor = end;
+    }
+
     for (const event of events) {
       const duration = this.reduceMotion === 'reduced' ? 0 : durationFor(event);
-      if (eventHasCell(event)) {
+
+      // A turn handover has no cell, and must never touch one: it would erase the card just played.
+      // It gets its own clock entry instead.
+      if (event.t === 'turn') {
+        // Reduced motion means no decorative motion either, and this is decoration.
+        if (duration > 0) {
+          this.turnStartedAt = cursor;
+          this.turnOwner = event.owner;
+        }
+        cursor += duration;
+        continue;
+      }
+
+      // A battle names two cards and they fight *together*, so both start at the same cursor. The
+      // cursor advances once per event, after the loop — advancing it per cell made every fight take
+      // twice as long as it is supposed to, and each one twice over again.
+      const cells = cellsFor(event);
+      for (const cell of cells) {
         // The target is the board as it stands *after* the whole action, which is correct for
-        // every cell an event names. Events without a cell animate nothing — in particular a
-        // `turn` event must never touch a cell, or it would erase the card just played.
-        const target = state.board[event.cell] ?? null;
+        // every cell an event names.
+        const target = state.board[cell] ?? null;
         if (duration === 0) {
           // Reduced motion: apply at once rather than queueing a zero-length tween, so the board
           // is correct on the very next frame.
-          this.display[event.cell] = target;
-        } else {
-          this.queue.push({
-            cell: event.cell,
-            kind: kindFor(event),
-            start: cursor,
-            duration,
-            target,
-          });
-          cursor += duration;
+          this.display[cell] = target;
+          continue;
         }
+        this.queue.push({
+          cell,
+          kind: kindFor(event),
+          start: cursor,
+          duration,
+          target,
+          roll: rollFor(event, cell),
+        });
       }
+      if (cells.length > 0) cursor += duration;
     }
-    if (cursor > this.clock) this.clock = cursor;
   }
 
   /**
@@ -117,8 +187,9 @@ export class Animator {
    * still running, so the caller knows whether to keep scheduling frames.
    */
   tick(deltaMs: number): boolean {
-    if (this.queue.length === 0) return false;
-
+    // The clock advances whether or not anything is queued. The turn glow runs on it, and a clock
+    // that only moves while cards are animating would freeze the handover pulse for the first
+    // placement of the match.
     const now = this.clock + deltaMs;
     // Apply every animation whose window has closed, in order, so intermediate states are never
     // skipped: a card must flip, then pop, then settle.
@@ -132,12 +203,35 @@ export class Animator {
     return this.queue.length > 0;
   }
 
+  /**
+   * The handover glow, or null when there is nothing to show.
+   *
+   * A turn change used to be announced by three words in the score bar changing and nothing else,
+   * which is a lot to ask of a player who has just watched a cascade of cards land. This is the
+   * only feedback a handover had, so it is deliberately short and quiet.
+   *
+   * It is decorative and never blocks input: it is not in `queue`, so `idle` does not wait for it
+   * and a slow frame cannot cost somebody a move.
+   */
+  turnGlow(): { readonly owner: Owner; readonly strength: number } | null {
+    if (this.turnOwner === null || this.turnStartedAt === null) return null;
+    const elapsed = this.clock - this.turnStartedAt;
+    if (elapsed < 0 || elapsed > TURN_GLOW_MS) return null;
+    // Up fast, down slow: the change should be noticed immediately and then get out of the way.
+    const t = elapsed / TURN_GLOW_MS;
+    const strength = t < 0.25 ? t / 0.25 : 1 - (t - 0.25) / 0.75;
+    // The glow starts from nothing and ends at nothing, and neither end is worth drawing.
+    if (strength <= 0.01) return null;
+    return { owner: this.turnOwner, strength };
+  }
+
   /** The frame for a cell right now: its animation progress, or a settled card. */
   frameAt(cell: Cell): CardFrame {
     const now = this.clock;
     let opacity = 1;
     let scale = 1;
     let flash = 0;
+    let roll: BattleRollFrame | null = null;
     let card = this.display[cell] ?? null;
 
     for (const animation of this.queue) {
@@ -159,10 +253,21 @@ export class Animator {
           break;
         case 'battle':
           flash = Math.sin(progress * Math.PI);
+          // Later animations win, so a `flip` queued behind a fight does not erase the numbers.
+          if (animation.roll !== null) {
+            const { base, actual, side, won, probability } = animation.roll;
+            roll = {
+              value: Math.round(base + (actual - base) * easeOut(progress)),
+              final: actual,
+              side,
+              won,
+              probability,
+            };
+          }
           break;
       }
     }
-    return { cell, card, opacity, scale, flash };
+    return { cell, card, opacity, scale, flash, roll };
   }
 
   /** Every cell's frame, for a whole-board render. */
@@ -218,6 +323,9 @@ function easeOut(t: number): number {
   return 1 - (1 - t) * (1 - t);
 }
 
+/** How long a turn handover's glow lasts. Short: it is a nudge, not a spectacle. */
+const TURN_GLOW_MS = 520;
+
 /** How long each kind of event takes to play. */
 function durationFor(event: GameEvent): number {
   switch (event.t) {
@@ -241,14 +349,57 @@ function kindFor(event: GameEvent): 'place' | 'flip' | 'battle' {
   return 'flip';
 }
 
-function eventHasCell(event: GameEvent): event is GameEvent & { cell: Cell } {
-  return 'cell' in event;
+/**
+ * Every cell an event touches.
+ *
+ * This was `'cell' in event`, which silently dropped every battle: `battle` and `battle-roll` name
+ * `attacker` and `defender` instead, because a fight involves two cards. So the centrepiece of the
+ * game — the number rolling up — was never animated at all, and the `battle` branch below it was
+ * unreachable. Battle events now contribute both of their cells.
+ */
+function cellsFor(event: GameEvent): readonly Cell[] {
+  if ('cell' in event) return [event.cell];
+  if (event.t === 'battle' || event.t === 'battle-roll') return [event.attacker, event.defender];
+  return [];
 }
 
-/** Total animation length for a log, so the UI can show a progress hint. */
+/** The numbers one side of a fight should count, or null for events that are not a roll. */
+function rollFor(event: GameEvent, cell: Cell): AnimationRoll | null {
+  if (event.t !== 'battle-roll') return null;
+  if (cell === event.attacker) {
+    return {
+      base: event.atkBase,
+      actual: event.atkActual,
+      side: 'attacker',
+      won: event.attackerWins,
+      probability: event.probability,
+    };
+  }
+  if (cell === event.defender) {
+    return {
+      base: event.defBase,
+      actual: event.defActual,
+      side: 'defender',
+      won: !event.attackerWins,
+      probability: event.probability,
+    };
+  }
+  return null;
+}
+
+/**
+ * Total animation length for a log, so the UI can show a progress hint.
+ *
+ * Only events that actually animate are counted. A `turn` or `winner` event occupies no time on
+ * screen, and including it reported 864ms for a fight that took 240 — a number nothing checked,
+ * because nothing used it. It is exported, so it can be checked now.
+ */
 export function totalDuration(events: readonly GameEvent[], mode: ReduceMotion = 'full'): number {
   if (mode === 'reduced') return 0;
-  return events.reduce((sum, event) => sum + durationFor(event), 0);
+  return events.reduce(
+    (sum, event) => sum + (cellsFor(event).length > 0 ? durationFor(event) : 0),
+    0,
+  );
 }
 
 /** The owner currently displayed at a cell, for hover and pointer logic. */

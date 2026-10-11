@@ -12,6 +12,7 @@
 import { figureById } from '../data/cards.ts';
 import { statCode } from '../core/card.ts';
 import { arrowCount } from '../core/direction.ts';
+import type { BattleRollFrame } from './animator.ts';
 import type { BoardCard, Cell } from '../core/types.ts';
 import { drawArrows } from './arrowSprite.ts';
 import { cardArt } from './sprites.ts';
@@ -204,4 +205,50 @@ export function cellFromPoint(
   const row = Math.floor((y - originY) / (cellSize + gutter));
   if (col < 0 || row < 0 || col >= columns || row >= columns) return null;
   return (row * columns + col) as Cell;
+}
+
+/**
+ * The number rolling down during a battle (§1.6, §1.7).
+ *
+ * Drawn as its own overlay rather than folded into `drawCardFace`, because the card face is a pure
+ * function of the card and this is a property of the *fight* — two cards, one comparison, and a
+ * verdict. Keeping them apart is also what lets the numbers be tested without a card.
+ */
+export function drawBattleRoll(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  roll: BattleRollFrame,
+  flash: number,
+): void {
+  const tint = roll.won ? COLORS.good : COLORS.bad;
+  const half = size / 2;
+
+  ctx.save();
+  // Scrim, so the number wins against whatever art is underneath rather than fighting it.
+  ctx.fillStyle = `rgba(10, 12, 18, ${0.55 + 0.3 * flash})`;
+  roundRect(ctx, 0, 0, size, size, METRICS.cornerRadius);
+  ctx.fill();
+
+  // The numbers run over the middle of the card, which is where the eye already is. The value falls
+  // from the card's printed stat towards what it actually rolled — see `BattleRollFrame`.
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = tint;
+  ctx.font = `700 ${Math.round(size * 0.44)}px ui-monospace, "SF Mono", Menlo, monospace`;
+  ctx.fillText(`${roll.value}`, half, half - size * 0.04);
+
+  // Odds under it: small, and only while the roll is running, so it cannot be mistaken for a stat.
+  ctx.font = FONTS.statSmall;
+  ctx.fillStyle = COLORS.inkMuted;
+  ctx.fillText(`${Math.round(roll.probability * 100)}%`, half, half + size * 0.26);
+
+  // A hairline ring in the same colour, brightest at the peak of the flash.
+  if (flash > 0.01) {
+    ctx.globalAlpha = flash;
+    ctx.strokeStyle = tint;
+    ctx.lineWidth = Math.max(1, size * 0.03 * flash);
+    roundRect(ctx, size * 0.04, size * 0.04, size * 0.92, size * 0.92, METRICS.cornerRadius);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
