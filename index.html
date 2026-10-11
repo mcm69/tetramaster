@@ -648,7 +648,15 @@
       /* The settings disclosure (MOBILE.md stage M4).
          On a wide screen the trigger is hidden and the panel is part of the bar, so the markup and
          the layout are the same shape either way — only whether it collapses changes. */
-      .settings-host {
+      /* `display: contents`, so the trigger and the panel become flex items of the bar directly.
+         Without it the wrapper is a flex item in its own right, the panel's 100% width sizes the
+         wrapper rather than the bar, and the wrapper wraps to a second row — which pushed the
+         Settings button *down* when the panel opened. The button belongs beside the mode buttons
+         whether the panel is open or shut.
+
+         This class is the one `renderMenu` puts on the container; the caller used to set a different
+         one that was overwritten a line later, so this rule matched nothing at all. */
+      .settings-menu {
         display: contents;
       }
       .menu-trigger {

@@ -78,8 +78,9 @@ export function renderToolbar(
   // M4. On a wide screen they render in place, exactly where they were; below the breakpoint they
   // collapse behind a single button, because the bar measured 141px tall on a 320px phone and 104px
   // from 360 to 560.
+  // `renderMenu` owns the class on this element — it sets `settings-menu`, which carries
+  // `display: contents`. Setting one here would simply be overwritten a line later.
   const host = document.createElement('div');
-  host.className = 'settings-host';
   container.append(host);
 
   renderMenu(

@@ -338,6 +338,15 @@ back to `touch-action: none` ("board blocks pinch-zoom"), the hand cards allowed
 would scroll the page"), the rules screen left unselectable, and `user-select` removed from the
 controls.
 
+**A bug this stage's screenshots found, and the guard it produced.** Opening the menu pushed the
+**Settings button down onto a second row**. `toolbar.ts` set `className = 'settings-host'` and
+`renderMenu` overwrote it a line later with `'settings-menu'`, while the stylesheet's
+`display: contents` rule was written against `.settings-host` — **so the rule matched nothing.** The
+button was present, enabled and correctly labelled throughout, and no harness question covers it: jsdom
+has no layout, and the probe asks whether things fit, overlap or are big enough. `tests/ui/
+stylesheetClasses.test.ts` now checks statically that every class the stylesheet names is a class
+something renders.
+
 ### M6 — Drag to place
 
 Tap-tap stays. Drag is added on top, because it is the gesture a thumb expects (§5.2).

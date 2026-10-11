@@ -842,6 +842,56 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S30 — 2026-10-11 — The Settings button dropping a row, and a guard for the whole bug class
+
+**Status:** post-M5 fix. **748 tests** (+3).
+
+**The bug the user spotted in a screenshot.** Opening the menu pushed the Settings button _down_ onto
+a second row. It should not have moved — it belongs beside the mode buttons whether the panel is open
+or shut. `toolbar.ts` created the container with `className = 'settings-host'`; `renderMenu` overwrote
+it one line later with `'settings-menu'`; and the stylesheet's `display: contents` rule was written
+against `.settings-host`. **The rule matched nothing at all.** Without it the container is an ordinary
+flex item, the panel's `width: 100%` sizes the container rather than the bar, and the container wraps
+to a second row. The button was present, enabled and correctly labelled the whole time — which is why
+nothing failed.
+
+**Why no existing check caught it.** jsdom has no layout, and the Playwright harness asks the
+questions a harness can ask: does it fit, does it overlap, is the target big enough. This was none of
+those. Verified the fix by measurement rather than by eye: trigger and mode bar now both at y=8,
+toolbar 44px collapsed, and the full viewport matrix unchanged.
+
+**The guard.** `tests/ui/stylesheetClasses.test.ts` — every class the stylesheet names must be a class
+something renders, checked statically. 77 classes, zero false positives after two corrections to the
+parser. The specific rule is pinned separately, because the general check would also pass if the
+wrapper were renamed consistently and `display: contents` dropped from both: the same symptom, a
+different bug.
+
+**Four mutations, all caught:** the caller setting `settings-host` again; `renderMenu` renaming its
+class and leaving the rule behind; the only source of `is-dead` removed; the `display: contents` rule
+deleted outright.
+
+**Learned:**
+
+- **A fifth mutation passed for a reason worth keeping.** Renaming `hand-arrows` to `hand-arrows-x`
+  was not caught, because the check matches substrings. That is not a hole — substring matching is
+  what lets it see `hand-arrows${cond ? ' is-dead' : ''}`, which no single line holds whole — but it
+  means **an equivalent mutant under this check is not evidence the check is weak**, and the first
+  mutation I reached for proved nothing.
+- **`flatMap` flattens arrays and leaves strings whole.** The first version of the helper recursed and
+  returned `string`, so each level handed its parent file _contents_ where paths were expected, and
+  the next `readFileSync` failed opening a 300KB "filename" — `ENAMETOOLONG`. Cost about twenty
+  minutes to localise because the stack pointed at recursion rather than at the wrong return type.
+  Two steps, paths then contents, keeps the type honest at every level.
+- **Comments in CSS are not comments to a regex.** `MOBILE.md` and `main.ts` in prose parse as classes
+  `md` and `ts`. Stripping comments first is not tidiness, it is the difference between the check
+  running at all.
+
+**Next:** M6, drag-to-place.
+**Files touched:** `index.html`, `src/ui/components/toolbar.ts`,
+`tests/ui/stylesheetClasses.test.ts`, `MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S29 — 2026-10-11 — M5: 44px everywhere, and the probe learned to check behaviour
 
 **Status:** mobile stage M5 complete. **745 tests** (unchanged — nothing here is unit-testable).
