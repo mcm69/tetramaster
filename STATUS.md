@@ -842,6 +842,43 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S22 — 2026-10-11 — mobile: a plan, not code
+
+**Status:** planning only. **No code changed.** Design written to `MOBILE.md`.
+
+**Asked:** make the game playable on mobile. Scoped as "phone as a first-class target, desktop becomes
+the special case", targeting 360×640 portrait.
+
+**What the investigation found.** The blocking defect is not a missing media query — it is
+`MIN_VIEWPORT = {1280, 720}` in `fitCanvas`, which floors the board at 420×420 CSS px on _every_
+device. On a 375px phone that overflows. The comment says it is deliberate ("below 1280x720 the page
+scrolls rather than the board becoming illegible"), which is right for a desktop and wrong for a
+phone. Two more sizing defects sit beside it: a hardcoded `260` standing in for the height of the
+chrome, and `window.innerHeight`, which is the layout viewport rather than the visible one.
+
+The other finding is the one that constrains the whole plan: **jsdom has no layout engine**, so no
+unit test can say whether the board fits on a phone. Every sizing claim available today is
+arithmetic. That is the same gap that let four real bugs through in a row — sound firing at the end
+of the match, hotseat unwired, the computer playing hotseat's second seat, and an animation system
+that had never rendered a single frame.
+
+**The plan** is nine separable stages, each its own commit, each leaving `npm run verify` green:
+measure (M0), sizing core (M1), viewport and document (M2), narrow-screen layout (M3), touch targets
+and hygiene (M4), drag-to-place (M5), orientation (M6), collection and rules (M7), headless layout
+gate (M8), docs (M9).
+
+The load-bearing idea is in §2: **the browser lays out, JavaScript observes.** The current design has
+JS compute a pixel size and hand it to CSS, which is the only reason `260` and `MIN_VIEWPORT` exist.
+Inverting it deletes both constants and leaves a pure function over numbers we control.
+
+**Open decisions** are in §5, and one of them matters more than the rest: whether to adopt a headless
+browser as a devDependency. Without it, "does it fit on a phone" stays a claim its author believes
+rather than a test, and M0 and M8 have to be restated as manual steps. It also closes the longest
+standing verification gap in this project.
+
+**Next:** answer §5.1 and §5.2 and M0 can start.
+**Files touched:** `MOBILE.md` (new), `STATUS.md`
+
 ### S21 — 2026-10-11 — the match was silent, and then it all arrived at once
 
 **Reported:** "it appears that all sounds are played at once at the end of the game." **Correct.**
