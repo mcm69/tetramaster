@@ -871,12 +871,27 @@ The load-bearing idea is in §2: **the browser lays out, JavaScript observes.** 
 JS compute a pixel size and hand it to CSS, which is the only reason `260` and `MIN_VIEWPORT` exist.
 Inverting it deletes both constants and leaves a pure function over numbers we control.
 
-**Open decisions** are in §5, and one of them matters more than the rest: whether to adopt a headless
-browser as a devDependency. Without it, "does it fit on a phone" stays a claim its author believes
-rather than a test, and M0 and M8 have to be restated as manual steps. It also closes the longest
-standing verification gap in this project.
+**Open decisions** were resolved after the plan was written: **§5.1 adopt Playwright** (devDependency
+only) so "does it fit on a phone" becomes a test rather than a claim; **§5.2 build drag-to-place**,
+kept in its own stage so it can be dropped without losing the rest; **§5.3 an overflow menu** for the
+narrow toolbar, chosen over horizontal scroll because a stacked panel is what a phone is good at and
+because it sidesteps the "what fits at every width" arithmetic entirely.
 
-**Next:** answer §5.1 and §5.2 and M0 can start.
+Deciding §5.1 changed the shape of the plan rather than just confirming it. Playwright means M0 is
+**report-only** — a gate would fail immediately on today's layout and leave every later stage red for
+the wrong reason — so the layout gate lands at M9 and the ten stages renumbered around it. It also
+means the overlap between modes/sound/settling and the desktop layout is now measured rather than
+asserted, and it closes the longest standing verification gap in this project.
+
+**One sub-decision is still open (§5.4): what goes in the overflow menu.** It is a question about a
+value, not a layout. `toolbar.ts` opens with a written principle — audio and motion must not be
+buried in a submenu, "the people who need them are exactly the people least likely to find one" — and
+a menu is a submenu. The recommendation is to take the option M0's measurement supports rather than
+guess now, and to update that header comment either way, so the rationale and the code cannot
+silently disagree.
+
+**Next:** M0. It needs a device or a headless browser to produce its baseline, and the §5.4 answer
+falls out of it.
 **Files touched:** `MOBILE.md` (new), `STATUS.md`
 
 ### S21 — 2026-10-11 — the match was silent, and then it all arrived at once

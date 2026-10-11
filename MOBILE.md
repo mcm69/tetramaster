@@ -79,6 +79,9 @@ match, hotseat unwired, the computer playing hotseat's second seat, and an entir
 that had never rendered a frame. A plan for mobile layout that verifies nothing is a plan for four
 more.
 
+**This is why §5.1 was decided the way it was.** The headless browser is not a convenience for this
+work; it is the thing that makes any of it checkable.
+
 ---
 
 ## 2. Design principles
@@ -91,8 +94,12 @@ more.
    and makes the arithmetic a pure, testable function over numbers we control.
 3. **Touch is an addition, never a replacement.** Tap-tap already works and is tested. Drag is added
    on top.
-4. **No new runtime dependencies.** Everything here is CSS, Pointer Events, and code we already have.
-5. **Every stage is independently shippable and leaves `npm run verify` green.**
+4. **One breakpoint, not a cascade of them.** The narrow layout swaps the toolbar for a menu
+   wholesale rather than progressively hiding things. Two behaviours, one switch, easy to reason
+   about and easy to assert.
+5. **No new runtime dependencies.** Everything here is CSS, Pointer Events, and code we already have.
+   Playwright is a devDependency and ships in nothing.
+6. **Every stage is independently shippable and leaves `npm run verify` green.**
 
 ---
 
@@ -101,19 +108,24 @@ more.
 Each stage is a separate commit. M0 and M1 come first because every sizing decision downstream depends
 on the numbers they produce.
 
-### M0 — Measure before changing anything
+### M0 — Headless harness and baseline
 
 Build the thing that tells us the truth, so the rest of this document stops being arithmetic.
 
-- `tools/viewport.ts`: loads the built page in a headless browser at a matrix of device sizes, and
-  reports for each — board rect, document scroll width vs client width, total chrome height, and any
-  element whose touch target is under 44px.
+- **Add Playwright as a devDependency** (§5.1). Browser binaries are a large first install; CI needs
+  a matching image.
+- `tools/viewport.ts`, behind a new `npm run viewport` script: loads the built page at a matrix of
+  device sizes and reports, for each — board rect, document scroll width vs client width, total chrome
+  height, and any interactive element whose touch target is under 44px.
 - A `?debug=layout` query parameter that overlays the measured numbers on the page, for use on a
-  real device.
+  real device. (Same trick as the existing `?seed=`.)
 - Output committed as `MOBILE-baseline.md`.
 
+**Report-only at this stage — no assertions, no CI gate.** The current layout does not fit, so a gate
+would fail immediately and every later stage would be red for the wrong reason. The gate is M9; until
+then the harness is a measuring instrument, re-run after each stage and the baseline updated.
+
 **Done when** the baseline exists and the estimated numbers in §1 are either confirmed or corrected.
-**Depends on** the decision in §5 about a headless browser.
 
 ### M1 — Sizing core
 
@@ -127,12 +139,12 @@ Build the thing that tells us the truth, so the rest of this document stops bein
   ```
   One coordinate system, unchanged: the canvas keeps drawing in `BOARD_SIZE` units and only the
   transform moves.
-- Delete `MIN_VIEWPORT` and the `260`. The floor stops being a desktop constant and becomes
-  whatever CSS says the board is.
+- Delete `MIN_VIEWPORT` and the `260`. The floor stops being a desktop constant and becomes whatever
+  CSS says the board is.
 - While here: the backing store is currently `BOARD_SIZE * dpr` regardless of display size, so a
   560-unit board at `dpr = 3` allocates 1680² pixels to draw into ~360 CSS px of screen. Size it to
   the measured rect instead. Not a visible fix; a memory one.
-- Tests: the sizing arithmetic over a device matrix, in Node.
+- Tests: the sizing arithmetic over the device matrix, in Node.
 
 **Done when** `cssScale` is derived entirely from a measured rect, and `MIN_VIEWPORT` and `260` no
 longer exist.
@@ -151,22 +163,50 @@ longer exist.
 
 ### M3 — Narrow-screen layout
 
-The toolbar is what costs the board its space, so it collapses first. Estimated saving on a 375px
-screen: ~76px of board.
+The toolbar's height is what costs the board its space, but the toolbar is M4's problem. This stage
+is everything else.
 
-- `.toolbar-bar` becomes a single horizontally-scrollable row under ~640px, instead of wrapping to
-  three rows. `scroll-snap-type: x mandatory`, snap points on the mode buttons.
-- `.hand` becomes a single horizontally-scrolling row with `scroll-snap-align` on the cards.
-  Five cards at ~76px each fit 375px without scrolling; below that they scroll rather than wrap,
-  because vertical space is the scarce resource and wrapping costs two rows.
-- First width-based media query in the project, and the first use of `@media (max-width: …)` for
+- `.hand` becomes a single horizontally-scrolling row with `scroll-snap-align` on the cards. Five
+  cards at ~76px fit 375px without scrolling; below that they scroll rather than wrap, because
+  vertical space is the scarce resource and wrapping costs two rows.
+- The first width-based media query in the project, and the first `@media (max-width: …)` used for
   layout rather than for hiding things.
 - Hide `.mode-note` and `.keys` by width as well as by height.
 - Tighten the flex `gap` and the `h1` at narrow widths.
 
-**Done when** the board is materially larger on a phone than it would be without M3, measured by M0.
+**Done when** the hand tray occupies one row at 360px and the board is larger than it would be
+without this stage, measured by the M0 harness.
 
-### M4 — Touch targets and touch hygiene
+### M4 — Toolbar overflow menu
+
+On narrow screens the toolbar swaps from an inline bar to a single **Settings** button that opens a
+stacked panel (§5.3). Desktop is untouched — the inline bar stays exactly as it is above the
+breakpoint.
+
+- New `src/ui/components/menu.ts`, following the same shape as the other components: build from
+  state, report through callbacks, no state of its own.
+- It is a real menu, not a `<details>`: `aria-expanded` on the trigger, `role="menu"` on the panel,
+  Escape closes and returns focus to the trigger, outside-tap closes, focus moves into the panel on
+  open. All of that is unit-testable in jsdom without a browser.
+- Narrow layout: mode buttons abbreviate (`Match` / `Tournament` / `Hotseat`) and stay inline, since
+  they are primary navigation and a disabled one states its reason — which the toolbar module
+  deliberately chose. The panel holds the opponent select, the collection progress, and — see §5.4 —
+  the preference toggles.
+
+**This stage changes a decision the codebase made in writing.** `src/ui/components/toolbar.ts` opens
+with a stated principle:
+
+> _"It does not hide settings behind a mode: audio and motion are accessibility and comfort
+> settings, and the people who need them are exactly the people least likely to find a submenu."_
+
+An overflow menu is a submenu. §5.4 records how far that principle is being bent, and M4 must update
+that header comment rather than leave it contradicting the code. Overriding a written rationale
+without recording it is how the next person puts it back.
+
+**Done when** the panel opens, closes and navigates correctly by keyboard and by tap, and desktop
+still renders the inline bar.
+
+### M5 — Touch targets and touch hygiene
 
 - Every interactive element gets `min-height: 44px` and `min-width: 44px` at narrow widths. Today
   `.hand-card` has `min-width: 7.5rem` and no height at all.
@@ -176,14 +216,14 @@ screen: ~76px of board.
   than flashed blue.
 - **`touch-action` policy.** `none` on the canvas currently blocks pinch-zoom over the play area.
   Change it to `manipulation`, which kills the 300ms double-tap delay and still permits pinch-zoom.
-  During an M5 drag we set `touch-action: none` on the dragging element via pointer capture instead,
-  which scopes the suppression to the gesture that needs it.
+  During an M6 drag we suppress panning via pointer capture instead, which scopes the suppression to
+  the gesture that needs it.
 
-**Done when** no interactive target is under 44px, and pinch-zoom still works over the board.
+**Done when** the M0 harness reports no target under 44px, and pinch-zoom still works over the board.
 
-### M5 — Drag to place
+### M6 — Drag to place
 
-Tap-tap stays. Drag is added on top, because it is the gesture a thumb expects.
+Tap-tap stays. Drag is added on top, because it is the gesture a thumb expects (§5.2).
 
 - A pure state machine in `src/input/drag.ts` — `idle → dragging(ghost at x,y) → placed | cancelled`
   — testable in Node with no DOM, in the same spirit as `src/ui/turn.ts` (which exists precisely
@@ -200,7 +240,7 @@ Tap-tap stays. Drag is added on top, because it is the gesture a thumb expects.
 **Done when** a drag from the hand to a legal square places the card, and every input state is
 covered by tests on the pure reducer.
 
-### M6 — Orientation
+### M7 — Orientation
 
 - Portrait is primary and the layout M2–M5 describe is designed for it.
 - Landscape: the board and the hand tray sit side by side, because vertical space is the binding
@@ -211,7 +251,7 @@ covered by tests on the pure reducer.
 
 **Done when** rotating mid-match keeps the board fully visible and playable, and nothing is lost.
 
-### M7 — Collection and rules on a narrow screen
+### M8 — Collection and rules on a narrow screen
 
 These are the screens players leave the board for, and neither has been looked at below 640px.
 
@@ -223,27 +263,27 @@ These are the screens players leave the board for, and neither has been looked a
 
 **Done when** the deck can be fully edited at 360px wide with no horizontal scrolling.
 
-### M8 — Headless layout gate
+### M9 — The layout gate goes green and joins CI
 
-Only if §5 is decided in favour of a headless browser. Without it, every "does it fit" claim in this
-document stays an assertion by the author.
+The harness from M0 becomes an assertion, which is when it stops being a measuring instrument and
+starts being a gate.
 
-- Playwright (devDependency only — the shipped bundle stays dependency-free) over a device matrix:
-  320×568, 360×640, 375×667, 390×844, 414×896, 768×1024, 844×390 landscape.
-- Assertions per size: board fully inside the viewport, `scrollWidth <= clientWidth`, no
-  interactive target under 44px, board height ≥ some agreed floor.
-- Runs in CI alongside the existing `verify` job.
+- Assertions per device size: board fully inside the viewport, `scrollWidth <= clientWidth`, no
+  interactive target under 44px, board height ≥ an agreed floor.
+- Matrix: 320×568, 360×640, 375×667, 390×844, 414×896, 768×1024, 844×390 landscape, and two desktop
+  sizes so the desktop layout cannot silently regress.
+- Wired into `npm run verify` and the existing CI job. This is also where desktop gets asserted,
+  which nothing currently does at the layout level.
 
-**This also closes the standing DoD gap.** Every stage of this project has been verified in Node and
-jsdom; nobody has watched the board draw on hardware. A headless browser is the cheapest way to stop
-that gap from swallowing another four bugs.
+**This closes the standing DoD gap.** Every stage of this project has been verified in Node and
+jsdom; nobody has watched the board draw on hardware.
 
-### M9 — Documentation
+### M10 — Documentation
 
 - README's controls table gains a touch column, so the keyboard-only bindings stop being the only
   documented way to play.
 - `PLAN.md` §7.4 gains the mobile deviation note.
-- `STATUS.md` gets the session entry per stage.
+- `STATUS.md` gets a session entry per stage.
 
 ---
 
@@ -251,57 +291,83 @@ that gap from swallowing another four bugs.
 
 - **No offline / PWA install.** A service worker is its own project and adds a cache-invalidation
   surface. Not needed to make it playable.
-- **No orientation lock.** See M6.
+- **No orientation lock.** See M7.
 - **No new game features.** Nothing about the rules changes.
 - **No native app.** The whole thing is a static bundle already; a wrapper adds nothing.
 - **No iOS-specific gesture work** beyond what Pointer Events gives for free.
 
 ---
 
-## 5. Open decisions
+## 5. Decisions taken
 
-These need an answer before the stages that depend on them.
+### 5.1 A headless browser: yes — Playwright, devDependency only
 
-### 5.1 Do we adopt a headless browser?
+**Decided: yes.** It is the only thing in this plan that makes "does it fit on a phone" a test
+rather than a claim, and it closes the project's longest standing verification gap. The shipped bundle
+stays dependency-free; this is a dev tool like `vitest`.
 
-**Recommendation: yes — Playwright, as a devDependency only.** It is the only thing in this plan
-that makes "does it fit on a phone" a test rather than a claim, and it closes the project's longest
-standing verification gap. Cost: a large install, and a CI image change.
+Consequences, and they are real:
 
-Alternatives, in descending order of how much they buy:
+- M0 gains a large first install (browser binaries) and CI gains an image change.
+- The layout gate cannot land before the layout works, so M0 is **report-only** and M9 is where
+  assertions and CI arrive. Until M9 the harness is an instrument, and every stage in between is
+  responsible for re-running it and updating `MOBILE-baseline.md`.
+- Until M9, "the gate exists" is still a claim. Nine stages is a long time to have one.
 
-|                                                             |                                                                          |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Manual device testing checklist, run by hand before release | free, but nothing prevents regression and nothing runs in CI             |
-| Playwright at one or two sizes only                         | a quarter of the install, catches gross overflow, misses the tight cases |
+### 5.2 Drag-to-place: yes, build it
 
-If the answer is no, then M0, M8 and the `visualViewport` work in M2 all need restating as manual
-steps, and this plan should be re-read with that in mind.
+**Decided: yes.** Two taps per move is fine at a desk and poor at a thumb, and the board is the one
+surface where touch input differs from mouse input in kind rather than degree.
 
-### 5.2 Is drag-to-place worth it, or is tap-tap enough?
+It remains its own stage precisely so it can be dropped without losing M0–M5 if it turns out to
+produce more touch-only bugs than it is worth. The tap-tap path is untouched either way.
 
-**Recommendation: yes, build it.** Two taps per move is fine at a desk and poor at a thumb, and the
-board is the one surface where touch input differs from mouse input in kind rather than degree. But
-it is the most expensive single item here and the most likely to produce touch bugs, so it is
-separated into its own stage precisely so it can be dropped without losing M0–M4.
+### 5.3 Narrow toolbar: an overflow menu
 
-### 5.3 Should the mode/toolbar bar scroll horizontally, or collapse to an overflow menu?
+**Decided: overflow menu**, not horizontal scroll. Two reasons, and the second is the one that
+moved it:
 
-The plan assumes horizontal scroll because it costs no JavaScript and keeps every control one tap
-away. An overflow menu is tidier and scales better if controls are ever added. Horizontal scroll is
-easy to add a menu to later; the reverse is not true.
+1. A stacked panel is what a phone is good at. Scrolling horizontally hides controls behind an
+   affordance people under-use.
+2. It sidesteps the arithmetic entirely. A scroller has to decide what fits at every width; a menu
+   does not, because the panel is a vertical stack and the only question is what is in it.
+
+The cost is real: a menu is a component with focus management, Escape, outside-tap and ARIA, and all
+of that has to be right. That is M4.
+
+### 5.4 What goes in the menu — still open
+
+**This is the one sub-decision left, and it is a question about a value rather than about layout.**
+
+`toolbar.ts` deliberately keeps audio and motion out of submenus, on the grounds that the people who
+need those settings are the least likely to find one. Putting them in the overflow menu bends that.
+
+The tension, plainly:
+
+|                                                                 |                                                                                                                                                             |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Keep Sound and Reduce motion inline**                         | honours the existing rationale; costs ~170px of a 360px row, so the mode bar may wrap to a second row anyway                                                |
+| **Put them in the menu**                                        | one fewer row and more board; buries accessibility settings one tap away, but behind a button that is always in the same place, never scrolled out of reach |
+| **Put them in the menu, and mark the button when they are set** | one fewer row _and_ the state stays visible at a glance; more work than it sounds, and a small visual language of its own                                   |
+
+**Recommendation: measure first.** M0's harness reports the real row count and chrome height on a
+360px screen, which is the input to this decision. Take the option that the measurement supports; if
+it shows the mode bar wrapping anyway, the toggles go in the menu with an indicator on the button.
+Whichever is chosen, M4 updates the `toolbar.ts` header comment to match.
 
 ---
 
 ## 6. Risks
 
-| Risk                                                                          | Mitigation                                                                                                                     |
-| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Pointer capture + `touch-action` interact badly and only fail on real devices | M5's state machine is pure; the gesture wiring is thin. Needs real-device testing regardless — this is where M8 earns its cost |
-| CSS-owned sizing regresses desktop                                            | M1 keeps one coordinate system; the existing desktop layout is asserted in M8's matrix at desktop sizes                        |
-| `dvh` / safe-area support varies                                              | both have fallbacks declared first; `100vh` and plain `padding` degrade predictably                                            |
-| The `260`-removal makes the desktop board larger than people expect           | it is the _correct_ size; measure it in M0 and decide with a number rather than a hunch                                        |
-| Scope creep — "while we're in the CSS"                                        | the nine stages are separable commits. Stop at any of them                                                                     |
+| Risk                                                                          | Mitigation                                                                                                                                                                      |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pointer capture + `touch-action` interact badly and only fail on real devices | M6's state machine is pure; the gesture wiring is thin. Needs real-device testing regardless — this is where Playwright earns its cost, though it cannot replace hands on glass |
+| CSS-owned sizing regresses desktop                                            | M1 keeps one coordinate system; M9 asserts the desktop sizes in the same matrix                                                                                                 |
+| `dvh` / safe-area support varies                                              | both have fallbacks declared first; `100vh` and plain `padding` degrade predictably                                                                                             |
+| The `260`-removal makes the desktop board larger than people expect           | it is the _correct_ size; measure it in M0 and decide with a number rather than a hunch                                                                                         |
+| Nine stages with no layout gate until M9                                      | M0's baseline is re-run after every stage and committed, so drift is visible even when nothing fails                                                                            |
+| Playwright install friction puts the whole plan at risk                       | it is isolated to M0 and M9; M1–M8 do not depend on it, only M0's _baseline_ does                                                                                               |
+| Scope creep — "while we're in the CSS"                                        | the ten stages are separable commits. Stop at any of them                                                                                                                       |
 
 ---
 
@@ -309,8 +375,9 @@ easy to add a menu to later; the reverse is not true.
 
 - At 360×640 portrait the whole board is visible without scrolling, and no page scrolls sideways.
 - No interactive target is under 44×44px on any screen.
-- A complete match can be played on a phone using touch alone: select a card, place it, resolve a
-  battle, collect a card, start a new match.
+- The toolbar is a single Settings menu on narrow screens and the unchanged inline bar on desktop.
+- A complete match can be played on a phone using touch alone: select a card, place it by drag or by
+  tap, resolve a battle, collect a card, start a new match.
 - Rotating mid-match keeps the board fully playable.
 - Pinch-zoom still works over the board.
 - Desktop is unchanged, asserted at desktop sizes in the device matrix.
