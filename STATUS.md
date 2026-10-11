@@ -842,6 +842,67 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S25 — 2026-10-11 — M2: everything fits, and M1's regression is gone
+
+**Status:** mobile stage M2 complete. **729 tests** (up from 728).
+
+**Did:** `viewport-fit=cover`, `100dvh` with a `100vh` fallback, safe-area insets in the body padding,
+`overflow-x: clip`, and the canvas moved into a `flex: 1 1 auto; min-height: 0` slot with
+`max-width: min(100%, 560px)` / `max-height: 100%` and **no** `width` or `height` — leaving both
+`auto` is what lets the two constraints clamp together and keep the board square. `ResizeObserver`
+replaces the `window.resize` listener.
+
+**Measured, before → after:**
+
+|                                      | before             | after                           |
+| ------------------------------------ | ------------------ | ------------------------------- |
+| page height, every portrait phone    | 209–486px too tall | **fits**                        |
+| page height at 1280×720              | 284px too tall     | **fits, exactly 720**           |
+| board and hand tray visible together | never              | **every size except landscape** |
+| hand tray on a 320px phone           | 481.8px tall       | **161.5px**                     |
+| board at 1280×720                    | 560×560            | **560×560, unchanged**          |
+
+M1's regression is resolved and **nothing is traded away** — desktop kept its full-size board,
+because with the tray on one row there is room for it.
+
+**Learned:**
+
+- **The stage order in the plan was wrong, and only measurement could say so.** The plan put the hand
+  tray in M3. M0's numbers showed it was 444px tall on a 390x844 phone — 46% of everything that was
+  not the board — because five cards at `min-width: 7.5rem` (120px, not the ~76px I estimated) wrap
+  into three rows. No viewport work fixes a tray that wraps, so it came forward into M2 and M3 is
+  now the rest of the chrome.
+- **`min-height` is not `height`, and the difference is the whole feature.** The first attempt kept
+  `min-height: 100dvh` and the board still would not shrink: a _minimum_ lets the body grow to its
+  content, and then the flex slot has no overflow to distribute. Constraining the body is what makes
+  the slot do anything.
+- **`max-width` and `max-height` only preserve a square when both dimensions are `auto`.** Setting
+  either one lets the other clamp independently and the board goes rectangular. Worth writing down
+  because the fix — removing a declaration — looks like no change at all.
+- **Two of the four changes here are invisible to the test suite.** Reverting the body height, or the
+  hand tray, leaves all 729 tests green; only `npm run viewport` catches them. That is MOBILE.md §6's
+  "no layout gate until M9" arriving again, now with two named examples rather than a warning.
+- **A fixture can drift while every test passes.** `index.html` gained `.board-slot` and the
+  hand-written `page()` fixtures did not. The boot test's own comment says it can only catch a
+  missing element "if the fixture really does mirror the page" — which was true as a claim and false
+  as a fact. Both halves are now checked: a test walks every `id` in `index.html` and asserts the
+  fixture has it. Writing that test caught a bug in the test itself on its first run.
+- **I took a mutation backup after mutating**, then restored the broken file and spent a cycle
+  wondering why the baseline was red. The lesson is boring and cost four minutes: back up first,
+  mutate second, and confirm the restore with `git diff` before believing anything downstream.
+
+**Two deviations from the plan, both recorded in MOBILE.md:** `ResizeObserver` instead of
+`visualViewport` (the plan assumed JavaScript would still own the size; now that CSS does,
+`ResizeObserver` is both sufficient and more precise), and the hand tray pulled forward from M3.
+
+**Next:** M3 — the rest of the chrome (hiding the mode note and key legend by width, tightening gaps).
+Then M4, the toolbar overflow menu, which is the next thing standing between this and a board that
+could be larger on a phone.
+**Files touched:** `index.html`, `src/main.ts`, `src/ui/layoutProbe.ts`, `tools/viewport.ts`,
+`tests/ui/boot.test.ts`, `tests/ui/hotseat.test.ts`, `MOBILE.md`, `MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S24 — 2026-10-11 — M1: the board sizes itself, and the two guesses are gone
 
 **Status:** mobile stage M1 complete. **728 tests** (up from 714).

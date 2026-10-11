@@ -185,6 +185,9 @@ function summarise(rows: readonly Row[]): string[] {
       `| reported viewport | ${r.viewport.width}×${r.viewport.height} |`,
       `| board | ${board === null ? '**not found**' : `${board.width}×${board.height} at (${board.x}, ${board.y})`} |`,
       `| fully visible | ${r.boardFullyVisible ? 'yes' : '**NO**'} |`,
+      `| hand tray | ${r.hand === null ? '**not found**' : `${r.hand.width}×${r.hand.height} at (${r.hand.x}, ${r.hand.y})`} |`,
+      `| hand visible | ${r.handFullyVisible ? 'yes' : '**NO**'} |`,
+      `| board and hand together | ${r.boardAndHandVisible ? 'yes' : '**NO**'} |`,
       `| sideways overflow | ${r.horizontalOverflow === 0 ? 'none' : `**${r.horizontalOverflow}px**`} |`,
       `| chrome (everything but the board) | ${r.chromeHeight}px |`,
       `| page height | ${r.viewport.height}${taller > 0 ? ` — **${taller}px taller than the screen**` : ' — fits vertically'} |`,
@@ -212,6 +215,8 @@ function verdicts(rows: readonly Row[]): string[] {
     const r = row.report;
     const faults: string[] = [];
     if (!r.boardFullyVisible) faults.push('board not fully visible');
+    if (!r.handFullyVisible) faults.push('hand tray below the fold');
+    else if (!r.boardAndHandVisible) faults.push('board and hand not visible together');
     if (r.horizontalOverflow > 0) faults.push(`${r.horizontalOverflow}px sideways overflow`);
     if (r.tooSmall.length > 0)
       faults.push(`${r.tooSmall.length} control(s) under ${MIN_TARGET_PX}px`);

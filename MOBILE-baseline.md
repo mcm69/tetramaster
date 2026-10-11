@@ -15,7 +15,7 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 - **iPhone SE (2nd/3rd) (375×667)** — 8 control(s) under 44px.
 - **iPhone 12/13/14 (390×844)** — 8 control(s) under 44px.
 - **iPhone XR/11 (414×896)** — 8 control(s) under 44px.
-- **phone landscape (844×390)** — board not fully visible, 8 control(s) under 44px.
+- **phone landscape (844×390)** — board not fully visible, hand tray below the fold, 8 control(s) under 44px.
 - **iPad portrait (768×1024)** — 8 control(s) under 44px.
 - **laptop (1280×720)** — 8 control(s) under 44px.
 - **desktop (1440×900)** — 8 control(s) under 44px.
@@ -24,16 +24,19 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 
 ## iPhone SE (1st gen) — 320×568 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 320×568                                |
-| reported viewport                 | 320×568                                |
-| board                             | 288×288 at (16, 170.2)                 |
-| fully visible                     | yes                                    |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 1117px                                 |
-| page height                       | 568 — **837px taller than the screen** |
-| targets under 44px                | 8 of 13                                |
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| requested viewport                | 320×568                  |
+| reported viewport                 | 320×568                  |
+| board                             | 288×288 at (16, 170.2)   |
+| fully visible                     | yes                      |
+| hand tray                         | 288×161.5 at (16, 332.3) |
+| hand visible                      | yes                      |
+| board and hand together           | yes                      |
+| sideways overflow                 | none                     |
+| chrome (everything but the board) | 280px                    |
+| page height                       | 568 — fits vertically    |
+| targets under 44px                | 8 of 13                  |
 
 Controls too small to tap comfortably:
 
@@ -48,16 +51,19 @@ Controls too small to tap comfortably:
 
 ## small Android — 360×640 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 360×640                                |
-| reported viewport                 | 360×640                                |
-| board                             | 328×328 at (16, 170.2)                 |
-| fully visible                     | yes                                    |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 966px                                  |
-| page height                       | 640 — **654px taller than the screen** |
-| targets under 44px                | 8 of 13                                |
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| requested viewport                | 360×640                  |
+| reported viewport                 | 360×640                  |
+| board                             | 328×328 at (16, 170.2)   |
+| fully visible                     | yes                      |
+| hand tray                         | 328×161.5 at (16, 404.3) |
+| hand visible                      | yes                      |
+| board and hand together           | yes                      |
+| sideways overflow                 | none                     |
+| chrome (everything but the board) | 312px                    |
+| page height                       | 640 — fits vertically    |
+| targets under 44px                | 8 of 13                  |
 
 Controls too small to tap comfortably:
 
@@ -72,16 +78,19 @@ Controls too small to tap comfortably:
 
 ## iPhone SE (2nd/3rd) — 375×667 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 375×667                                |
-| reported viewport                 | 375×667                                |
-| board                             | 343×343 at (16, 170.2)                 |
-| fully visible                     | yes                                    |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 966px                                  |
-| page height                       | 667 — **642px taller than the screen** |
-| targets under 44px                | 8 of 13                                |
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| requested viewport                | 375×667                  |
+| reported viewport                 | 375×667                  |
+| board                             | 343×343 at (16, 170.2)   |
+| fully visible                     | yes                      |
+| hand tray                         | 343×161.5 at (16, 431.3) |
+| hand visible                      | yes                      |
+| board and hand together           | yes                      |
+| sideways overflow                 | none                     |
+| chrome (everything but the board) | 324px                    |
+| page height                       | 667 — fits vertically    |
+| targets under 44px                | 8 of 13                  |
 
 Controls too small to tap comfortably:
 
@@ -96,16 +105,19 @@ Controls too small to tap comfortably:
 
 ## iPhone 12/13/14 — 390×844 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 390×844                                |
-| reported viewport                 | 390×844                                |
-| board                             | 358×358 at (16, 170.2)                 |
-| fully visible                     | yes                                    |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 972px                                  |
-| page height                       | 844 — **486px taller than the screen** |
-| targets under 44px                | 8 of 13                                |
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| requested viewport                | 390×844                  |
+| reported viewport                 | 390×844                  |
+| board                             | 358×358 at (16, 170.2)   |
+| fully visible                     | yes                      |
+| hand tray                         | 358×161.5 at (16, 482.3) |
+| hand visible                      | yes                      |
+| board and hand together           | yes                      |
+| sideways overflow                 | none                     |
+| chrome (everything but the board) | 486px                    |
+| page height                       | 844 — fits vertically    |
+| targets under 44px                | 8 of 13                  |
 
 Controls too small to tap comfortably:
 
@@ -120,16 +132,19 @@ Controls too small to tap comfortably:
 
 ## iPhone XR/11 — 414×896 (touch)
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 414×896                                |
-| reported viewport                 | 414×896                                |
-| board                             | 382×382 at (16, 170.2)                 |
-| fully visible                     | yes                                    |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 954px                                  |
-| page height                       | 896 — **440px taller than the screen** |
-| targets under 44px                | 8 of 13                                |
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| requested viewport                | 414×896                  |
+| reported viewport                 | 414×896                  |
+| board                             | 382×382 at (16, 170.2)   |
+| fully visible                     | yes                      |
+| hand tray                         | 382×161.5 at (16, 552.3) |
+| hand visible                      | yes                      |
+| board and hand together           | yes                      |
+| sideways overflow                 | none                     |
+| chrome (everything but the board) | 514px                    |
+| page height                       | 896 — fits vertically    |
+| targets under 44px                | 8 of 13                  |
 
 Controls too small to tap comfortably:
 
@@ -148,11 +163,14 @@ Controls too small to tap comfortably:
 | --------------------------------- | -------------------------------------- |
 | requested viewport                | 844×390                                |
 | reported viewport                 | 844×390                                |
-| board                             | 560×560 at (142, 131.2)                |
+| board                             | 560×560 at (142, 14)                   |
 | fully visible                     | **NO**                                 |
+| hand tray                         | 812×293.6 at (16, 139.4)               |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
 | sideways overflow                 | none                                   |
-| chrome (everything but the board) | 626px                                  |
-| page height                       | 390 — **796px taller than the screen** |
+| chrome (everything but the board) | 0px                                    |
+| page height                       | 390 — **170px taller than the screen** |
 | targets under 44px                | 8 of 13                                |
 
 Controls too small to tap comfortably:
@@ -168,16 +186,19 @@ Controls too small to tap comfortably:
 
 ## iPad portrait — 768×1024 (touch)
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 768×1024                                |
-| reported viewport                 | 768×1024                                |
-| board                             | 560×560 at (104, 131.2)                 |
-| fully visible                     | yes                                     |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 729px                                   |
-| page height                       | 1024 — **265px taller than the screen** |
-| targets under 44px                | 8 of 13                                 |
+|                                   |                          |
+| --------------------------------- | ------------------------ |
+| requested viewport                | 768×1024                 |
+| reported viewport                 | 768×1024                 |
+| board                             | 560×560 at (104, 131.2)  |
+| fully visible                     | yes                      |
+| hand tray                         | 736×293.6 at (16, 584.2) |
+| hand visible                      | yes                      |
+| board and hand together           | yes                      |
+| sideways overflow                 | none                     |
+| chrome (everything but the board) | 464px                    |
+| page height                       | 1024 — fits vertically   |
+| targets under 44px                | 8 of 13                  |
 
 Controls too small to tap comfortably:
 
@@ -192,16 +213,19 @@ Controls too small to tap comfortably:
 
 ## laptop — 1280×720
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 1280×720                               |
-| reported viewport                 | 1280×720                               |
-| board                             | 560×560 at (360, 100)                  |
-| fully visible                     | yes                                    |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 444px                                  |
-| page height                       | 720 — **284px taller than the screen** |
-| targets under 44px                | 8 of 13                                |
+|                                   |                             |
+| --------------------------------- | --------------------------- |
+| requested viewport                | 1280×720                    |
+| reported viewport                 | 1280×720                    |
+| board                             | 560×560 at (360, 100)       |
+| fully visible                     | yes                         |
+| hand tray                         | 857.7×142.8 at (211.2, 503) |
+| hand visible                      | yes                         |
+| board and hand together           | yes                         |
+| sideways overflow                 | none                        |
+| chrome (everything but the board) | 160px                       |
+| page height                       | 720 — fits vertically       |
+| targets under 44px                | 8 of 13                     |
 
 Controls too small to tap comfortably:
 
@@ -216,16 +240,19 @@ Controls too small to tap comfortably:
 
 ## desktop — 1440×900
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 1440×900                               |
-| reported viewport                 | 1440×900                               |
-| board                             | 560×560 at (440, 100)                  |
-| fully visible                     | yes                                    |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 547px                                  |
-| page height                       | 900 — **207px taller than the screen** |
-| targets under 44px                | 8 of 13                                |
+|                                   |                             |
+| --------------------------------- | --------------------------- |
+| requested viewport                | 1440×900                    |
+| reported viewport                 | 1440×900                    |
+| board                             | 560×560 at (440, 100)       |
+| fully visible                     | yes                         |
+| hand tray                         | 857.7×142.8 at (291.2, 611) |
+| hand visible                      | yes                         |
+| board and hand together           | yes                         |
+| sideways overflow                 | none                        |
+| chrome (everything but the board) | 340px                       |
+| page height                       | 900 — fits vertically       |
+| targets under 44px                | 8 of 13                     |
 
 Controls too small to tap comfortably:
 

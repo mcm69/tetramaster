@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Tetra Master</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style>
@@ -20,15 +20,34 @@
       * {
         box-sizing: border-box;
       }
+      html {
+        /* Belt and braces. M1 removed the last element that overflowed sideways, but a document
+           that can be dragged horizontally is the kind of thing that comes back. `clip` rather than
+           `hidden`, so it cannot become a scroll container of its own. */
+        overflow-x: clip;
+      }
       body {
         margin: 0;
-        min-height: 100vh;
+        /* 100vh is the *large* viewport: on a phone it runs under a URL bar that then collapses
+           over the content. `dvh` is what is actually on screen. Declared second so the fallback
+           wins where it is unsupported. */
+        /* Constrained, not `min-height`. A minimum lets the body grow to its content, and then the
+           board slot has no overflow to distribute and the board never shrinks — which is what
+           actually happened the first time round. `overflow-y: auto` is the safety valve for the
+           case where even this is not enough: the collection screen, or a text size that makes the
+           controls genuinely taller than a phone. */
+        height: 100vh;
+        height: 100dvh;
+        overflow-y: auto;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         gap: 0.75rem;
-        padding: 1rem;
+        /* A notch on the left or right, and a home indicator at the bottom, both sit *inside* the
+           viewport once `viewport-fit=cover` is set, so the padding has to make room for them. */
+        padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+          max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
         background: var(--bg);
         color: var(--ink);
         font:
@@ -45,15 +64,31 @@
         color: var(--accent);
       }
       /* The board's size belongs to CSS, not to JavaScript. `main.ts` reads the result and works
-         out the backing store and the transform; it does not decide how big the board is. */
+         out the backing store and the transform; it does not decide how big the board is.
+         No `width` or `height` here on purpose: with both left `auto`, the `max-*` constraints clamp
+         the element's intrinsic size and the square survives. Setting either one would let the box
+         go rectangular, because each `max-*` would then clamp independently. */
       canvas {
         display: block;
-        width: min(100%, 560px);
+        width: auto;
         height: auto;
+        max-width: min(100%, 560px);
+        max-height: 100%;
         aspect-ratio: 1 / 1;
         border-radius: 10px;
         box-shadow: 0 10px 40px rgb(0 0 0 / 55%);
         touch-action: none;
+      }
+      /* The space the board is allowed to occupy: whatever the column above and below it did not
+         need. `min-height: 0` is the part that matters — without it a flex item refuses to shrink
+         below its content, and the board would push the hand tray off the screen instead of
+         giving way to it. */
+      .board-slot {
+        flex: 1 1 auto;
+        min-height: 0;
+        width: 100%;
+        display: grid;
+        place-items: center;
       }
       .status {
         min-height: 1.4em;
@@ -65,6 +100,24 @@
         gap: 0.5rem;
         flex-wrap: wrap;
         justify-content: center;
+        max-width: 100%;
+      }
+      /* One row, always. Five cards at `min-width: 7.5rem` wrap to three rows below about 640px, and
+         measured on a 390x844 phone the tray came out **444px tall** — 46% of everything on the
+         page that was not the board. No viewport work fixes a tray that wraps; the tray has to stop
+         wrapping. Below 40rem the five cards share the row instead, which keeps all of them on
+         screen at once: scrolling a tray to see which card you are holding is worse than a small
+         one. MOBILE.md stage M2. */
+      @media (max-width: 40rem) {
+        .hand {
+          flex-wrap: nowrap;
+        }
+        .hand-card {
+          min-width: 0;
+          flex: 1 1 0;
+          align-items: center;
+          text-align: center;
+        }
       }
       .hand-card,
       .picker-option,
@@ -498,7 +551,9 @@
     <div class="toolbar-bar" id="toolbar" role="toolbar" aria-label="Mode and settings"></div>
     <div class="collection-panel" id="collection" hidden aria-label="Collection and deck"></div>
     <div class="collection-panel" id="rules" hidden aria-label="How to play"></div>
-    <canvas id="board" width="560" height="560" aria-label="Game board"></canvas>
+    <div class="board-slot">
+      <canvas id="board" width="560" height="560" aria-label="Game board"></canvas>
+    </div>
     <div class="toolbar">
       <button type="button" class="rematch" id="toggle-collection">Collection (C)</button>
       <button type="button" class="rematch" id="toggle-rules">How to play (R)</button>

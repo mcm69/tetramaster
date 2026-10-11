@@ -59,6 +59,14 @@ export interface LayoutReport {
   readonly board: ProbeRect | null;
   /** True when the board's whole rect is inside the visible viewport. */
   readonly boardFullyVisible: boolean;
+  /** The hand tray, which has to be on screen with the board for a move to be playable. */
+  readonly hand: ProbeRect | null;
+  readonly handFullyVisible: boolean;
+  /**
+   * The two things a player needs at once. MOBILE.md stage M2 is defined by this pair being
+   * visible without scrolling, which no earlier measurement could express.
+   */
+  readonly boardAndHandVisible: boolean;
   /** Vertical space consumed by everything that is not the board, in CSS pixels. */
   readonly chromeHeight: number;
   /** Interactive elements measured, and how many of them are under the touch minimum. */
@@ -101,6 +109,8 @@ export function collectLayout(
 
   const canvas = doc.querySelector('#board');
   const board = canvas === null ? null : rectOf(canvas);
+  const handElement = doc.querySelector('#hand');
+  const hand = handElement === null ? null : rectOf(handElement);
 
   const visibleHeight = view.visualViewport?.height ?? view.innerHeight;
   const visibleWidth = view.visualViewport?.width ?? view.innerWidth;
@@ -146,11 +156,11 @@ export function collectLayout(
       doc.documentElement.scrollWidth - doc.documentElement.clientWidth,
     ),
     board,
-    boardFullyVisible:
-      board !== null &&
-      board.y >= -1 &&
-      board.bottom <= visibleHeight + 1 &&
-      board.width <= visibleWidth + 1,
+    boardFullyVisible: within(board, visibleWidth, visibleHeight),
+    hand,
+    handFullyVisible: within(hand, visibleWidth, visibleHeight),
+    boardAndHandVisible:
+      within(board, visibleWidth, visibleHeight) && within(hand, visibleWidth, visibleHeight),
     chromeHeight: board === null ? scrollHeight : Math.max(0, scrollHeight - board.height),
     interactive: elements.length,
     tooSmall,
@@ -167,6 +177,14 @@ function labelFor(element: Element): string {
   const text = element.textContent.trim().replace(/\s+/g, ' ').slice(0, 28);
   const parts = [tag, id, classes.split(/\s+/).filter(Boolean).join('.'), name, aria, text];
   return parts.filter((part) => part !== '').join(' ');
+}
+
+/** True when the rect exists and lies wholly inside the visible viewport. */
+function within(rect: ProbeRect | null, width: number, height: number): boolean {
+  if (rect === null) return false;
+  return (
+    rect.y >= -1 && rect.bottom <= height + 1 && rect.width <= width + 1 && rect.right <= width + 1
+  );
 }
 
 function round(value: number): number {
@@ -192,6 +210,10 @@ export function formatReport(report: LayoutReport): string[] {
       ? 'board: NOT FOUND'
       : `board ${board.width}x${board.height} at (${board.x}, ${board.y})` +
           `  bottom ${board.bottom}  fully visible: ${report.boardFullyVisible ? 'yes' : 'NO'}`,
+  );
+  lines.push(
+    `hand ${report.handFullyVisible ? 'visible' : 'BELOW THE FOLD'}` +
+      `   board and hand together: ${report.boardAndHandVisible ? 'yes' : 'NO'}`,
   );
   lines.push(`chrome ${report.chromeHeight}px (everything that is not the board)`);
   const tooSmall = report.tooSmall;

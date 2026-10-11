@@ -163,38 +163,77 @@ arrival and every later stage would be red for the wrong reason. The gate is M9.
 **Done when** `cssScale` is derived entirely from a measured rect, and `MIN_VIEWPORT` and `260` no
 longer exist.
 
-### M2 — Viewport and document
+### M2 — Viewport and document — **done**
 
-- `viewport-fit=cover` on the meta tag.
-- `min-height: 100vh` → `100dvh` (with a `100vh` fallback declared first).
-- `overflow-x: clip` on the document, so nothing can ever scroll sideways.
-- `padding-bottom: max(1rem, env(safe-area-inset-bottom))` and the matching top/left/right.
-- The board moves into a `flex: 1 1 auto; min-height: 0` slot so the browser does the height
-  arithmetic, and `aspect-ratio: 1` keeps it square.
-- `visualViewport` drives the fit; `resize` on `window` is no longer the only signal.
+- `viewport-fit=cover`; `100vh` fallback then `100dvh`; safe-area insets folded into the body padding.
+- `overflow-x: clip` on the document, so nothing can be dragged sideways again.
+- The canvas moves into a `flex: 1 1 auto; min-height: 0` slot, with `max-width: min(100%, 560px)` and
+  `max-height: 100%` and **no** `width` or `height` — leaving both `auto` is what lets the two
+  `max-*` constraints clamp the intrinsic size together and keep the board square.
+- `ResizeObserver` on the canvas replaces the `visualViewport` listener the plan called for. See
+  "deviation" below.
+- **The hand tray stopped wrapping**, pulled forward from M3. See "deviation" below.
 
-**This stage also owns M1's regression.** Board size is no longer capped by viewport height, so the
-1280×720 desktop page is currently 284px taller than the screen and the hand tray sits below the fold.
+**Measured, before → after (M0 harness, re-run):**
 
-**Done when** the board fits at 360×640, the page never scrolls horizontally, **and the page height
-at 1280×720 is no worse than the 720px it was before M1** — with the board and the hand tray visible
-together without scrolling. Re-run `npm run viewport` and compare against `MOBILE-baseline.md`.
+|                                      | before M2                        | after M2                        |
+| ------------------------------------ | -------------------------------- | ------------------------------- |
+| page height, every portrait phone    | 209–486px taller than the screen | **fits**                        |
+| page height at 1280×720              | 284px taller than the screen     | **fits, exactly**               |
+| page height at 1440×900              | 390px taller                     | **fits**                        |
+| board and hand tray visible together | never                            | **every size except landscape** |
+| hand tray on a 320px phone           | 481.8px tall                     | **161.5px**                     |
+| board at 1280×720                    | 560×560                          | **560×560 — unchanged**         |
+
+**M1's regression is gone.** The 1280×720 page is exactly 720px now, and the board is still its
+natural 560 — the desktop never got smaller, because with the tray on one row there is room for it.
+Nothing is traded away.
+
+**Two deviations from the plan, both forced by measurement.**
+
+1. **`ResizeObserver` instead of `visualViewport`.** The plan asked for `visualViewport` on the
+   assumption that JavaScript would still be computing the size and would need to know when the
+   visible area moved. Now that CSS owns the size, that is both unnecessary and slightly wrong:
+   `ResizeObserver` fires when the box _actually_ changes, covering the URL bar collapsing, a
+   rotation, a font arriving and a zoom, without guessing which of those is worth listening for.
+   `window.resize` remains as the fallback where `ResizeObserver` is absent.
+
+2. **The hand tray came forward from M3.** M0 measured the tray at **444px tall on a 390×844 phone** —
+   46% of everything on the page that was not the board — because five cards at `min-width: 7.5rem`
+   (120px, not the ~76px this plan estimated) wrapped into three rows. No viewport work fixes a tray
+   that wraps. Below `40rem` the five cards now share one row, which keeps all of them on screen:
+   scrolling a tray to see which card you are holding is worse than a small one.
+
+**The gap, demonstrated.** Two of the four changes here — the body height and the hand tray — are
+invisible to `npm test`. Reverting either one leaves all 729 tests green. Only `npm run viewport`
+catches them, and it is report-only until M9:
+
+| Mutation                         | unit suite | harness                   |
+| -------------------------------- | ---------- | ------------------------- |
+| body height back to `min-height` | **passes** | phones 209–253px too tall |
+| hand tray wraps again            | **passes** | tray 161.5px → 481.8px    |
+| fixture loses `.board-slot`      | fails      | —                         |
+| `ResizeObserver` removed         | fails      | —                         |
+
+**The fixture drift check.** `index.html` gained `.board-slot`, and the hand-written `page()`
+fixtures in `boot.test.ts` and `hotseat.test.ts` did not — which would have quietly invalidated the
+one thing the boot test exists to do, since its own comment says it can only catch a missing element
+"if the fixture really does mirror the page". Both halves of that are now checked: a test walks
+every `id` in `index.html` and asserts the fixture has it.
+
+**Done.** Every portrait size fits, desktop is unchanged, and M1's regression is resolved.
 
 ### M3 — Narrow-screen layout
 
-The toolbar's height is what costs the board its space, but the toolbar is M4's problem. This stage
-is everything else.
+The hand tray is **already done**, in M2, because M0 showed it was the single largest item in the
+chrome and no viewport work fixes a tray that wraps. What is left here is the rest of the chrome.
 
-- `.hand` becomes a single horizontally-scrolling row with `scroll-snap-align` on the cards. Five
-  cards at ~76px fit 375px without scrolling; below that they scroll rather than wrap, because
-  vertical space is the scarce resource and wrapping costs two rows.
-- The first width-based media query in the project, and the first `@media (max-width: …)` used for
-  layout rather than for hiding things.
+- The first `@media (max-width: …)` in the project used for layout rather than for hiding things.
 - Hide `.mode-note` and `.keys` by width as well as by height.
 - Tighten the flex `gap` and the `h1` at narrow widths.
+- The toolbar's own height is M4's problem.
 
-**Done when** the hand tray occupies one row at 360px and the board is larger than it would be
-without this stage, measured by the M0 harness.
+**Done when** the board at 390×844 is larger than it is after M2, measured by the M0 harness.
 
 ### M4 — Toolbar overflow menu
 

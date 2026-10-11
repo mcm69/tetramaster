@@ -123,7 +123,24 @@ function boot(): void {
     ctx.setTransform(sizing.transform, 0, 0, sizing.transform, 0, 0);
   }
   fitCanvas();
-  window.addEventListener('resize', fitCanvas);
+
+  // Re-fit whenever the *canvas's own box* changes, rather than when the window does.
+  //
+  // MOBILE.md asked for `visualViewport` here, on the assumption that JavaScript would still be
+  // computing the size and would need to know when the visible area moved. Now that CSS owns the
+  // size, that is unnecessary and slightly wrong: `ResizeObserver` fires when the box actually
+  // changes, which covers the URL bar collapsing, a rotation, a font arriving and a zoom, without
+  // guessing at which of those is worth listening for.
+  //
+  // No feedback loop: the backing store is device pixels and does not affect the CSS box, so
+  // assigning it cannot trigger this observer again.
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(fitCanvas).observe(canvas);
+  } else {
+    // Ancient browsers, and anything that stubs the global out. `resize` is the old signal and is
+    // sufficient, just less precise.
+    window.addEventListener('resize', fitCanvas);
+  }
 
   // A no-op unless the URL carries `?debug=layout` — see src/ui/layoutProbe.ts.
   installLayoutProbe(window, document);

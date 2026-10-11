@@ -30,7 +30,9 @@ function page(): void {
     <div class="toolbar-bar" id="toolbar"></div>
     <div class="collection-panel" id="collection" hidden></div>
     <div class="collection-panel" id="rules" hidden></div>
-    <canvas id="board" width="560" height="560"></canvas>
+    <div class="board-slot">
+      <canvas id="board" width="560" height="560"></canvas>
+    </div>
     <div class="toolbar">
       <button type="button" class="rematch" id="toggle-collection">Collection (C)</button>
       <button type="button" class="rematch" id="toggle-rules">How to play (R)</button>
@@ -45,6 +47,30 @@ function page(): void {
     <p class="keys" id="keys"></p>
   `;
 }
+
+describe('the boot fixture', () => {
+  it('mirrors index.html, so it can still catch an element the app needs and the page lacks', () => {
+    // The comment above `page()` says this fixture is kept in step with index.html *by hand*, and
+    // that it is the only thing that can catch a missing element. Both halves of that are only true
+    // if nothing is checked. Adding `.board-slot` to the page without adding it here would have
+    // passed every test in this file while quietly invalidating its reason to exist.
+    page();
+    const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+    const ids = [...html.matchAll(/id="([a-z-]+)"/g)]
+      .map((match) => match[1])
+      .filter((id): id is string => id !== undefined)
+      .sort();
+    expect(ids.length, 'no ids found in index.html; the regex is wrong').toBeGreaterThan(5);
+    for (const id of ids) {
+      expect(
+        document.getElementById(id),
+        `index.html has #${id} but the fixture does not`,
+      ).not.toBeNull();
+    }
+    expect(html).toContain('class="board-slot"');
+    expect(document.querySelector('.board-slot'), 'the fixture lost its board slot').not.toBeNull();
+  });
+});
 
 describe('boot', () => {
   it('wires every panel and paints a frame', async () => {
@@ -127,7 +153,7 @@ describe('boot', () => {
   });
 
   it('surfaces a clear error when a panel is missing', async () => {
-    document.body.innerHTML = '<canvas id="board" width="560" height="560"></canvas>';
+    document.body.innerHTML = '<div class="board-slot"><canvas id="board"></canvas></div>';
     vi.resetModules();
 
     await expect(import('../../src/main')).rejects.toThrow(/#status is missing/);

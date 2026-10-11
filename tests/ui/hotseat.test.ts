@@ -45,7 +45,9 @@ function page(): void {
     <div class="toolbar-bar" id="toolbar"></div>
     <div class="collection-panel" id="collection" hidden></div>
     <div class="collection-panel" id="rules" hidden></div>
-    <canvas id="board" width="560" height="560"></canvas>
+    <div class="board-slot">
+      <canvas id="board" width="560" height="560"></canvas>
+    </div>
     <div class="toolbar">
       <button type="button" class="rematch" id="toggle-collection">Collection (C)</button>
       <button type="button" class="rematch" id="toggle-rules">How to play (R)</button>
