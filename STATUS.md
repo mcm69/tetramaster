@@ -842,6 +842,61 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S24 — 2026-10-11 — M1: the board sizes itself, and the two guesses are gone
+
+**Status:** mobile stage M1 complete. **728 tests** (up from 714).
+
+**Did:** `src/ui/sizing.ts` — a pure `boardSizing({boardPx, displayPx, devicePixelRatio,
+maxDisplayPx})`. `fitCanvas` no longer decides anything; CSS gives the canvas `width: min(100%, 560px)`
+with a square aspect ratio, and `main.ts` reads the rect and works out the backing store and the
+transform. **`MIN_VIEWPORT` and the hardcoded `260` are deleted.**
+
+**Measured before and after, from the M0 harness:**
+
+- Board at 320×568: **420×420 at x=-50 -> 288×288 at x=16**. Fifty pixels off-screen on _each_ side,
+  now on neither.
+- Board at 414×896: 420×382 -> 382×382. At 768 and above: 560 everywhere, desktop unchanged.
+- **Sideways overflow: gone at every one of the nine sizes.**
+- **The board is now fully visible on every phone in portrait**, which it was not on any of them.
+
+**Learned:**
+
+- **I introduced a regression and wrote it into the next stage's acceptance criteria rather than
+  glossing it.** Removing the height cap without yet replacing it let the desktop board grow from 460
+  to its natural 560, pushing the hand tray further below the fold: the 1280×720 page went from 184px
+  to 284px taller than the screen. Nothing that worked stopped working — M0 established that the page
+  was _already_ 184px too tall — but it is a regression and it belongs to M2. M2's "done when" now
+  says so, with a number to check against.
+- **A fix nothing can test is a fix that will rot.** The other consequence of M1 — `min-width: 0` on
+  `.opponent-select`, without which a 320px screen scrolls sideways — is verified _only_ by
+  `npm run viewport`, which is report-only until M9. No unit test can see a CSS overflow. That is
+  MOBILE.md §6's "nine stages with no layout gate" risk arriving early and concrete, and it is the
+  strongest argument for finishing M9 sooner rather than later.
+- **`min-width: 0` is the whole trick, and it is not obvious.** Capping the control with `max-width`
+  did nothing: the percentage resolved against a shrink-to-fit parent, so `min(18rem, 100%)` was
+  still 288px. A flex child only shrinks below the intrinsic width of its content when its
+  `min-width` is zero. Found by measuring, after the first attempt looked correct.
+- **Two tests are not the same as one test.** "Rises with the space it is given" failed on the very
+  first input — because a canvas measuring zero is _unmeasured_, not very small, and answers
+  differently on purpose. Rather than start the loop at 1 and move on, the discontinuity is now
+  pinned by its own test, because it is a rule someone will otherwise "fix".
+- **The boot test was asserting the bug.** It checked the board was never below 420px — the exact
+  floor M1 exists to delete. Rewritten to assert the new arrangement (JavaScript does not size the
+  board; an unmeasurable canvas is left untouched). Counting `setTransform` calls would not have
+  worked: the hand tray's arrow previews call it five times.
+
+**Verified by mutation**, seven and all caught: the `maxDisplayPx` clamp removed, `cssScale` pinned to
+1, the backing store reverted to `boardPx * dpr`, the unmeasurable fallback removed, the `dpr`
+sanitisation removed, both `RangeError` guards removed, and `fitCanvas` no longer bailing on an
+unmeasurable canvas.
+
+**Next:** M2, which owns the regression above — the viewport and document work (`dvh`, safe areas,
+`overflow-x: clip`, and the flex slot that gives the board a height to fit into).
+**Files touched:** `src/ui/sizing.ts` (new), `src/main.ts`, `index.html`, `tests/ui/sizing.test.ts`
+(new), `tests/ui/boot.test.ts`, `MOBILE.md`, `MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S23 — 2026-10-11 — M0: a headless browser, and what the page actually measures
 
 **Status:** mobile stage M0 complete. **No product code changed** — the probe is inert without a query

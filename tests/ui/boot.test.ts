@@ -59,15 +59,26 @@ describe('boot', () => {
 
     const board = document.querySelector<HTMLCanvasElement>('#board');
     expect(board).not.toBeNull();
-    // The backing store is sized from devicePixelRatio (1 under jsdom); the CSS size is scaled to
-    // fit the viewport, so it is at most the design size and never below the legibility floor.
-    expect(board?.width).toBeGreaterThanOrEqual(560);
-    const cssWidth = Number.parseInt(board?.style.width ?? '0', 10);
-    expect(cssWidth).toBeLessThanOrEqual(560);
-    expect(cssWidth).toBeGreaterThanOrEqual(420);
-    // The DPR/CSS scale is applied with setTransform rather than scale, so it cannot compound on
-    // every resize.
-    expect(canvasStub.recorder.calls['setTransform']).toBeGreaterThan(0);
+
+    // The board's size belongs to CSS (MOBILE.md stage M1). Two things are asserted here, and both
+    // are about the new arrangement rather than the old numbers:
+    //
+    //  - JavaScript does not size the board. It used to write `canvas.style.width` from a floor of
+    //    420px that was derived from a desktop minimum viewport, which is why a 320px phone put the
+    //    board 50px off-screen on each side.
+    //  - jsdom has no layout engine, so the canvas measures zero and `fitCanvas` deliberately does
+    //    nothing rather than guessing. That is the honest behaviour, and it is what stops a layout
+    //    change from being papered over with a fallback size in a test environment.
+    //
+    // The sizing arithmetic itself is tested in tests/ui/sizing.test.ts, and against a real browser
+    // by `npm run viewport`.
+    expect(board?.style.width, 'javascript must not size the board').toBe('');
+    // `fitCanvas` bails before touching the backing store when the canvas measures zero, so it is
+    // still the 560 from the markup. Counting `setTransform` calls would not show this: the hand
+    // tray's arrow previews call it too, five times.
+    expect(board?.width, 'the backing store was resized against a canvas that measures zero').toBe(
+      560,
+    );
 
     // The hand tray is populated from the initial view, so the player can see their cards.
     expect(document.querySelectorAll('#hand button.hand-card')).toHaveLength(5);

@@ -17,6 +17,7 @@ import { clickToAction, hitTest } from './input/pointer.ts';
 import { KEY_BINDINGS, handleKey, resolveKey } from './input/keys.ts';
 import { MatchController } from './ui/app.ts';
 import { installLayoutProbe } from './ui/layoutProbe.ts';
+import { boardSizing } from './ui/sizing.ts';
 import { OpponentGate } from './ui/turn.ts';
 import { Opponent } from './ai/opponent.ts';
 import { renderBattlePicker } from './ui/components/picker.ts';
@@ -66,7 +67,6 @@ import type { GameEvent, Outcome } from './core/types.ts';
 const BOARD_SIZE = 560;
 
 /** The narrowest window the layout is designed for (PLAN.md §6: down to 1280x720). */
-const MIN_VIEWPORT = { width: 1280, height: 720 };
 
 function boot(): void {
   const canvas = query('#board') as HTMLCanvasElement;
@@ -90,32 +90,37 @@ function boot(): void {
   const ctx: CanvasRenderingContext2D = context;
 
   // ── responsive sizing ──────────────────────────────────────────────────────────────────────
-  // The canvas is drawn at BOARD_SIZE in CSS pixels and then scaled to fit. Resizing the backing
-  // store on every resize event instead would mean recomputing the layout and re-deriving every
-  // coordinate, and would make pointer hit-testing depend on the scale.
-  let dpr = Math.max(1, window.devicePixelRatio || 1);
+  // The browser decides how big the board is — CSS gives it `width: min(100%, 560px)` and a square
+  // aspect ratio — and this only reads the result and works out what it means for the backing store
+  // and the transform.
+  //
+  // It used to be the other way round, and got the numbers wrong on every device: a `MIN_VIEWPORT`
+  // of `{1280, 720}` floored the board at 420×420 everywhere, and a hardcoded `260` stood in for the
+  // height of the chrome around it. Measured, the real chrome is 1117px on a 320×568 phone and 444px
+  // on a 1280×720 laptop — see MOBILE-baseline.md.
   let cssScale = 1;
 
   function fitCanvas(): void {
-    dpr = Math.max(1, window.devicePixelRatio || 1);
-    const available = Math.min(
-      window.innerWidth - 32,
-      window.innerHeight - 260, // room for the toolbar, hand tray and status lines
-      BOARD_SIZE,
-    );
-    // Never shrink below what fits at the minimum supported window: a board too small to read is
-    // worse than a page that scrolls. Below 1280x720 the page scrolls rather than the board
-    // becoming illegible.
-    const minBoard = Math.min(MIN_VIEWPORT.width - 380, MIN_VIEWPORT.height - 300);
-    cssScale = Math.max(minBoard / BOARD_SIZE, Math.min(1, available / BOARD_SIZE));
-    canvas.width = Math.round(BOARD_SIZE * dpr);
-    canvas.height = Math.round(BOARD_SIZE * dpr);
-    canvas.style.width = `${Math.round(BOARD_SIZE * cssScale)}px`;
-    canvas.style.height = `${Math.round(BOARD_SIZE * cssScale)}px`;
+    const displayPx = canvas.getBoundingClientRect().width;
+    // A hidden canvas measures zero, and there is nothing to fit. Bail before touching the backing
+    // store, which would clear it for no reason.
+    if (displayPx <= 0) return;
+
+    const sizing = boardSizing({
+      boardPx: BOARD_SIZE,
+      displayPx,
+      devicePixelRatio: window.devicePixelRatio,
+      maxDisplayPx: BOARD_SIZE,
+    });
+    cssScale = sizing.cssScale;
+
+    // Assigning `width` resets the canvas, so the transform has to be set afterwards, not before.
+    canvas.width = sizing.backingPx;
+    canvas.height = sizing.backingPx;
     // Scale the transform rather than the layout: every coordinate stays in BOARD_SIZE units, so
     // there is exactly one coordinate system in the whole renderer. Setting the transform (rather
     // than calling ctx.scale) also avoids compounding it on every resize.
-    ctx.setTransform(dpr * cssScale, 0, 0, dpr * cssScale, 0, 0);
+    ctx.setTransform(sizing.transform, 0, 0, sizing.transform, 0, 0);
   }
   fitCanvas();
   window.addEventListener('resize', fitCanvas);

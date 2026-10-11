@@ -44,8 +44,13 @@
         text-transform: uppercase;
         color: var(--accent);
       }
+      /* The board's size belongs to CSS, not to JavaScript. `main.ts` reads the result and works
+         out the backing store and the transform; it does not decide how big the board is. */
       canvas {
         display: block;
+        width: min(100%, 560px);
+        height: auto;
+        aspect-ratio: 1 / 1;
         border-radius: 10px;
         box-shadow: 0 10px 40px rgb(0 0 0 / 55%);
         touch-action: none;
@@ -377,10 +382,19 @@
         display: flex;
         gap: 0.35rem;
         align-items: center;
+        /* A flex item is sized by its content by default, so a wide child makes the row wider than
+           the screen no matter what the child is capped at. */
+        max-width: 100%;
         color: var(--muted);
         font-size: 0.8rem;
       }
       .opponent-select {
+        /* `18rem` alone overflowed a 320px screen: the select was 288px and its inline label took
+           the field to 353px, so the page could be scrolled sideways. `min-width: 0` lets the
+           control shrink below the intrinsic width of its longest option, which is the only way a
+           flex child gets smaller than the text inside it. MOBILE.md stage M1. */
+        flex: 1 1 auto;
+        min-width: 0;
         max-width: 18rem;
         padding: 0.25rem 0.4rem;
         background: var(--bg);

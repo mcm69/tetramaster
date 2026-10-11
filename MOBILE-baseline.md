@@ -10,11 +10,11 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 
 ## Summary
 
-- **iPhone SE (1st gen) (320×568)** — board not fully visible, 50px sideways overflow, 8 control(s) under 44px.
-- **small Android (360×640)** — board not fully visible, 30px sideways overflow, 8 control(s) under 44px.
-- **iPhone SE (2nd/3rd) (375×667)** — board not fully visible, 23px sideways overflow, 8 control(s) under 44px.
-- **iPhone 12/13/14 (390×844)** — board not fully visible, 15px sideways overflow, 8 control(s) under 44px.
-- **iPhone XR/11 (414×896)** — board not fully visible, 3px sideways overflow, 8 control(s) under 44px.
+- **iPhone SE (1st gen) (320×568)** — 8 control(s) under 44px.
+- **small Android (360×640)** — 8 control(s) under 44px.
+- **iPhone SE (2nd/3rd) (375×667)** — 8 control(s) under 44px.
+- **iPhone 12/13/14 (390×844)** — 8 control(s) under 44px.
+- **iPhone XR/11 (414×896)** — 8 control(s) under 44px.
 - **phone landscape (844×390)** — board not fully visible, 8 control(s) under 44px.
 - **iPad portrait (768×1024)** — 8 control(s) under 44px.
 - **laptop (1280×720)** — 8 control(s) under 44px.
@@ -28,11 +28,11 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | --------------------------------- | -------------------------------------- |
 | requested viewport                | 320×568                                |
 | reported viewport                 | 320×568                                |
-| board                             | 420×420 at (-50, 170.2)                |
-| fully visible                     | **NO**                                 |
-| sideways overflow                 | **50px**                               |
+| board                             | 288×288 at (16, 170.2)                 |
+| fully visible                     | yes                                    |
+| sideways overflow                 | none                                   |
 | chrome (everything but the board) | 1117px                                 |
-| page height                       | 568 — **969px taller than the screen** |
+| page height                       | 568 — **837px taller than the screen** |
 | targets under 44px                | 8 of 13                                |
 
 Controls too small to tap comfortably:
@@ -40,7 +40,7 @@ Controls too small to tap comfortably:
 - `button mode-button Match. Play a named opponent over one board. Match` — 63.6×33.6
 - `button mode-button Master Tournament. Your saved deck against one built to counter it. Master Tournament` — 146.9×33.6
 - `button mode-button Hotseat. Two players, one board, alternating. Hotseat` — 73.8×33.6
-- `select opponent-select  Bibi · A card for a card! A ` — 288×27
+- `select opponent-select  Bibi · A card for a card! A ` — 242.1×27
 - `label toolbar-toggle  Sound` — 63.8×19.2
 - `label toolbar-toggle  Reduce motion` — 115.3×19.2
 - `button #toggle-collection rematch  Collection (C)` — 120×40.5
@@ -52,11 +52,11 @@ Controls too small to tap comfortably:
 | --------------------------------- | -------------------------------------- |
 | requested viewport                | 360×640                                |
 | reported viewport                 | 360×640                                |
-| board                             | 420×420 at (-30, 170.2)                |
-| fully visible                     | **NO**                                 |
-| sideways overflow                 | **30px**                               |
+| board                             | 328×328 at (16, 170.2)                 |
+| fully visible                     | yes                                    |
+| sideways overflow                 | none                                   |
 | chrome (everything but the board) | 966px                                  |
-| page height                       | 640 — **746px taller than the screen** |
+| page height                       | 640 — **654px taller than the screen** |
 | targets under 44px                | 8 of 13                                |
 
 Controls too small to tap comfortably:
@@ -64,7 +64,7 @@ Controls too small to tap comfortably:
 - `button mode-button Match. Play a named opponent over one board. Match` — 63.6×33.6
 - `button mode-button Master Tournament. Your saved deck against one built to counter it. Master Tournament` — 146.9×33.6
 - `button mode-button Hotseat. Two players, one board, alternating. Hotseat` — 73.8×33.6
-- `select opponent-select  Bibi · A card for a card! A ` — 288×27
+- `select opponent-select  Bibi · A card for a card! A ` — 280.5×27
 - `label toolbar-toggle  Sound` — 63.8×19.2
 - `label toolbar-toggle  Reduce motion` — 115.3×19.2
 - `button #toggle-collection rematch  Collection (C)` — 120×40.5
@@ -76,11 +76,11 @@ Controls too small to tap comfortably:
 | --------------------------------- | -------------------------------------- |
 | requested viewport                | 375×667                                |
 | reported viewport                 | 375×667                                |
-| board                             | 420×420 at (-22.5, 170.2)              |
-| fully visible                     | **NO**                                 |
-| sideways overflow                 | **23px**                               |
+| board                             | 343×343 at (16, 170.2)                 |
+| fully visible                     | yes                                    |
+| sideways overflow                 | none                                   |
 | chrome (everything but the board) | 966px                                  |
-| page height                       | 667 — **719px taller than the screen** |
+| page height                       | 667 — **642px taller than the screen** |
 | targets under 44px                | 8 of 13                                |
 
 Controls too small to tap comfortably:
@@ -100,11 +100,11 @@ Controls too small to tap comfortably:
 | --------------------------------- | -------------------------------------- |
 | requested viewport                | 390×844                                |
 | reported viewport                 | 390×844                                |
-| board                             | 420×420 at (-15, 170.2)                |
-| fully visible                     | **NO**                                 |
-| sideways overflow                 | **15px**                               |
+| board                             | 358×358 at (16, 170.2)                 |
+| fully visible                     | yes                                    |
+| sideways overflow                 | none                                   |
 | chrome (everything but the board) | 972px                                  |
-| page height                       | 844 — **548px taller than the screen** |
+| page height                       | 844 — **486px taller than the screen** |
 | targets under 44px                | 8 of 13                                |
 
 Controls too small to tap comfortably:
@@ -124,11 +124,11 @@ Controls too small to tap comfortably:
 | --------------------------------- | -------------------------------------- |
 | requested viewport                | 414×896                                |
 | reported viewport                 | 414×896                                |
-| board                             | 420×420 at (-3, 170.2)                 |
-| fully visible                     | **NO**                                 |
-| sideways overflow                 | **3px**                                |
+| board                             | 382×382 at (16, 170.2)                 |
+| fully visible                     | yes                                    |
+| sideways overflow                 | none                                   |
 | chrome (everything but the board) | 954px                                  |
-| page height                       | 896 — **478px taller than the screen** |
+| page height                       | 896 — **440px taller than the screen** |
 | targets under 44px                | 8 of 13                                |
 
 Controls too small to tap comfortably:
@@ -148,11 +148,11 @@ Controls too small to tap comfortably:
 | --------------------------------- | -------------------------------------- |
 | requested viewport                | 844×390                                |
 | reported viewport                 | 844×390                                |
-| board                             | 420×420 at (212, 131.2)                |
+| board                             | 560×560 at (142, 131.2)                |
 | fully visible                     | **NO**                                 |
 | sideways overflow                 | none                                   |
 | chrome (everything but the board) | 626px                                  |
-| page height                       | 390 — **656px taller than the screen** |
+| page height                       | 390 — **796px taller than the screen** |
 | targets under 44px                | 8 of 13                                |
 
 Controls too small to tap comfortably:
@@ -196,11 +196,11 @@ Controls too small to tap comfortably:
 | --------------------------------- | -------------------------------------- |
 | requested viewport                | 1280×720                               |
 | reported viewport                 | 1280×720                               |
-| board                             | 460×460 at (410, 100)                  |
+| board                             | 560×560 at (360, 100)                  |
 | fully visible                     | yes                                    |
 | sideways overflow                 | none                                   |
 | chrome (everything but the board) | 444px                                  |
-| page height                       | 720 — **184px taller than the screen** |
+| page height                       | 720 — **284px taller than the screen** |
 | targets under 44px                | 8 of 13                                |
 
 Controls too small to tap comfortably:

@@ -173,7 +173,12 @@ longer exist.
   arithmetic, and `aspect-ratio: 1` keeps it square.
 - `visualViewport` drives the fit; `resize` on `window` is no longer the only signal.
 
-**Done when** the board fits at 360×640 and the page never scrolls horizontally.
+**This stage also owns M1's regression.** Board size is no longer capped by viewport height, so the
+1280×720 desktop page is currently 284px taller than the screen and the hand tray sits below the fold.
+
+**Done when** the board fits at 360×640, the page never scrolls horizontally, **and the page height
+at 1280×720 is no worse than the 720px it was before M1** — with the board and the hand tray visible
+together without scrolling. Re-run `npm run viewport` and compare against `MOBILE-baseline.md`.
 
 ### M3 — Narrow-screen layout
 
