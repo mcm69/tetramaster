@@ -298,20 +298,45 @@ is caught by the harness — toolbar back to 104px, eight controls under 44px re
 **Not done here:** 320-375px still scroll to reach the hand tray. What remains is the `h1`, the mode
 note and the flex gaps — which is **M3**, and it is the next thing to do.
 
-### M5 — Touch targets and touch hygiene
+### M5 — Touch targets and touch hygiene — **done**
 
-- Every interactive element gets `min-height: 44px` and `min-width: 44px` at narrow widths. Today
-  `.hand-card` has `min-width: 7.5rem` and no height at all.
-- `user-select: none` and `-webkit-touch-callout: none` on the play area; `user-select: text`
-  restored on the rules and collection screens, which are prose and should be selectable.
-- `-webkit-tap-highlight-color: transparent` plus a visible `:active` state, so a tap is felt rather
+**44px, at every width.** Stage M0 found **eight controls under it on every device, desktop
+included** — the mode buttons at 33.6px, the opponent `<select>` at 27px, both preference toggles at
+19.2px, the two bottom buttons at 40.5px. The floor is applied everywhere rather than only on
+phones, because a 19px checkbox is not a desktop design choice; it is a small target that happens to
+have a mouse beside it. The checkboxes are labelled and the label toggles them, so the **label** is
+the target and the label gets the height — padding a 13px `<input>` helps nobody.
+
+**Touch policy, and the one place the plan changed.**
+
+- `canvas { touch-action: manipulation }`, not `none`. The old value also forbade pinch-zoom over the
+  main play area, which is an accessibility cost for a player who may need to magnify the board.
+  `manipulation` still removes the 300ms double-tap delay and still allows panning.
+- `.hand-card`, `.picker-option`, `.claim-card { touch-action: none }`. M6's drag starts on a hand
+  card, and a gesture that scrolled the page halfway across the board would be worse than a lost
+  pinch. This is the deliberate trade.
+- `user-select: none` and `-webkit-touch-callout: none` on the controls; **`text` restored on the
+  rules and collection screens**, which are prose and which a player may want to copy a card name out
+  of.
+- `-webkit-tap-highlight-color: transparent` with a real `:active` background, so a tap is felt rather
   than flashed blue.
-- **`touch-action` policy.** `none` on the canvas currently blocks pinch-zoom over the play area.
-  Change it to `manipulation`, which kills the 300ms double-tap delay and still permits pinch-zoom.
-  During an M6 drag we suppress panning via pointer capture instead, which scopes the suppression to
-  the gesture that needs it.
 
-**Done when** the M0 harness reports no target under 44px, and pinch-zoom still works over the board.
+**What it cost, and where the money came from.** 44px targets put 320×568 **77px over** — the toolbar
+wrapped to two rows because the mode bar, the gear button and their gaps came to 302px in a 300px
+column. The gap gave 4px; the tray's own padding and line gap gave 13; body padding and gaps gave the
+last 6. **320×568 is now 6px over, which is 1% of the screen on the oldest device in the matrix, below
+this plan's own stated 360×640 target.** Everything from 360px up fits with the full floor applied.
+
+**The probe learned to check behaviour, not only size.** None of stage M5's second half is visible in
+a measurement of sizes, so none of it would ever have been checked. `touch-action`, `user-select` and
+the target floor are now read back as computed style and flagged — and the first attempt at adding
+them **silently did not apply** (an eighth `python` replace that matched nothing), which is how four
+of five mutations passed before anyone noticed.
+
+**Verified by mutation**, all caught: the 44px floor removed (six controls under 44px), the board
+back to `touch-action: none` ("board blocks pinch-zoom"), the hand cards allowed to pan ("a drag
+would scroll the page"), the rules screen left unselectable, and `user-select` removed from the
+controls.
 
 ### M6 — Drag to place
 

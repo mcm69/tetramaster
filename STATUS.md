@@ -842,6 +842,52 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S29 — 2026-10-11 — M5: 44px everywhere, and the probe learned to check behaviour
+
+**Status:** mobile stage M5 complete. **745 tests** (unchanged — nothing here is unit-testable).
+
+**Done.** A 44px floor on the mode buttons, the Settings button, the opponent `<select>`, both
+preference toggles and the two bottom buttons — **at every width, not just phones.** M0 found eight
+controls under 44px on every device _including desktop_: a 19.2px checkbox label is not a desktop
+design choice, it is a small target that happens to have a mouse beside it. The checkboxes are
+labelled and the label toggles them, so the label is the target and the label gets the height.
+
+**Touch policy.** `canvas { touch-action: manipulation }` instead of `none`, because `none` also
+forbids pinch-zoom over the play area — an accessibility cost this stage exists to remove. Hand cards
+keep `none`, because M6's drag starts there and a gesture that scrolled the page halfway across the
+board would be worse. `user-select: none` on controls, **`text` restored on the rules and collection
+screens**, because those are prose.
+
+**What it cost.** 44px targets put 320×568 **77px over** — the toolbar wrapped to two rows, because
+the mode bar, the gear button and their gaps came to 302px in a 300px column. Two pixels over, and it
+cost 56px of height. The gap gave 4px, the tray's own padding 13, body padding and gaps the last 6.
+**320×568 is now 6px over: 1% of the screen, on the oldest device in the matrix, below this plan's own
+360×640 target.** Everything from 360px up fits with the full floor applied.
+
+**Learned:**
+
+- **The probe only measured sizes, so half of this stage was invisible to it.** `touch-action`,
+  `user-select` and the target floor are now read back as computed style and flagged. Verified by
+  computed style directly first — I would otherwise have been asserting CSS I had never seen applied.
+- **An eighth silent replace, and it hid four passing mutations.** The edit adding the verdict checks
+  matched nothing and reported nothing. The first mutation run then showed "fits" for a board with
+  `touch-action: none`, which should have been impossible — and was, once the checks were actually in
+  the file. **Every multi-line replace now asserts its anchor before writing.** This one bit twice:
+  the code did not land, and then the test of the code did not land.
+- **Measuring at the edge is a budget, and this stage spent most of it.** Before M5 the 320px device
+  had ~23px of slack. A 44px floor on six controls costs far more than that, so it had to come out of
+  the toolbar wrapping first — which came down to **two pixels** in a gap.
+
+**Verified by mutation**, all caught: the 44px floor removed (six controls under 44px), the board back
+to `touch-action: none`, the hand cards allowed to pan, the rules screen left unselectable, and
+`user-select` removed from the controls.
+
+**Next:** M6, drag-to-place. The hand cards already carry `touch-action: none` for it.
+**Files touched:** `index.html`, `src/ui/layoutProbe.ts`, `tools/viewport.ts`, `MOBILE.md`,
+`MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S28 — 2026-10-11 — M3: every portrait phone fits, and the board got bigger
 
 **Status:** mobile stage M3 complete. **745 tests** (up from 743).

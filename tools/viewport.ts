@@ -191,6 +191,9 @@ function summarise(rows: readonly Row[]): string[] {
       `| page height | ${r.viewport.height}${r.pageOverflowPx > 0 ? ` — **${r.pageOverflowPx}px taller than the screen**` : ' — fits vertically'} |`,
       `| overlapping regions | ${r.overlaps.length === 0 ? 'none' : `**${r.overlaps.map((o) => `${o.a} / ${o.b} (${o.area}px²)`).join(', ')}**`} |`,
       `| targets under ${MIN_TARGET_PX}px | ${tooSmall.length} of ${r.interactive} |`,
+      `| board touch-action | ${r.touch.boardTouchAction} |`,
+      `| hand touch-action | ${r.touch.handTouchAction} |`,
+      `| prose selectable | ${r.touch.proseSelectable ? 'yes' : '**no**'} |`,
       '',
     );
     if (tooSmall.length > 0) {
@@ -220,6 +223,15 @@ function verdicts(rows: readonly Row[]): string[] {
     if (r.horizontalOverflow > 0) faults.push(`${r.horizontalOverflow}px sideways overflow`);
     if (r.tooSmall.length > 0)
       faults.push(`${r.tooSmall.length} control(s) under ${MIN_TARGET_PX}px`);
+    if (r.overlaps.length > 0)
+      faults.push(
+        `${r.overlaps.length} overlapping region(s): ${r.overlaps.map((o) => `${o.a}/${o.b}`).join(', ')}`,
+      );
+    if (r.touch.boardTouchAction === 'none') faults.push('board blocks pinch-zoom');
+    if (r.touch.handTouchAction !== 'none')
+      faults.push('hand cards allow panning, so a drag would scroll the page');
+    if (r.touch.controlsSelectable) faults.push('controls are text-selectable');
+    if (!r.touch.proseSelectable) faults.push('the rules screen is not selectable');
     return faults.length === 0 ? `- **${name}** — fits.` : `- **${name}** — ${faults.join(', ')}.`;
   });
 }

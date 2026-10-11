@@ -100,6 +100,22 @@ export interface LayoutReport {
    * question too.
    */
   readonly overlaps: readonly ProbeOverlap[];
+  /**
+   * The touch policy the stylesheet promises, read back as computed style.
+   *
+   * None of it is visible in a measurement of sizes, so none of it would ever have been checked: the
+   * whole of stage M5's second half is invisible to every other question this probe asks.
+   */
+  readonly touch: {
+    /** Must not be `none`, which forbids pinch-zoom over the play area. */
+    readonly boardTouchAction: string;
+    /** Must be `none`, because M6's drag starts here. */
+    readonly handTouchAction: string;
+    /** Controls must not be selectable; prose must be. */
+    readonly controlsSelectable: boolean;
+    readonly proseSelectable: boolean;
+    readonly minTargetReached: boolean;
+  };
 }
 
 /**
@@ -189,7 +205,23 @@ export function collectLayout(
   // `body` is the scroller now (the viewport is `overflow: hidden`), and a documentElement's
   // scrollHeight says nothing about what is inside it. Measured the wrong way, a 1280x720 window
   // reported a page height of 720 while the hand tray sat 67px below the bottom edge.
-  const scrollHeight = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+  const computed = (selector: string): string | null => {
+    const element = doc.querySelector(selector);
+    if (element === null) return null;
+    const style = view.getComputedStyle(element);
+    return `${style.getPropertyValue('touch-action')}|${style.getPropertyValue('user-select')}`;
+  };
+  const split = (selector: string): [string, string] => {
+    const raw = computed(selector);
+    if (raw === null) return ['', ''];
+    const [touchAction = '', userSelect = ''] = raw.split('|');
+    return [touchAction, userSelect];
+  };
+  const [boardTouchAction] = split('#board');
+  const [handTouchAction, handSelect] = split('.hand-card');
+  const [, rulesSelect] = split('#rules');
+
+  const scrollHeight = Math.max(document.documentElement.scrollHeight, doc.body.scrollHeight);
   const scrollWidth = Math.max(doc.documentElement.scrollWidth, doc.body.scrollWidth);
 
   // Overlap between the regions that are laid out as siblings. `#hand`'s children are excluded: they
@@ -249,6 +281,13 @@ export function collectLayout(
     interactive: elements.length,
     tooSmall,
     overlaps,
+    touch: {
+      boardTouchAction,
+      handTouchAction,
+      controlsSelectable: handSelect !== 'none',
+      proseSelectable: rulesSelect === 'text',
+      minTargetReached: tooSmall.length === 0,
+    },
   };
 }
 
@@ -305,6 +344,13 @@ export function formatReport(report: LayoutReport): string[] {
     overlaps.length === 0
       ? 'overlaps: none'
       : `overlaps: **${overlaps.length}**  ${overlaps.map((o) => `${o.a} / ${o.b} (${o.area}px²)`).join(', ')}`,
+  );
+  const touch = report.touch;
+  lines.push(
+    `touch: board ${touch.boardTouchAction === 'none' ? '**none — pinch-zoom blocked**' : touch.boardTouchAction}` +
+      `  hand ${touch.handTouchAction}` +
+      `  controls selectable: ${touch.controlsSelectable ? '**yes**' : 'no'}` +
+      `  prose selectable: ${touch.proseSelectable ? 'yes' : '**no**'}`,
   );
   lines.push(`chrome ${report.chromeHeight}px (everything that is not the board)`);
   lines.push(
