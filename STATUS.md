@@ -842,6 +842,65 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S27 — 2026-10-11 — M4: the settings disclosure, and §5.4 settled by arithmetic
+
+**Status:** mobile stage M4 complete. **743 tests** (up from 729).
+
+**Did:** `src/ui/components/menu.ts`. The toolbar collapses behind one Settings button below 48rem;
+above it the panel is simply part of the bar and the trigger is hidden, so the markup is the same shape
+either way. `main.ts` decides with `matchMedia` through a new `matchQuery` wrapper in
+`accessibility.ts`, because jsdom has no `matchMedia` and a second hand-rolled guard would be a second
+place to get it wrong.
+
+**Measured:** the toolbar was **141px at 320px and 104px from 360 to 560**. It is now **79px at 320
+and 34px from 375 up**.
+
+**§5.4, settled by the numbers rather than by taste.** The plan left open whether the preference
+toggles belong in the menu, against `toolbar.ts`'s written principle that audio and motion must not be
+buried in a submenu. Leaving them inline saves nothing below 768px: the mode bar and the opponent
+`<select>` already fill two rows and the two 19px checkboxes take a third. **The row they occupy is
+the row the panel would have freed.** They go in, and what survives of the principle is a marker on
+the trigger — a dot and an explanatory `title` when a preference is off its default, so the state is
+visible without opening anything. The button's word stays "Settings" so the bar does not reflow.
+
+**Learned:**
+
+- **It is a disclosure, not a menu, and the plan's word was wrong.** The panel holds a `<select>` and
+  two checkboxes. `role="menu"` promises arrow-key roving focus and an item-per-command model, which
+  is a lie assistive technology would act on. `aria-expanded` + `aria-controls` is what this actually
+  is, and it is less code.
+- **The outside-click listener has to be torn down, and the test for that is easy to write wrong.** The
+  first version of the teardown test attached the listener to a `host` the test had **never rendered
+  anything into** — `host` was empty, an optional-chained dispatch did nothing, and the test passed
+  against a component that was never in the document. Sixth time this shape has bitten in this project.
+  The assertion now fails if the panel is not on screen first.
+- **A cast can fabricate a value the type says is impossible.** `needsAttention` briefly returned
+  `undefined` and I rewrote the source to defend against it. The real cause was my own test casting
+  `{ reduceMotion: null } as Settings`, which has no `audio` — an object `Settings` cannot be. The
+  source was right and the test was lying. Tests now build settings through a helper that fills the
+  rest in.
+- **`matchMedia` does not exist in jsdom**, and the codebase already had a safe wrapper for the
+  reduced-motion query. Reaching for a second one would have been the second place to get it wrong, so
+  the existing guard was generalised instead.
+- **A `python` replace that matches nothing is silent, and it happened again.** Two of my media
+  blocks never landed because the anchor — an emptied-out `@media (max-width: 40rem)` left behind by
+  an earlier edit — no longer contained what I was matching. Caught by grepping for the rules I had
+  just "added" and finding two `@media` blocks where there should have been four. **Confirm the
+  selector you targeted still exists before replacing against it.**
+
+**Verified by mutation**, seven and all caught: `aria-expanded` hardcoded, the panel never hidden,
+inside-clicks closing it, the teardown not removing its listener, Escape not restoring focus, the
+marker always on, and the marker computed but never applied to the button. Forcing `isNarrow()` false
+is caught by the harness instead: the toolbar returns to 104px and eight undersized controls reappear.
+
+**Next:** M3 — the `h1`, the mode note and the flex gaps. They are the whole of what still keeps the
+hand tray below the fold at 320-375px, and it is the last thing between this and a phone that fits.
+**Files touched:** `src/ui/components/menu.ts` (new), `src/ui/components/toolbar.ts`, `src/main.ts`,
+`src/ui/accessibility.ts`, `index.html`, `tests/ui/menu.test.ts` (new), `tests/ui/toolbar.test.ts`,
+`MOBILE.md`, `MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S26 — 2026-10-11 — M2 revisited: the first version shipped broken, and the harness said so
 
 **Reported:** a screenshot of an iPhone 14 Pro showing the board painted across the toolbar, the

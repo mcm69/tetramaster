@@ -225,34 +225,42 @@ chrome and no viewport work fixes a tray that wraps. What is left here is the re
 
 **Done when** the board at 390×844 is larger than it is after M2, measured by the M0 harness.
 
-### M4 — Toolbar overflow menu
+### M4 — Toolbar overflow menu — **done**
 
-On narrow screens the toolbar swaps from an inline bar to a single **Settings** button that opens a
-stacked panel (§5.3). Desktop is untouched — the inline bar stays exactly as it is above the
-breakpoint.
+- New `src/ui/components/menu.ts`. On a wide screen the trigger is hidden and the panel is part of
+  the bar, so the markup is the same shape either way; only whether it collapses changes.
+- It is a **disclosure**, not a `role="menu"`. The panel holds a `<select>` and two checkboxes, which
+  have their own focus behaviour and their own keys; promising arrow-key roving focus would be a lie
+  assistive technology acts on. `aria-expanded` + `aria-controls`, Escape closes and returns focus to
+  the trigger, a click outside closes, opening moves focus into the panel.
+- `main.ts` decides whether it collapses with `matchMedia` — via a new `matchQuery` wrapper in
+  `accessibility.ts`, because jsdom has no `matchMedia` and a second hand-rolled guard would be a
+  second place to get it wrong. Absent means wide, which is the layout every existing test describes.
+- Rotating across the breakpoint re-renders, or a phone left open keeps a panel no button can close.
+- The outside-click listener is torn down on every re-render; `main.ts` re-renders the toolbar on
+  every settings change and every match, so a leaked listener is a growing pile of them.
+- "Master Tournament" becomes "Tournament" below 30rem — it was 146px alone, which is what pushed the
+  mode bar onto a second row at 320px. The full name stays in `title` and the accessible name.
 
-- New `src/ui/components/menu.ts`, following the same shape as the other components: build from
-  state, report through callbacks, no state of its own.
-- It is a real menu, not a `<details>`: `aria-expanded` on the trigger, `role="menu"` on the panel,
-  Escape closes and returns focus to the trigger, outside-tap closes, focus moves into the panel on
-  open. All of that is unit-testable in jsdom without a browser.
-- Narrow layout: mode buttons abbreviate (`Match` / `Tournament` / `Hotseat`) and stay inline, since
-  they are primary navigation and a disabled one states its reason — which the toolbar module
-  deliberately chose. The panel holds the opponent select, the collection progress, and — see §5.4 —
-  the preference toggles.
+**Measured:** the toolbar was **141px at 320px and 104px from 360 to 560**. It is now **79px at 320
+and 34px from 375 up**.
 
-**This stage changes a decision the codebase made in writing.** `src/ui/components/toolbar.ts` opens
-with a stated principle:
+**§5.4 is resolved, by the measurement rather than by taste.** The plan left open whether the
+preference toggles belong in the menu, against `toolbar.ts`'s written principle that audio and motion
+must not be buried. Leaving them inline saves nothing below 768px: the mode bar and the opponent
+select already fill two rows and the two 19px checkboxes simply take a third. **The row they occupy
+is the row the panel would have freed.** So they go in, and the compromise that keeps most of the
+principle is a marker on the trigger — when either preference is off its default the button carries a
+dot and says so in its `title`, so a player who needs it set can see that it is without opening
+anything. The button's word stays "Settings" either way so the bar does not reflow as they toggle.
 
-> _"It does not hide settings behind a mode: audio and motion are accessibility and comfort
-> settings, and the people who need them are exactly the people least likely to find a submenu."_
+**Verified by mutation**, seven and all caught: `aria-expanded` hardcoded, the panel never hidden,
+inside-clicks closing the panel, the teardown not removing its listener, Escape not restoring focus,
+the marker always on, and the marker computed but never put on the button. `isNarrow()` forced false
+is caught by the harness — toolbar back to 104px, eight controls under 44px reappearing.
 
-An overflow menu is a submenu. §5.4 records how far that principle is being bent, and M4 must update
-that header comment rather than leave it contradicting the code. Overriding a written rationale
-without recording it is how the next person puts it back.
-
-**Done when** the panel opens, closes and navigates correctly by keyboard and by tap, and desktop
-still renders the inline bar.
+**Not done here:** 320-375px still scroll to reach the hand tray. What remains is the `h1`, the mode
+note and the flex gaps — which is **M3**, and it is the next thing to do.
 
 ### M5 — Touch targets and touch hygiene
 
@@ -383,9 +391,15 @@ moved it:
 The cost is real: a menu is a component with focus management, Escape, outside-tap and ARIA, and all
 of that has to be right. That is M4.
 
-### 5.4 What goes in the menu — still open
+### 5.4 What goes in the menu — decided, by measurement
 
-**This is the one sub-decision left, and it is a question about a value rather than about layout.**
+**Decided at stage M4: everything except the mode buttons.** The panel holds the opponent picker,
+both preference toggles and the collection's progress; the three mode buttons stay inline, because a
+disabled one states its reason and that is worth keeping visible. The trigger carries a marker when a
+preference is off its default, which is what survives of `toolbar.ts`'s principle that they must not
+be buried. The reasoning, with the numbers, is at the top of stage M4.
+
+The decision it replaced, kept because the argument still holds:
 
 `toolbar.ts` deliberately keeps audio and motion out of submenus, on the grounds that the people who
 need those settings are the least likely to find one. Putting them in the overflow menu bends that.

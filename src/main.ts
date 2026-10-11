@@ -16,6 +16,8 @@ import { COLORS, FONTS } from './render/theme.ts';
 import { clickToAction, hitTest } from './input/pointer.ts';
 import { KEY_BINDINGS, handleKey, resolveKey } from './input/keys.ts';
 import { MatchController } from './ui/app.ts';
+import { matchQuery } from './ui/accessibility.ts';
+import { PANEL_ID, closeOnOutsideClick, focusFirstControl } from './ui/components/menu.ts';
 import { installLayoutProbe } from './ui/layoutProbe.ts';
 import { boardSizing } from './ui/sizing.ts';
 import { OpponentGate } from './ui/turn.ts';
@@ -163,6 +165,23 @@ function boot(): void {
   let deckSlots: number[] = [...profile.save.deck];
   let modeId: ModeId = profile.mode;
   let counterNote: string | null = null;
+  // Whether the settings panel is open, and the teardown for its outside-click listener.
+  let settingsOpen = false;
+  let disposeOutsideClick: (() => void) | null = null;
+
+  // Below this width the settings collapse behind one button. The bar measured 141px tall on a
+  // 320px phone and 104px from 360 to 560, against 34px on a 1024px window.
+  const NARROW_QUERY = '(max-width: 48rem)';
+  // No `matchMedia` under jsdom, and none in very old browsers. Absent means wide, which renders the
+  // settings inline — the layout that predates this and that every existing test describes.
+  const narrow = matchQuery(NARROW_QUERY);
+  const isNarrow = (): boolean => narrow?.matches === true;
+  // Rotating across the breakpoint has to re-render, or a phone left open leaves a panel that no
+  // button can close.
+  narrow?.addEventListener('change', () => {
+    settingsOpen = false;
+    renderToolbarBar();
+  });
   // Progression runs exactly once per finished match. Declared up here because `newController`
   // resets it and is called during initialisation, below this point.
   let settled = false;
@@ -361,8 +380,32 @@ function boot(): void {
           controller.animator.setReduceMotion(reducedMotion() ? 'reduced' : 'full');
           renderToolbarBar();
         },
+        collapsible: isNarrow(),
+        menuOpen: settingsOpen,
+        onMenuToggle: (open) => {
+          settingsOpen = open;
+          renderToolbarBar();
+          if (open) {
+            const panel = document.getElementById(PANEL_ID);
+            if (panel !== null && !panel.hidden) focusFirstControl(panel);
+          }
+        },
       },
     );
+    // Outside-click closes the panel, and the listener is torn down every re-render so it cannot
+    // accumulate — `main.ts` re-renders the toolbar on every settings change and every match.
+    disposeOutsideClick?.();
+    disposeOutsideClick = isNarrow()
+      ? closeOnOutsideClick(
+          toolbarEl,
+          () => settingsOpen,
+          () => {
+            settingsOpen = false;
+            renderToolbarBar();
+          },
+        )
+      : null;
+
     modeNoteEl.textContent = describeMode(MODES[modeId], counterNote);
   };
 

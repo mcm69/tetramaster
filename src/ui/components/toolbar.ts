@@ -13,13 +13,17 @@
  */
 
 import { MODE_ORDER, MODES, blockedReason, type Mode, type ModeId } from '../../game/modes.ts';
-import { PERSONALITIES } from '../../ai/personalities.ts';
+import { renderMenu } from './menu.ts';
 import type { Settings } from '../../game/save.ts';
 
 export interface ToolbarCallbacks {
   readonly onMode: (mode: ModeId) => void;
   readonly onOpponent: (id: string) => void;
   readonly onSettings: (patch: Partial<Settings>) => void;
+  /** True below the breakpoint, where the settings collapse behind a button (MOBILE.md M4). */
+  readonly collapsible: boolean;
+  readonly menuOpen: boolean;
+  readonly onMenuToggle: (open: boolean) => void;
 }
 
 export interface ToolbarState {
@@ -70,108 +74,32 @@ export function renderToolbar(
   }
   container.append(modes);
 
-  if (state.opponentIsComputer) {
-    container.append(opponentPicker(state, callbacks));
-  }
+  // The opponent picker, the preferences and the collection's progress moved to `menu.ts` at stage
+  // M4. On a wide screen they render in place, exactly where they were; below the breakpoint they
+  // collapse behind a single button, because the bar measured 141px tall on a 320px phone and 104px
+  // from 360 to 560.
+  const host = document.createElement('div');
+  host.className = 'settings-host';
+  container.append(host);
 
-  container.append(settingsToggles(state, callbacks));
-}
-
-function opponentPicker(state: ToolbarState, callbacks: ToolbarCallbacks): HTMLElement {
-  const wrap = document.createElement('label');
-  wrap.className = 'toolbar-field';
-  wrap.textContent = 'Opponent';
-
-  const select = document.createElement('select');
-  select.className = 'opponent-select';
-  // An opponent id from an older save may name someone who no longer exists; fall back to a real one
-  // rather than rendering an empty picker.
-  const known = PERSONALITIES.some((personality) => personality.id === state.opponent);
-  const current = known ? state.opponent : (PERSONALITIES[0]?.id ?? 'vivi');
-  for (const difficulty of ['casual', 'steady', 'sharp'] as const) {
-    const group = document.createElement('optgroup');
-    group.label = difficulty;
-    for (const personality of PERSONALITIES.filter((p) => p.difficulty === difficulty)) {
-      const option = document.createElement('option');
-      option.value = personality.id;
-      option.textContent = `${personality.name} · ${personality.taunt}`;
-      if (personality.id === state.opponent) option.selected = true;
-      group.append(option);
-    }
-    select.append(group);
-  }
-  select.value = current;
-
-  select.addEventListener('change', () => {
-    callbacks.onOpponent(select.value);
-  });
-  wrap.append(select);
-  return wrap;
-}
-
-function settingsToggles(state: ToolbarState, callbacks: ToolbarCallbacks): HTMLElement {
-  const wrap = document.createElement('div');
-  wrap.className = 'toolbar-toggles';
-
-  wrap.append(
-    toggle({
-      id: 'audio',
-      label: 'Sound',
-      checked: state.settings.audio,
-      disabled: !state.audioAvailable,
-      hint: state.audioAvailable
-        ? 'Off by default. Every sound is synthesised; nothing is played until you ask for it.'
-        : 'This browser has no Web Audio support.',
-      onChange: (on) => {
-        callbacks.onSettings({ audio: on });
-      },
-    }),
+  renderMenu(
+    host,
+    {
+      collapsible: callbacks.collapsible,
+      open: callbacks.menuOpen,
+      showOpponent: state.opponentIsComputer,
+      opponent: state.opponent,
+      settings: state.settings,
+      audioAvailable: state.audioAvailable,
+      collectionSize: state.collectionSize,
+      requiredForMode: MODES.match.requiresCollection,
+    },
+    {
+      onOpponent: callbacks.onOpponent,
+      onSettings: callbacks.onSettings,
+      onToggle: callbacks.onMenuToggle,
+    },
   );
-
-  wrap.append(
-    toggle({
-      id: 'motion',
-      label: 'Reduce motion',
-      checked: state.settings.reduceMotion === true,
-      hint: 'Cards change instantly instead of sliding. Follows your system setting until you change it here.',
-      onChange: (on) => {
-        callbacks.onSettings({ reduceMotion: on });
-      },
-    }),
-  );
-
-  return wrap;
-}
-
-interface ToggleSpec {
-  readonly id: string;
-  readonly label: string;
-  readonly checked: boolean;
-  readonly disabled?: boolean;
-  readonly hint: string;
-  readonly onChange: (on: boolean) => void;
-}
-
-/** A labelled checkbox. A checkbox, not a button: the pressed state is genuinely binary. */
-function toggle(spec: ToggleSpec): HTMLElement {
-  const label = document.createElement('label');
-  label.className = 'toolbar-toggle';
-  label.title = spec.hint;
-
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.id = `toggle-${spec.id}`;
-  input.checked = spec.checked;
-  if (spec.disabled === true) input.disabled = true;
-  input.addEventListener('change', () => {
-    spec.onChange(input.checked);
-  });
-
-  const text = document.createElement('span');
-  text.textContent = spec.label;
-
-  label.append(input, text);
-  return label;
 }
 
 /** A one-line summary of the mode, shown under the board. */

@@ -20,6 +20,24 @@ import {
 } from '../../src/ui/accessibility.ts';
 import type { ModeId } from '../../src/game/modes.ts';
 
+/**
+ * Callbacks with the disclosure fields filled in.
+ *
+ * The defaults describe a wide screen: not collapsible, and open, which renders the panel exactly
+ * where it used to sit. Tests about the collapsed state pass their own.
+ */
+function callbacks(overrides: Partial<Parameters<typeof renderToolbar>[2]> = {}) {
+  return {
+    onMode: () => {},
+    onOpponent: () => {},
+    onSettings: () => {},
+    collapsible: false,
+    menuOpen: true,
+    onMenuToggle: () => {},
+    ...overrides,
+  };
+}
+
 function mount(): HTMLElement {
   const host = document.createElement('div');
   document.body.append(host);
@@ -45,7 +63,14 @@ beforeEach(() => {
 describe('the mode bar', () => {
   it('offers every mode, and marks the current one', () => {
     const host = mount();
-    renderToolbar(host, state(), { onMode: () => {}, onOpponent: () => {}, onSettings: () => {} });
+    renderToolbar(host, state(), {
+      onMode: () => {},
+      onOpponent: () => {},
+      onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
+    });
     const buttons = host.querySelectorAll<HTMLButtonElement>('button.mode-button');
     expect(buttons).toHaveLength(3);
     expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true');
@@ -56,9 +81,7 @@ describe('the mode bar', () => {
     const host = mount();
     const chosen: ModeId[] = [];
     renderToolbar(host, state(), {
-      onMode: (id) => chosen.push(id),
-      onOpponent: () => {},
-      onSettings: () => {},
+      ...callbacks({ onMode: (id) => chosen.push(id) }),
     });
     for (const button of host.querySelectorAll<HTMLButtonElement>('button.mode-button')) {
       button.click();
@@ -70,9 +93,7 @@ describe('the mode bar', () => {
     const host = mount();
     const chosen: ModeId[] = [];
     renderToolbar(host, state({ collectionSize: 2 }), {
-      onMode: (id) => chosen.push(id),
-      onOpponent: () => {},
-      onSettings: () => {},
+      ...callbacks({ onMode: (id) => chosen.push(id) }),
     });
     const buttons = host.querySelectorAll<HTMLButtonElement>('button.mode-button');
     for (const button of buttons) expect(button.disabled).toBe(true);
@@ -88,6 +109,9 @@ describe('the mode bar', () => {
       onMode: () => {},
       onOpponent: () => {},
       onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
     });
     expect(host.querySelector('button.mode-button')?.getAttribute('aria-label')).toMatch(
       /at least 5 cards/,
@@ -98,7 +122,14 @@ describe('the mode bar', () => {
 describe('the opponent picker', () => {
   it('groups opponents by difficulty', () => {
     const host = mount();
-    renderToolbar(host, state(), { onMode: () => {}, onOpponent: () => {}, onSettings: () => {} });
+    renderToolbar(host, state(), {
+      onMode: () => {},
+      onOpponent: () => {},
+      onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
+    });
     const groups = host.querySelectorAll('optgroup');
     expect([...groups].map((g) => g.label)).toEqual(['casual', 'steady', 'sharp']);
     expect(host.querySelectorAll('option').length).toBeGreaterThanOrEqual(9);
@@ -110,6 +141,9 @@ describe('the opponent picker', () => {
       onMode: () => {},
       onOpponent: () => {},
       onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
     });
     const select = host.querySelector<HTMLSelectElement>('select.opponent-select');
     expect(select?.value).toBe('kuja');
@@ -121,6 +155,9 @@ describe('the opponent picker', () => {
       onMode: () => {},
       onOpponent: () => {},
       onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
     });
     const select = host.querySelector<HTMLSelectElement>('select.opponent-select');
     expect(select?.value).not.toBe('');
@@ -130,11 +167,7 @@ describe('the opponent picker', () => {
   it('reports a change', () => {
     const host = mount();
     const picked: string[] = [];
-    renderToolbar(host, state(), {
-      onMode: () => {},
-      onOpponent: (id) => picked.push(id),
-      onSettings: () => {},
-    });
+    renderToolbar(host, state(), callbacks({ onOpponent: (id) => picked.push(id) }));
     const select = host.querySelector<HTMLSelectElement>('select.opponent-select');
     if (select === null) throw new Error('no select');
     select.value = 'gil';
@@ -148,6 +181,9 @@ describe('the opponent picker', () => {
       onMode: () => {},
       onOpponent: () => {},
       onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
     });
     expect(host.querySelector('select.opponent-select')).toBeNull();
   });
@@ -156,7 +192,14 @@ describe('the opponent picker', () => {
 describe('the settings toggles', () => {
   it('shows sound off by default', () => {
     const host = mount();
-    renderToolbar(host, state(), { onMode: () => {}, onOpponent: () => {}, onSettings: () => {} });
+    renderToolbar(host, state(), {
+      onMode: () => {},
+      onOpponent: () => {},
+      onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
+    });
     const audio = host.querySelector<HTMLInputElement>('#toggle-audio');
     expect(audio?.checked).toBe(false);
   });
@@ -168,6 +211,9 @@ describe('the settings toggles', () => {
       onMode: () => {},
       onOpponent: () => {},
       onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
     });
     expect(host.querySelector<HTMLInputElement>('#toggle-audio')?.checked).toBe(true);
     expect(host.querySelector<HTMLInputElement>('#toggle-motion')?.checked).toBe(true);
@@ -176,11 +222,7 @@ describe('the settings toggles', () => {
   it('reports changes', () => {
     const host = mount();
     const patches: Partial<Settings>[] = [];
-    renderToolbar(host, state(), {
-      onMode: () => {},
-      onOpponent: () => {},
-      onSettings: (patch) => patches.push(patch),
-    });
+    renderToolbar(host, state(), callbacks({ onSettings: (patch) => patches.push(patch) }));
     const audio = host.querySelector<HTMLInputElement>('#toggle-audio');
     const motion = host.querySelector<HTMLInputElement>('#toggle-motion');
     if (audio === null || motion === null) throw new Error('missing toggles');
@@ -198,6 +240,9 @@ describe('the settings toggles', () => {
       onMode: () => {},
       onOpponent: () => {},
       onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
     });
     const audio = host.querySelector<HTMLInputElement>('#toggle-audio');
     expect(audio?.disabled).toBe(true);
@@ -206,7 +251,14 @@ describe('the settings toggles', () => {
 
   it('uses checkboxes, because the state really is binary', () => {
     const host = mount();
-    renderToolbar(host, state(), { onMode: () => {}, onOpponent: () => {}, onSettings: () => {} });
+    renderToolbar(host, state(), {
+      onMode: () => {},
+      onOpponent: () => {},
+      onSettings: () => {},
+      collapsible: false,
+      menuOpen: true,
+      onMenuToggle: () => {},
+    });
     for (const input of host.querySelectorAll('input')) {
       expect(input.type).toBe('checkbox');
     }

@@ -37,9 +37,19 @@ export function prefersReducedMotion(): boolean {
 
 /** `matchMedia` where it exists, null where it does not — Node, and very old browsers. */
 function matchReducedMotion(): MediaQueryList | null {
+  return matchQuery(QUERY);
+}
+
+/**
+ * `matchMedia` for an arbitrary query, or null where it is unavailable.
+ *
+ * Exported because `main.ts` needs the same question answered for the layout breakpoint, and jsdom
+ * has no `matchMedia` at all — so a second hand-rolled guard would be a second place to get it wrong.
+ */
+export function matchQuery(query: string): MediaQueryList | null {
   try {
     return (
-      (globalThis as { matchMedia?: (query: string) => MediaQueryList }).matchMedia?.(QUERY) ?? null
+      (globalThis as { matchMedia?: (q: string) => MediaQueryList }).matchMedia?.(query) ?? null
     );
   } catch {
     return null;

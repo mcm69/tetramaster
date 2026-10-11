@@ -567,26 +567,86 @@
       [hidden] {
         display: none !important;
       }
+      /* The settings disclosure (MOBILE.md stage M4).
+         On a wide screen the trigger is hidden and the panel is part of the bar, so the markup and
+         the layout are the same shape either way — only whether it collapses changes. */
+      .settings-host {
+        display: contents;
+      }
+      .menu-trigger {
+        position: relative;
+        padding: 0.35rem 0.7rem;
+        background: var(--panel);
+        border: 1px solid var(--edge);
+        border-radius: 8px;
+        color: var(--ink);
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+      /* The dot is the half of `toolbar.ts`'s principle that survives: a player who needs a
+         preference set can see that it is, without opening anything. */
+      .menu-trigger.is-marked::after {
+        content: '';
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .menu-panel {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .menu-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.75rem;
+      }
+
       /* Narrow screens.
          All of it lives here, after the base rules, because a media query adds no specificity: an
          earlier one loses to a later rule that targets the same thing with the same weight. The
          first attempt sat next to `.hand` and was silently overridden by `.hand-card` eleven lines
          below it, so the five cards kept their 7.5rem minimum, overflowed the 361px tray, and two
          of them were clipped away by `overflow-x: clip` without a scrollbar to explain it. */
-      @media (max-width: 40rem) {
-        /* On a phone the board gives way to the chrome; on a desktop it does not.
-           A 1280x720 window has about 230px left after the toolbar, the tray and the key legend, and
-           a 230px board is a 57px square — too small to read arrows on. Scrolling a desktop page is
-           free and a mouse wheel makes it invisible; scrolling a phone is a thumb-reach problem. So
-           the trade is made in the direction each one hurts least.
-
-           The board does not shrink. Every mechanism tried — `max-height: 100%` against the slot,
-           then `height: 100%` against it — failed the same way: the percentage did not resolve
-           against a flex-shrunk grid area, the canvas kept its width-derived size, and it painted
-           across the toolbar and the hand tray. A board too small to read is worse than a page that
-           scrolls, so the board keeps the size its width allows and the document scrolls if the
-           total genuinely does not fit. With the tray on one row it fits to within a pixel at
-           393x852. */
+      /* The disclosure becomes a panel rather than part of the bar. Whether it collapses at all is
+         decided by `main.ts` with `matchMedia`, so that `hidden` and `aria-expanded` agree; this is
+         only how the open panel is arranged. */
+      @media (max-width: 48rem) {
+        .menu-panel {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+          width: 100%;
+          padding: 0.75rem;
+          background: var(--panel);
+          border: 1px solid var(--edge);
+          border-radius: 10px;
+        }
+        .toolbar-field {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.25rem;
+        }
+        .menu-note {
+          margin: 0;
+        }
+      }
+      /* "Master Tournament" is 146px on its own, which is what pushed the mode bar onto a second row
+         at 320px. The full name stays in `title` and in the accessible name. */
+      @media (max-width: 30rem) {
+        .mode-button[data-mode='tournament'] {
+          font-size: 0;
+        }
+        .mode-button[data-mode='tournament']::before {
+          content: 'Tournament';
+          font-size: 0.85rem;
+        }
       }
       @media (max-height: 760px) {
         .mode-note,
