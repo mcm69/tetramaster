@@ -43,6 +43,14 @@ export interface ProbeTarget {
   readonly height: number;
 }
 
+/** Two things painted on top of each other, which no amount of "is it on screen" can detect. */
+export interface ProbeOverlap {
+  readonly a: string;
+  readonly b: string;
+  /** How much they intersect, in CSS pixels squared. */
+  readonly area: number;
+}
+
 export interface LayoutReport {
   /** The layout viewport: what the document believes it has. */
   readonly viewport: { readonly width: number; readonly height: number };
@@ -72,7 +80,39 @@ export interface LayoutReport {
   /** Interactive elements measured, and how many of them are under the touch minimum. */
   readonly interactive: number;
   readonly tooSmall: readonly ProbeTarget[];
+  /**
+   * Pairs of visible elements that overlap.
+   *
+   * Added after stage M2 shipped a page that the harness reported as entirely healthy while a
+   * screenshot showed the board painted across the toolbar and the hand tray. Every measurement here
+   * was *containment* — is this element inside the viewport — and every one of them was true. A page
+   * can be entirely inside the viewport and still be visibly broken, so the probe now asks the other
+   * question too.
+   */
+  readonly overlaps: readonly ProbeOverlap[];
 }
+
+/**
+ * The elements whose positions matter to each other, by selector.
+ *
+ * Deliberately a short, fixed list rather than "everything": a full sweep would report every
+ * legitimately-nested pair (a card's frame and its art) and bury the real answer in noise.
+ */
+const OVERLAP_WATCH: readonly { readonly selector: string; readonly label: string }[] = [
+  { selector: '.board-slot', label: 'board slot' },
+  // The canvas itself, not just its wrapper. The board overran *its own slot* and painted across
+  // the toolbar, and a sibling-only watch list reported a clean page: the shrunken slot did not
+  // intersect anything, because the thing escaping was its child.
+  { selector: '#board', label: 'board canvas' },
+  { selector: '#toolbar', label: 'toolbar' },
+  { selector: '.toolbar', label: 'controls' },
+  { selector: '.status', label: 'status' },
+  { selector: '#hand', label: 'hand' },
+  { selector: '.hint', label: 'hint' },
+  { selector: '.keys', label: 'key legend' },
+  { selector: '.mode-note', label: 'mode note' },
+  { selector: '#picker:not([hidden])', label: 'battle picker' },
+];
 
 export interface ProbeOptions {
   /** The smallest an interactive target should be, in CSS pixels. */
@@ -136,7 +176,43 @@ export function collectLayout(
       height: box.height,
     }));
 
-  const scrollHeight = doc.documentElement.scrollHeight;
+  // `body` is the scroller now (the viewport is `overflow: hidden`), and a documentElement's
+  // scrollHeight says nothing about what is inside it. Measured the wrong way, a 1280x720 window
+  // reported a page height of 720 while the hand tray sat 67px below the bottom edge.
+  const scrollHeight = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+  const scrollWidth = Math.max(doc.documentElement.scrollWidth, doc.body.scrollWidth);
+
+  // Overlap between the regions that are laid out as siblings. `#hand`'s children are excluded: they
+  // are meant to sit inside it.
+  const watched = OVERLAP_WATCH.map(({ selector, label }) => {
+    const element = doc.querySelector(selector);
+    const box = element === null ? null : rectOf(element);
+    return {
+      label,
+      element,
+      box: box === null || box.width === 0 || box.height === 0 ? null : box,
+    };
+  }).filter(
+    (entry): entry is { label: string; element: Element; box: ProbeRect } => entry.box !== null,
+  );
+
+  const overlaps: ProbeOverlap[] = [];
+  for (let i = 0; i < watched.length; i++) {
+    for (let j = i + 1; j < watched.length; j++) {
+      const first = watched[i] as { label: string; element: Element; box: ProbeRect };
+      const second = watched[j] as { label: string; element: Element; box: ProbeRect };
+      // The canvas lives inside the slot and always intersects it; that is containment, not
+      // collision. Only *sibling* intersections are faults.
+      if (first.element.contains(second.element) || second.element.contains(first.element)) {
+        continue;
+      }
+      const w = Math.min(first.box.right, second.box.right) - Math.max(first.box.x, second.box.x);
+      const h = Math.min(first.box.bottom, second.box.bottom) - Math.max(first.box.y, second.box.y);
+      if (w > 1 && h > 1) {
+        overlaps.push({ a: first.label, b: second.label, area: Math.round(w * h) });
+      }
+    }
+  }
 
   return {
     viewport: { width: round(view.innerWidth), height: round(view.innerHeight) },
@@ -149,12 +225,9 @@ export function collectLayout(
             height: round(view.visualViewport.height),
           },
     devicePixelRatio: round(view.devicePixelRatio || 1),
-    scrollWidth: doc.documentElement.scrollWidth,
+    scrollWidth,
     clientWidth: doc.documentElement.clientWidth,
-    horizontalOverflow: Math.max(
-      0,
-      doc.documentElement.scrollWidth - doc.documentElement.clientWidth,
-    ),
+    horizontalOverflow: Math.max(0, scrollWidth - doc.documentElement.clientWidth),
     board,
     boardFullyVisible: within(board, visibleWidth, visibleHeight),
     hand,
@@ -164,6 +237,7 @@ export function collectLayout(
     chromeHeight: board === null ? scrollHeight : Math.max(0, scrollHeight - board.height),
     interactive: elements.length,
     tooSmall,
+    overlaps,
   };
 }
 
@@ -214,6 +288,12 @@ export function formatReport(report: LayoutReport): string[] {
   lines.push(
     `hand ${report.handFullyVisible ? 'visible' : 'BELOW THE FOLD'}` +
       `   board and hand together: ${report.boardAndHandVisible ? 'yes' : 'NO'}`,
+  );
+  const overlaps = report.overlaps;
+  lines.push(
+    overlaps.length === 0
+      ? 'overlaps: none'
+      : `overlaps: **${overlaps.length}**  ${overlaps.map((o) => `${o.a} / ${o.b} (${o.area}px²)`).join(', ')}`,
   );
   lines.push(`chrome ${report.chromeHeight}px (everything that is not the board)`);
   const tooSmall = report.tooSmall;

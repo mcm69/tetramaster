@@ -21,10 +21,9 @@
         box-sizing: border-box;
       }
       html {
-        /* Belt and braces. M1 removed the last element that overflowed sideways, but a document
-           that can be dragged horizontally is the kind of thing that comes back. `clip` rather than
-           `hidden`, so it cannot become a scroll container of its own. */
-        overflow-x: clip;
+        /* The viewport itself never scrolls. `body` is the one scroller, so there is exactly one
+           place a measurement can look and exactly one thing a finger can drag. */
+        overflow: hidden;
       }
       body {
         margin: 0;
@@ -39,10 +38,15 @@
         height: 100vh;
         height: 100dvh;
         overflow-y: auto;
+        overflow-x: clip;
+        /* `safe centre` rather than `centre`: with plain centring, content taller than the body is
+           laid out starting *above* the top edge, where no amount of scrolling can reach it. The
+           board measured at y = -41px on a 1280x720 window. `safe` falls back to `start` in exactly
+           that case and centres otherwise. */
+        justify-content: safe center;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
         gap: 0.75rem;
         /* A notch on the left or right, and a home indicator at the bottom, both sit *inside* the
            viewport once `viewport-fit=cover` is set, so the padding has to make room for them. */
@@ -65,27 +69,37 @@
       }
       /* The board's size belongs to CSS, not to JavaScript. `main.ts` reads the result and works
          out the backing store and the transform; it does not decide how big the board is.
-         No `width` or `height` here on purpose: with both left `auto`, the `max-*` constraints clamp
-         the element's intrinsic size and the square survives. Setting either one would let the box
-         go rectangular, because each `max-*` would then clamp independently. */
+         No `width` or `height` here on purpose: with both left `auto`, `max-width` clamps the
+         element's intrinsic size and the square survives. Setting either dimension would let a second
+         constraint clamp independently and the board would go rectangular.
+
+         There is deliberately **no `max-height`**. It looks like the obvious way to stop the board
+         running off a short screen, and it silently does nothing: the percentage does not resolve
+         against a grid area whose height came from flexing, the canvas keeps its width-derived size,
+         and it paints across the toolbar. The board's size is its width's business. */
       canvas {
         display: block;
         width: auto;
         height: auto;
         max-width: min(100%, 560px);
-        max-height: 100%;
         aspect-ratio: 1 / 1;
         border-radius: 10px;
         box-shadow: 0 10px 40px rgb(0 0 0 / 55%);
         touch-action: none;
       }
-      /* The space the board is allowed to occupy: whatever the column above and below it did not
-         need. `min-height: 0` is the part that matters — without it a flex item refuses to shrink
-         below its content, and the board would push the hand tray off the screen instead of
-         giving way to it. */
+      /* A wrapper so the board can be positioned and, later, placed beside the hand tray in
+         landscape. It deliberately does *not* grow or shrink.
+
+         It used to be `flex: 1 1 auto; min-height: 0`, on the reasoning that the board should take
+         whatever space the chrome left. Two things went wrong with that, and the second is the one
+         that mattered: the slot shrank to 164px, the canvas ignored it (`max-height: 100%` does not
+         clamp against a shrunken grid area), and the board painted straight over the toolbar, the
+         status line and the hand tray. Shrinking the board was a bad idea regardless — on a 393x852
+         phone the chrome leaves about 164px, which is a 41px square — and the page fitted to within
+         a pixel anyway at 361 + 490 = 851 of 852. So: the board is as large as its width allows, and
+         the document scrolls when the total genuinely does not fit. */
       .board-slot {
-        flex: 1 1 auto;
-        min-height: 0;
+        flex: 0 0 auto;
         width: 100%;
         display: grid;
         place-items: center;
@@ -94,30 +108,6 @@
         min-height: 1.4em;
         color: var(--muted);
         font-size: 0.9rem;
-      }
-      .hand {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
-        max-width: 100%;
-      }
-      /* One row, always. Five cards at `min-width: 7.5rem` wrap to three rows below about 640px, and
-         measured on a 390x844 phone the tray came out **444px tall** — 46% of everything on the
-         page that was not the board. No viewport work fixes a tray that wraps; the tray has to stop
-         wrapping. Below 40rem the five cards share the row instead, which keeps all of them on
-         screen at once: scrolling a tray to see which card you are holding is worse than a small
-         one. MOBILE.md stage M2. */
-      @media (max-width: 40rem) {
-        .hand {
-          flex-wrap: nowrap;
-        }
-        .hand-card {
-          min-width: 0;
-          flex: 1 1 0;
-          align-items: center;
-          text-align: center;
-        }
       }
       .hand-card,
       .picker-option,
@@ -153,6 +143,43 @@
         border-color: var(--accent);
         background: #1a2334;
       }
+
+      /* One row, five equal columns, at every size. Wrapping is what made the tray 236px tall on a
+         320px phone and 294px on an iPad; a tray that costs a third of the screen is not a tray.
+         The cards share the row rather than scrolling it, so all five stay visible at once —
+         scrolling a tray to see which card you are holding is worse than a small one. */
+      .hand {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: nowrap;
+        justify-content: center;
+        /* Definite, and not `max-width`: the cards below are size-contained (see
+           `container-type`), so they report no content width for this to shrink-to-fit around.
+           Left to itself the tray collapsed to 154px and gave each card 24px. */
+        width: 100%;
+        max-width: min(64rem, 100%);
+      }
+      .hand-card {
+        min-width: 0;
+        flex: 1 1 0;
+        align-items: center;
+        text-align: center;
+        /* So the card can ask how wide *it* is, rather than the media query guessing from the
+           screen. The two are different questions: an iPad at 768px gives each card 147px, a
+           1440px desktop gives 171px, and a 320px phone gives 57px. */
+        container-type: inline-size;
+      }
+      /* The arrow directions are already drawn as a sprite directly above the name, so on a narrow
+         card the text version repeats the same information — wrapped over six lines, 75px of a
+         236px tray, unreadable at 57px wide. What is lost is the "no arrows at all" warning, which
+         the empty sprite already shows. Degrades to showing the text where containers are
+         unsupported, which is merely verbose rather than broken. */
+      @container (max-width: 130px) {
+        .hand-arrows {
+          display: none;
+        }
+      }
+
       /* The card's arrow pattern, drawn with the same code the board uses. */
       .arrow-preview {
         display: block;
@@ -235,7 +262,11 @@
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-        width: min(64rem, 96vw);
+        /* `96vw` rather than `100%` measured the *viewport*, not this element's content box, which
+           is 32px narrower because of the body's padding — so both of these were 16px too wide and
+           overflowed every phone. The body is the scroller now and clips it, which is how a silent
+           16px overflow turned into a hidden one. */
+        width: min(64rem, 100%);
         padding: 1rem;
         background: var(--panel);
         border: 1px solid var(--edge);
@@ -393,7 +424,11 @@
         flex-wrap: wrap;
         align-items: center;
         justify-content: center;
-        width: min(64rem, 96vw);
+        /* `96vw` rather than `100%` measured the *viewport*, not this element's content box, which
+           is 32px narrower because of the body's padding — so both of these were 16px too wide and
+           overflowed every phone. The body is the scroller now and clips it, which is how a silent
+           16px overflow turned into a hidden one. */
+        width: min(64rem, 100%);
       }
       .mode-bar {
         display: flex;
@@ -531,6 +566,27 @@
       }
       [hidden] {
         display: none !important;
+      }
+      /* Narrow screens.
+         All of it lives here, after the base rules, because a media query adds no specificity: an
+         earlier one loses to a later rule that targets the same thing with the same weight. The
+         first attempt sat next to `.hand` and was silently overridden by `.hand-card` eleven lines
+         below it, so the five cards kept their 7.5rem minimum, overflowed the 361px tray, and two
+         of them were clipped away by `overflow-x: clip` without a scrollbar to explain it. */
+      @media (max-width: 40rem) {
+        /* On a phone the board gives way to the chrome; on a desktop it does not.
+           A 1280x720 window has about 230px left after the toolbar, the tray and the key legend, and
+           a 230px board is a 57px square — too small to read arrows on. Scrolling a desktop page is
+           free and a mouse wheel makes it invisible; scrolling a phone is a thumb-reach problem. So
+           the trade is made in the direction each one hurts least.
+
+           The board does not shrink. Every mechanism tried — `max-height: 100%` against the slot,
+           then `height: 100%` against it — failed the same way: the percentage did not resolve
+           against a flex-shrunk grid area, the canvas kept its width-derived size, and it painted
+           across the toolbar and the hand tray. A board too small to read is worse than a page that
+           scrolls, so the board keeps the size its width allows and the document scrolls if the
+           total genuinely does not fit. With the tray on one row it fits to within a pixel at
+           393x852. */
       }
       @media (max-height: 760px) {
         .mode-note,

@@ -163,65 +163,55 @@ arrival and every later stage would be red for the wrong reason. The gate is M9.
 **Done when** `cssScale` is derived entirely from a measured rect, and `MIN_VIEWPORT` and `260` no
 longer exist.
 
-### M2 — Viewport and document — **done**
+### M2 — Viewport and document — **done, after a screenshot proved it wrong**
 
-- `viewport-fit=cover`; `100vh` fallback then `100dvh`; safe-area insets folded into the body padding.
-- `overflow-x: clip` on the document, so nothing can be dragged sideways again.
-- The canvas moves into a `flex: 1 1 auto; min-height: 0` slot, with `max-width: min(100%, 560px)` and
-  `max-height: 100%` and **no** `width` or `height` — leaving both `auto` is what lets the two
-  `max-*` constraints clamp the intrinsic size together and keep the board square.
-- `ResizeObserver` on the canvas replaces the `visualViewport` listener the plan called for. See
-  "deviation" below.
-- **The hand tray stopped wrapping**, pulled forward from M3. See "deviation" below.
+> **The first version of this stage was wrong and was committed as working.** S25 claimed every
+> portrait size fitted. It did not: the board painted across the toolbar, the status line and the hand
+> tray, and two of the five hand cards were clipped away. Both the screenshot and the measurement were
+> wrong in the same direction, for related reasons, and neither is a lesson about CSS.
 
-**Measured, before → after (M0 harness, re-run):**
+**What shipped wrong, and why the harness did not see it**
 
-|                                      | before M2                        | after M2                        |
-| ------------------------------------ | -------------------------------- | ------------------------------- |
-| page height, every portrait phone    | 209–486px taller than the screen | **fits**                        |
-| page height at 1280×720              | 284px taller than the screen     | **fits, exactly**               |
-| page height at 1440×900              | 390px taller                     | **fits**                        |
-| board and hand tray visible together | never                            | **every size except landscape** |
-| hand tray on a 320px phone           | 481.8px tall                     | **161.5px**                     |
-| board at 1280×720                    | 560×560                          | **560×560 — unchanged**         |
+- `main.ts` used to size the document; it now makes `body` the single scroller and gives the board a
+  `flex: 1 1 auto; min-height: 0` slot "so the board takes what the chrome leaves". The slot shrank to
+  164px, `max-height: 100%` did not clamp against a flex-shrunk grid area, the canvas kept its
+  width-derived 361px size, and **it painted over everything below it**.
+- The probe measured `documentElement.scrollHeight`. With `body` as the scroller that says nothing
+  about what is inside it, so a page 205px too tall reported as fitting.
+- Every probe measurement was _containment_ — is this element inside the viewport. All of them were
+  true. Nothing asked whether two things were painted on top of each other.
 
-**M1's regression is gone.** The 1280×720 page is exactly 720px now, and the board is still its
-natural 560 — the desktop never got smaller, because with the tray on one row there is room for it.
-Nothing is traded away.
+**Fixed**
 
-**Two deviations from the plan, both forced by measurement.**
+- The board does **not** shrink. `flex: 0 0 auto`, and **no `max-height`** on the canvas: the obvious
+  way to stop it running off a short screen silently does nothing, and leaving it in the stylesheet
+  would re-arm the same trap. A board too small to read is worse than a page that scrolls.
+- The probe watches for **overlap**, not just containment — including the canvas itself rather than
+  only its wrapper, because what escaped was a child overrunning its own parent, which no sibling
+  comparison can see. Nested pairs are excluded, or the canvas and its slot would be a permanent
+  false positive.
+- The probe reads the **body's** scroll metrics.
+- `justify-content: safe center`, not `center`: with plain centring, content taller than the body is
+  laid out starting above the top edge, where no scrolling reaches it. The board measured at y = −41px.
+- `.toolbar-bar` and `.collection-panel` were `min(64rem, 96vw)` — the _viewport_, not the element's
+  content box, which is 32px narrower because of the body's padding. 16px of silent overflow, clipped
+  away by the new `overflow-x: clip`.
+- The hand tray is one row of five equal columns at **every** size, and the arrow-directions text is
+  dropped below 130px of card width — via a **container query**, because the card's width is a
+  different question from the screen's (an iPad gives each card 147px, a desktop 171px, a 320px phone
+  57px). That text was 75px of a 236px tray.
 
-1. **`ResizeObserver` instead of `visualViewport`.** The plan asked for `visualViewport` on the
-   assumption that JavaScript would still be computing the size and would need to know when the
-   visible area moved. Now that CSS owns the size, that is both unnecessary and slightly wrong:
-   `ResizeObserver` fires when the box _actually_ changes, covering the URL bar collapsing, a
-   rotation, a font arriving and a zoom, without guessing which of those is worth listening for.
-   `window.resize` remains as the fallback where `ResizeObserver` is absent.
+**Measured now (M0 harness, re-run):** no overlapping regions and no sideways overflow at any of the
+nine sizes. Every portrait phone from 375px up has the board and the hand tray on screen together.
 
-2. **The hand tray came forward from M3.** M0 measured the tray at **444px tall on a 390×844 phone** —
-   46% of everything on the page that was not the board — because five cards at `min-width: 7.5rem`
-   (120px, not the ~76px this plan estimated) wrapped into three rows. No viewport work fixes a tray
-   that wraps. Below `40rem` the five cards now share one row, which keeps all of them on screen:
-   scrolling a tray to see which card you are holding is worse than a small one.
+**What is still not right, and which stage owns it:**
 
-**The gap, demonstrated.** Two of the four changes here — the body height and the hand tray — are
-invisible to `npm test`. Reverting either one leaves all 729 tests green. Only `npm run viewport`
-catches them, and it is report-only until M9:
-
-| Mutation                         | unit suite | harness                   |
-| -------------------------------- | ---------- | ------------------------- |
-| body height back to `min-height` | **passes** | phones 209–253px too tall |
-| hand tray wraps again            | **passes** | tray 161.5px → 481.8px    |
-| fixture loses `.board-slot`      | fails      | —                         |
-| `ResizeObserver` removed         | fails      | —                         |
-
-**The fixture drift check.** `index.html` gained `.board-slot`, and the hand-written `page()`
-fixtures in `boot.test.ts` and `hotseat.test.ts` did not — which would have quietly invalidated the
-one thing the boot test exists to do, since its own comment says it can only catch a missing element
-"if the fixture really does mirror the page". Both halves of that are now checked: a test walks
-every `id` in `index.html` and asserts the fixture has it.
-
-**Done.** Every portrait size fits, desktop is unchanged, and M1's regression is resolved.
+|                           |                          |                                                                                |
+| ------------------------- | ------------------------ | ------------------------------------------------------------------------------ |
+| 320×568, 360×640, 375×667 | hand tray below the fold | **M4** — the toolbar is ~300px there and is the whole of the remaining problem |
+| 844×390 landscape         | board and tray both cut  | M7                                                                             |
+| iPad, laptop, desktop     | hand tray below the fold | the page scrolls, as it always did; M3 and M4 shorten it                       |
+| every size                | 8 controls under 44px    | M5                                                                             |
 
 ### M3 — Narrow-screen layout
 

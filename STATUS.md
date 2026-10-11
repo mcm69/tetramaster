@@ -842,6 +842,69 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S26 — 2026-10-11 — M2 revisited: the first version shipped broken, and the harness said so
+
+**Reported:** a screenshot of an iPhone 14 Pro showing the board painted across the toolbar, the
+status line and the hand tray, with two of the five hand cards missing.
+
+**Status:** mobile stage M2, corrected. **729 tests** (unchanged — see below).
+
+**Answer to the question asked — "are the next stages taking care of this?" — no, and that was the
+right thing to push back on.** Overlapping elements is not something M3 or M4 addresses; it was a bug
+I introduced two commits ago and shipped as working.
+
+**Three bugs, and every measurement I had was wrong in the same direction.**
+
+- The board slot was `flex: 1 1 auto; min-height: 0`, so it could shrink. `max-height: 100%` on the
+  canvas does **not** clamp against a flex-shrunk grid area — the percentage never resolves — so the
+  canvas kept its 361px width-derived size inside a 164px slot and painted over everything below it.
+- The probe read `documentElement.scrollHeight`. Once `body` became the scroller that number says
+  nothing about the content, so a page 205px too tall was reported as fitting.
+- The narrow hand-card rules sat _before_ the shared rule setting `min-width: 7.5rem`. A media query
+  adds no specificity, so the later rule won: five 120px cards in a 361px tray, two of them clipped
+  away by `overflow-x: clip` with no scrollbar to explain it.
+
+**Learned:**
+
+- **Containment is not collision.** Every probe measurement asked "is this element inside the
+  viewport" and every one was true, while the page was visibly broken. The probe now checks overlap
+  too — and watches the **canvas**, not only its wrapper, because what escaped was a child overrunning
+  its own parent, which no sibling comparison can see. The first version of that check flagged the
+  canvas and its slot as an overlap, since the canvas genuinely is inside the slot; nested pairs are
+  now excluded.
+- **A screenshot is a measurement tool, and I built an instrument instead of using one.** The harness
+  was careful, thorough, reproducible and wrong. It is still the right instrument — it now catches the
+  regression, verified by re-introducing it — but it answered a narrower question than the one the page
+  was failing.
+- **A media query adds no specificity.** Twice now, on two different rules, a narrow-screen override
+  placed next to the thing it styled was beaten by a base rule further down the file. Both times it
+  was silent. All narrow rules now live together at the end, and the hand rules were moved to sit
+  after the shared block they have to override.
+- **`safe center` is not `center`.** With plain centring, content taller than the body is laid out
+  starting above the top edge, where no amount of scrolling can reach it. The board measured at
+  **y = −41px**. One keyword.
+- **`96vw` is the viewport, not the element.** `.toolbar-bar` and `.collection-panel` were
+  `min(64rem, 96vw)` inside a body with 32px of padding, so both were 16px too wide on every device.
+  The new `overflow-x: clip` turned that from visible to invisible, which is worse until you know to
+  look for it.
+- **`container-type` costs you the content width.** Querying the _card_ rather than the screen is the
+  right question, but inline-size containment means the card reports no intrinsic width, so the tray
+  shrink-wrapped around it and collapsed to 154px — 24px per card. It needs `width: 100%`.
+- **I retracted a claim in writing rather than quietly editing it.** S25 said every portrait size fitted
+  and that M1's regression was resolved with nothing traded away. Both were true only of a measurement
+  that was itself broken. MOBILE.md now carries the retraction at the top of M2.
+
+**Still M2's shape, not fixed here:** 320-375px hands are below the fold because the toolbar is ~300px
+there, which is M4. Landscape is M7. Eight controls are under 44px on every device, which is M5.
+
+**Verified by mutation:** re-introducing the two-part cause (a shrinking slot plus `max-height: 100%`)
+makes the harness report `board canvas / controls`, `/ status`, `/ hand` and `/ mode note` with their
+intersection areas. The fixed build reports none.
+**Files touched:** `index.html`, `src/ui/layoutProbe.ts`, `tools/viewport.ts`, `MOBILE.md`,
+`MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S25 — 2026-10-11 — M2: everything fits, and M1's regression is gone
 
 **Status:** mobile stage M2 complete. **729 tests** (up from 728).
