@@ -842,6 +842,59 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S23 — 2026-10-11 — M0: a headless browser, and what the page actually measures
+
+**Status:** mobile stage M0 complete. **No product code changed** — the probe is inert without a query
+parameter. 714 tests unchanged. Plan: `MOBILE.md`.
+
+**Did:** installed Playwright as a devDependency, added `src/ui/layoutProbe.ts` (the measurement, in
+the app, so the tool and the on-device overlay share one implementation), `tools/viewport.ts` behind
+`npm run viewport`, a `?debug=layout` overlay, and `MOBILE-baseline.md` — byte-identical across runs.
+
+**Measured, and worse than estimated:**
+
+- **The board is 420x420 on every device measured.** Confirmed the `MIN_VIEWPORT` floor. On a 320px
+  screen it is centred at x=-50, so 50px is off-screen on _each_ side.
+- **The chrome is 1117px on a 320x568 phone — three times the ~390px this plan estimated.** The page
+  is **969px taller than the screen**.
+- **The page also overflows on a 1280x720 laptop**, by 184px, putting the hand tray below the fold.
+  The layout has never fitted; it has fitted well enough that nobody noticed, because a mouse scrolls
+  without ceremony.
+- **Eight controls are under 44px on every device, desktop included.** Mode buttons 33.6px, the
+  opponent `<select>` 27px, both preference toggles 19.2px, the two bottom buttons 40.5px. This is a
+  pre-existing accessibility problem that mobile merely makes unforgivable; M5 fixes both.
+
+**Learned:**
+
+- **The harness was wrong three times, and each time it _under-reported_.** None of the three was
+  caught by a test — they were caught by reading its own output, which is the whole argument for
+  having the thing print something a person reads.
+  1. It measured a page that had not finished rendering: the toolbar and hand are built by
+     JavaScript, and a report taken at `load` found 2 controls where there are 13. Fixed with a
+     `MutationObserver`, which also keeps the on-device overlay live.
+  2. It counted bare `<input type=checkbox>` elements at ~13px instead of the `<label>` around them.
+     Tapping the label toggles it, so the label is the target — and counting the input would have
+     made both preference toggles a permanent false positive in the M9 gate.
+  3. **`isMobile: true` hid the very overflow the tool was installed to find.** Chromium honours
+     `width=device-width` and then _expands the layout viewport to absorb overflowing content_:
+     asked for 320px it reported 370, and the 50px it absorbed never appeared in the measurement.
+     Dropped for `hasTouch` alone.
+- **A number I estimated being three times wrong is the strongest argument yet for having built the
+  measuring instrument before acting on the arithmetic.** Every "chrome is about 390px" in the plan
+  was mine, and every one of them was wrong.
+- **Report-only was the right call, twice over.** The layout does not fit, so an assertion would have
+  been red on arrival; and a gate that is red for a reason nobody is currently working on is how a
+  gate gets ignored.
+
+**Next:** M1, the sizing core — `cssScale` derived from a measured rect, with `MIN_VIEWPORT` and the
+`260` both deleted. M0's numbers say the chrome, not the board's own sizing, is what costs the space,
+so M1 should be read as removing a guess rather than changing a size.
+
+**Files touched:** `src/ui/layoutProbe.ts` (new), `tools/viewport.ts` (new), `src/main.ts`,
+`package.json`, `package-lock.json`, `MOBILE.md`, `MOBILE-baseline.md` (new), `STATUS.md`
+
+---
+
 ### S22 — 2026-10-11 — mobile: a plan, not code
 
 **Status:** planning only. **No code changed.** Design written to `MOBILE.md`.

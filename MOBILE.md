@@ -37,8 +37,8 @@ cssScale = Math.max(minBoard / BOARD_SIZE, Math.min(1, available / BOARD_SIZE));
 ```
 
 `MIN_VIEWPORT` is `{ width: 1280, height: 720 }`. On a 375px phone the width term wants a scale of
-0.61, and the floor overrides it to 0.75 — so the board renders **420×420 CSS px on a 375px screen**
-and overflows. The comment above it states the intent:
+0.61, and the floor overrides it to 0.75 — so the board renders **420×420 CSS px on every device
+measured**, overflowing 50px off each side of a 320px screen. The comment above it states the intent:
 
 > _Below 1280x720 the page scrolls rather than the board becoming illegible._
 
@@ -70,10 +70,11 @@ acceptable trade — there is nowhere else to scroll to.
 | Touch hygiene                      | no `user-select: none`, no `-webkit-tap-highlight-color`; a fast double-tap can select text or flash a blue box                  |
 | Deck editor                        | `.deck-slot { flex: 1 1 12rem }` — below ~384px wide the slots shrink below a usable size                                        |
 
-### The verification gap that makes all of this risky
+### The verification gap that made all of this risky
 
 jsdom has no layout engine. `getBoundingClientRect()` returns zeros, so **no unit test can say
-whether the board fits on a phone.** Every sizing claim in this document is arithmetic. This project
+whether the board fits on a phone** — which is why stage M0 exists, and why every "estimated" figure
+above has since been replaced with a measurement. This project
 has now had four real bugs in a row that headless tests could not see — sound fired at the end of the
 match, hotseat unwired, the computer playing hotseat's second seat, and an entire animation system
 that had never rendered a frame. A plan for mobile layout that verifies nothing is a plan for four
@@ -108,24 +109,37 @@ work; it is the thing that makes any of it checkable.
 Each stage is a separate commit. M0 and M1 come first because every sizing decision downstream depends
 on the numbers they produce.
 
-### M0 — Headless harness and baseline
+### M0 — Headless harness and baseline — **done**
 
 Build the thing that tells us the truth, so the rest of this document stops being arithmetic.
 
-- **Add Playwright as a devDependency** (§5.1). Browser binaries are a large first install; CI needs
-  a matching image.
-- `tools/viewport.ts`, behind a new `npm run viewport` script: loads the built page at a matrix of
-  device sizes and reports, for each — board rect, document scroll width vs client width, total chrome
-  height, and any interactive element whose touch target is under 44px.
-- A `?debug=layout` query parameter that overlays the measured numbers on the page, for use on a
-  real device. (Same trick as the existing `?seed=`.)
-- Output committed as `MOBILE-baseline.md`.
+- **Playwright added as a devDependency** (§5.1), Chromium downloaded.
+- `src/ui/layoutProbe.ts` — the measurement, living in the app so the tool and the on-page overlay
+  share one implementation rather than two copies of the same arithmetic.
+- `tools/viewport.ts`, behind a new `npm run viewport` script, serving `dist/` and running a nine-size
+  matrix.
+- A `?debug=layout` overlay, for a person holding the actual device — the notch, the home indicator
+  and the URL bar are three things no desktop browser reproduces faithfully.
+- Output committed as `MOBILE-baseline.md`, byte-identical across runs.
 
-**Report-only at this stage — no assertions, no CI gate.** The current layout does not fit, so a gate
-would fail immediately and every later stage would be red for the wrong reason. The gate is M9; until
-then the harness is a measuring instrument, re-run after each stage and the baseline updated.
+**Three things the harness got wrong first, all caught by reading its own output rather than by a
+test** — worth recording because each one made the tool _under-report_:
 
-**Done when** the baseline exists and the estimated numbers in §1 are either confirmed or corrected.
+1. **It measured a page that had not finished rendering.** The toolbar and hand tray are built by
+   JavaScript; a report taken at `load` found 2 controls where there are 13. Fixed with a
+   `MutationObserver`, so the report stays current as the page changes.
+2. **It counted checkboxes instead of the labels around them.** A bare `<input type=checkbox>` is
+   ~13px, and flagging it would have made both preference toggles a permanent false positive in the
+   M9 gate. The probe now measures the owning `<label>`, which is what a thumb actually aims at.
+3. **`isMobile: true` hid the very overflow it was installed to find.** With mobile emulation on,
+   Chromium honours `width=device-width` and then _expands the layout viewport to absorb overflowing
+   content_: asked for 320px it reported 370, and the 50px it absorbed never appeared in the
+   measurement. Dropped in favour of `hasTouch` alone, which keeps touch events real.
+
+**Still report-only — no assertions, no CI gate.** The layout does not fit, so a gate would be red on
+arrival and every later stage would be red for the wrong reason. The gate is M9.
+
+**Done.** Baseline exists, is reproducible, and has corrected this document twice.
 
 ### M1 — Sizing core
 

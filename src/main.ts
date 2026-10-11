@@ -16,6 +16,7 @@ import { COLORS, FONTS } from './render/theme.ts';
 import { clickToAction, hitTest } from './input/pointer.ts';
 import { KEY_BINDINGS, handleKey, resolveKey } from './input/keys.ts';
 import { MatchController } from './ui/app.ts';
+import { installLayoutProbe } from './ui/layoutProbe.ts';
 import { OpponentGate } from './ui/turn.ts';
 import { Opponent } from './ai/opponent.ts';
 import { renderBattlePicker } from './ui/components/picker.ts';
@@ -118,6 +119,9 @@ function boot(): void {
   }
   fitCanvas();
   window.addEventListener('resize', fitCanvas);
+
+  // A no-op unless the URL carries `?debug=layout` — see src/ui/layoutProbe.ts.
+  installLayoutProbe(window, document);
 
   // Stage 9: the collection, deck and record survive a reload. Loaded before the controller,
   // which builds its deck from them.
