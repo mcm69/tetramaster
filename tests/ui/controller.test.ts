@@ -32,13 +32,25 @@ function matchAt(seed: number): GameState {
   return createMatch({ seed, playerDeck: deck, aiDeck: deck.slice() });
 }
 
+/**
+ * A controller with both seats under local control.
+ *
+ * Most of these tests drive one loop to play a whole match, which means the single "player" has to
+ * move for both sides. That is hotseat, and it has to be *asked for*: `MatchController` defaults to
+ * only the `player` seat, because playing for the computer is exactly the bug fixed in Stage 11
+ * follow-up. The seat rules have their own tests below.
+ */
+function bothSeats(seed: number): MatchController {
+  return new MatchController(matchAt(seed), undefined, { humanSeats: ['player', 'ai'] });
+}
+
 beforeEach(() => {
   document.body.innerHTML = '';
 });
 
 describe('MatchController — card selection', () => {
   it('picks up and puts down a card', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     expect(controller.view.selected).toBeNull();
     expect(controller.selectCard(0)).toBe(true);
     expect(controller.view.selected).toBe(0);
@@ -48,19 +60,19 @@ describe('MatchController — card selection', () => {
   });
 
   it('refuses a card that is not in hand', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     expect(controller.selectCard(99)).toBe(false);
     expect(controller.view.selected).toBeNull();
   });
 
   it('refuses to play with no card selected', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     const cell = legalCells(controller.state)[0] as Cell;
     expect(controller.playAt(cell)).toBe(false);
   });
 
   it('exposes hand entries with stat codes and arrow counts', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     const hand = controller.view.hand;
     expect(hand).toHaveLength(5);
     for (const entry of hand) {
@@ -73,7 +85,7 @@ describe('MatchController — card selection', () => {
 
 describe('MatchController — playing', () => {
   it('plays the selected card into a legal cell', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     const cell = legalCells(controller.state)[0] as Cell;
     controller.selectCard(0);
     expect(controller.playAt(cell)).toBe(true);
@@ -82,7 +94,7 @@ describe('MatchController — playing', () => {
   });
 
   it('refuses an illegal cell and leaves the match untouched', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     const cell = legalCells(controller.state)[0] as Cell;
     controller.selectCard(0);
     controller.playAt(cell);
@@ -92,7 +104,7 @@ describe('MatchController — playing', () => {
   });
 
   it('ignores input while the board is still animating', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     const cell = legalCells(controller.state)[0] as Cell;
     controller.selectCard(0);
     controller.playAt(cell);
@@ -121,7 +133,7 @@ describe('MatchController — playing', () => {
   });
 
   it('refuses to pick up a card while the board is animating', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     const cell = legalCells(controller.state)[0] as Cell;
     controller.selectCard(0);
     controller.playAt(cell);
@@ -131,7 +143,7 @@ describe('MatchController — playing', () => {
   });
 
   it('turns pass between players', () => {
-    const controller = new MatchController(matchAt(1));
+    const controller = bothSeats(1);
     const first = controller.state.turn;
     controller.selectCard(0);
     controller.playAt(legalCells(controller.state)[0] as Cell);
@@ -142,7 +154,7 @@ describe('MatchController — playing', () => {
 
 describe('MatchController — keyboard cursor', () => {
   it('starts on the first legal cell and moves around the grid', () => {
-    const controller = new MatchController(matchAt(2));
+    const controller = bothSeats(2);
     expect(controller.moveHover(0, 0)).toBe(legalCells(controller.state)[0]);
     const first = controller.view.hover as Cell;
     const moved = controller.moveHover(0, 1);
@@ -151,7 +163,7 @@ describe('MatchController — keyboard cursor', () => {
   });
 
   it('never leaves the legal set', () => {
-    const controller = new MatchController(matchAt(3));
+    const controller = bothSeats(3);
     for (let i = 0; i < 40; i++) {
       const cell = controller.moveHover(i % 2 === 0 ? 1 : 0, i % 3 === 0 ? 1 : -1);
       expect(legalCells(controller.state)).toContain(cell ?? -1);
@@ -159,7 +171,7 @@ describe('MatchController — keyboard cursor', () => {
   });
 
   it('confirm() plays at the cursor, not at the first legal cell', () => {
-    const controller = new MatchController(matchAt(4));
+    const controller = bothSeats(4);
     // Deliberately choose a target that is NOT the first legal cell, so "plays somewhere else"
     // cannot pass by coincidence.
     const first = legalCells(controller.state)[0];
@@ -175,8 +187,8 @@ describe('MatchController — keyboard cursor', () => {
   });
 
   it('a click and Enter on the same cell produce the same result', () => {
-    const viaClick = new MatchController(matchAt(12));
-    const viaKey = new MatchController(matchAt(12));
+    const viaClick = bothSeats(12);
+    const viaKey = bothSeats(12);
     const target = legalCells(viaClick.state)[1];
 
     viaClick.selectCard(0);
@@ -191,9 +203,9 @@ describe('MatchController — keyboard cursor', () => {
 });
 
 describe('MatchController — battle chooser (§1.7)', () => {
-  /** Drives to a contested placement. */
+  /** Drives to a contested placement. Both seats, so one driver can set the board up. */
   function reachContested(seed: number): MatchController | null {
-    const controller = new MatchController(matchAt(seed));
+    const controller = bothSeats(seed);
     for (let step = 0; step < 8; step++) {
       if (controller.view.phase !== 'place') break;
       const cell = legalCells(controller.state)[0];
@@ -233,14 +245,14 @@ describe('MatchController — battle chooser (§1.7)', () => {
   });
 
   it('refuses a battle that was not on the table', () => {
-    const controller = new MatchController(matchAt(5));
+    const controller = bothSeats(5);
     expect(controller.chooseBattle(0)).toBe(false);
   });
 });
 
 describe('MatchController — hints and claims', () => {
   it('explains a blocked cell, an occupied cell, and a pending fight', () => {
-    const controller = new MatchController(matchAt(6));
+    const controller = bothSeats(6);
     const blockedIndex = controller.state.blocked.findIndex(Boolean);
     if (blockedIndex >= 0) {
       controller.setHover(blockedIndex as Cell);
@@ -256,16 +268,127 @@ describe('MatchController — hints and claims', () => {
 
   it('claims a captured card at the end of a match', () => {
     // Play a whole match out, then claim.
-    const controller = new MatchController(matchAt(7));
+    const controller = bothSeats(7);
     playToEnd(controller, () => null); // no-op policy: just settles animations
     expect(controller.view.result).toBeNull(); // nothing was played, so no result yet
+  });
+});
+
+describe('MatchController — who may act', () => {
+  // The bug this covers: with no turn check, the controller would place the *opponent's* card when
+  // the player clicked during the opponent's turn. It was invisible for as long as the opponent
+  // kept moving -- and then the player quietly ended up playing both sides.
+  it('defaults to the player seat only', () => {
+    const controller = new MatchController(matchAt(1));
+    expect(controller.state.turn).toBe('player');
+    expect(controller.acceptsLocalInput).toBe(true);
+  });
+
+  // Note on coverage: removing *either* guard alone changes nothing observable, because the other
+  // masks it — selectCard refuses to hold a card, so playAt has nothing to play; and if a card were
+  // somehow held, playAt would refuse. They are redundant on purpose, exactly like the `busy` guard
+  // in `dispatch`. What the test pins is the pair: with both gone, the bug is back.
+  it('refuses to play for a seat nobody is sitting at', () => {
+    const controller = new MatchController(matchAt(1));
+    controller.selectCard(0);
+    controller.playAt(legalCells(controller.state)[0] as Cell);
+    // Settle the animation first. Without this every assertion below would pass on the *busy* guard,
+    // which is a different rule — and it is exactly what let both of these guards go untested once.
+    while (controller.busy) controller.advance(1000);
+    expect(controller.state.turn).toBe('ai');
+
+    const before = controller.state.placedCount;
+    const cell = legalCells(controller.state)[0] as Cell;
+    expect(controller.acceptsLocalInput).toBe(false);
+
+    // Every route in, refused — with nothing animating to hide behind.
+    expect(controller.selectCard(0)).toBe(false);
+    expect(controller.selectCard(null)).toBe(false);
+    expect(controller.playAt(cell)).toBe(false);
+    controller.setHover(cell);
+    expect(controller.confirm()).toBe(false);
+    expect(controller.chooseBattle(cell)).toBe(false);
+    expect(controller.state.placedCount).toBe(before);
+  });
+
+  it("refuses to fight the opponent's battles for them", () => {
+    // A forced battle order with only the opponent to resolve it.
+    const controller = new MatchController(matchAt(2), undefined, { humanSeats: ['player'] });
+    // Push the turn to the opponent and into a battle by having the player place into a counter.
+    let guard = 0;
+    while (
+      controller.state.phase === 'place' &&
+      controller.state.turn === 'player' &&
+      guard++ < 10
+    ) {
+      while (controller.busy) controller.advance(1000);
+      controller.selectCard(0);
+      controller.playAt(legalCells(controller.state)[0] as Cell);
+    }
+    while (controller.busy) controller.advance(1000);
+    if (controller.state.phase !== 'chooseBattle') return; // this seed produced no counter-attack
+
+    expect(controller.state.turn).toBe('ai');
+    const pending = controller.state.pendingBattles[0];
+    if (pending === undefined) return;
+    const resolved = controller.state.history.length;
+    expect(controller.chooseBattle(pending)).toBe(false);
+    expect(controller.state.history.length).toBe(resolved);
+  });
+
+  it('lets a person act for both seats in hotseat', () => {
+    const controller = bothSeats(1);
+    controller.selectCard(0);
+    controller.playAt(legalCells(controller.state)[0] as Cell);
+    while (controller.busy) controller.advance(1000);
+    expect(controller.state.turn).toBe('ai');
+    // The second player is a person at this keyboard, so the guard must not stand in the way.
+    expect(controller.acceptsLocalInput).toBe(true);
+    controller.selectCard(0);
+    expect(controller.playAt(legalCells(controller.state)[0] as Cell)).toBe(true);
+  });
+
+  it('accepts input again once the turn comes back round', () => {
+    // Driven externally for the opponent's move, which is exactly how the AI does it.
+    const controller = new MatchController(matchAt(1));
+    expect(controller.acceptsLocalInput).toBe(true);
+    controller.selectCard(0);
+    controller.playAt(legalCells(controller.state)[0] as Cell);
+    expect(controller.acceptsLocalInput).toBe(false);
+    while (controller.busy) controller.advance(1000);
+    controller.submitExternal({
+      t: 'place',
+      cell: legalCells(controller.state)[0] as Cell,
+      cardIndex: 0,
+    });
+    expect(controller.state.turn).toBe('player');
+    expect(controller.acceptsLocalInput).toBe(true);
+  });
+
+  it('still lets the opponent be driven externally', () => {
+    // The AI goes through `submitExternal`, which is not local input and must not be gated by turn.
+    const controller = new MatchController(matchAt(1));
+    controller.selectCard(0);
+    controller.playAt(legalCells(controller.state)[0] as Cell);
+    expect(controller.state.turn).toBe('ai');
+    expect(controller.acceptsLocalInput).toBe(false);
+    // Settle first: `dispatch` is guarded by the animation, for the AI exactly as for a click.
+    while (controller.busy) controller.advance(1000);
+    expect(
+      controller.submitExternal({
+        t: 'place',
+        cell: legalCells(controller.state)[0] as Cell,
+        cardIndex: 0,
+      }),
+    ).toBe(true);
+    expect(controller.state.turn).toBe('player');
   });
 });
 
 describe('the Stage 7 DoD — a whole match, mouse only then keyboard only', () => {
   /** Drives a whole match using only the mouse path: select a card, click a cell. */
   function playMatchWithMouse(seed: number): MatchController {
-    const controller = new MatchController(matchAt(seed));
+    const controller = bothSeats(seed);
     const picker = createRng(seed + 17);
 
     for (let guard = 0; guard < 2000; guard++) {
@@ -293,7 +416,7 @@ describe('the Stage 7 DoD — a whole match, mouse only then keyboard only', () 
 
   /** Drives the same match using only the keyboard path: 1-5 to pick, Enter to play. */
   function playMatchWithKeyboard(seed: number): MatchController {
-    const controller = new MatchController(matchAt(seed));
+    const controller = bothSeats(seed);
     const picker = createRng(seed + 17);
 
     for (let guard = 0; guard < 2000; guard++) {
@@ -533,7 +656,7 @@ describe('results component', () => {
 
 describe('status text', () => {
   it('says what the player is being asked to do', () => {
-    const controller = new MatchController(matchAt(9));
+    const controller = bothSeats(9);
     const base = { ...controller.view, phase: 'place' as const };
     expect(statusText(base)).toMatch(/Pick a card/);
     expect(statusText({ ...base, selected: 0 })).toMatch(/Click a square/);
@@ -549,7 +672,7 @@ describe('status text', () => {
 
 describe('toCardView', () => {
   it('names a card from its figure', () => {
-    const controller = new MatchController(matchAt(10));
+    const controller = bothSeats(10);
     const card = controller.state.players.player.deck[0];
     expect(card).toBeDefined();
     const view = toCardView(card!);
@@ -560,7 +683,7 @@ describe('toCardView', () => {
 
 describe('MatchView shape', () => {
   it('exposes everything the UI needs in one object', () => {
-    const controller = new MatchController(matchAt(11));
+    const controller = bothSeats(11);
     const view: MatchView = controller.view;
     for (const key of [
       'phase',

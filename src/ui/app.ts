@@ -73,18 +73,42 @@ export interface MatchView {
   readonly hint: string | null;
 }
 
+export interface ControllerOptions {
+  /**
+   * Which seats a person at this keyboard may act for. Defaults to `['player']`.
+   *
+   * Without this the controller happily played for whoever's turn it was, so during the opponent's
+   * turn a click would place *their* card. That is invisible in a single-player game — until the
+   * opponent stops moving, which it did, and then the player quietly ends up playing both sides.
+   *
+   * Hotseat passes both seats, because there the opponent genuinely is a person.
+   */
+  readonly humanSeats?: readonly Owner[];
+}
+
 export class MatchController {
   private current: GameState;
   private readonly anim: Animator;
+  private readonly humanSeats: readonly Owner[];
   private selected: number | null = null;
   private hoverCell: Cell | null = null;
   private hintText: string | null = null;
   private claimed: readonly Card[] = [];
 
-  constructor(initial: GameState, animator: Animator = new Animator()) {
+  constructor(
+    initial: GameState,
+    animator: Animator = new Animator(),
+    options: ControllerOptions = {},
+  ) {
     this.current = initial;
     this.anim = animator;
+    this.humanSeats = options.humanSeats ?? ['player'];
     this.anim.syncTo(initial.board);
+  }
+
+  /** True when a person at this keyboard may act for `owner` right now. */
+  get acceptsLocalInput(): boolean {
+    return this.humanSeats.includes(this.current.turn);
   }
 
   get state(): GameState {
@@ -105,6 +129,7 @@ export class MatchController {
   /** Picks up (or puts down) a card from the hand. */
   selectCard(index: number | null): boolean {
     if (this.busy || this.current.phase !== 'place') return false;
+    if (!this.acceptsLocalInput) return false;
     if (index === null) {
       this.selected = null;
       return true;
@@ -147,6 +172,9 @@ export class MatchController {
    * what guarantees the two input modes behave identically.
    */
   playAt(cell: Cell): boolean {
+    // Playing for a seat nobody is sitting at is not a legal move for this input device, however
+    // legal it is for the engine.
+    if (!this.acceptsLocalInput) return false;
     if (this.current.phase === 'chooseBattle') {
       return this.current.pendingBattles.includes(cell) ? this.chooseBattle(cell) : false;
     }
@@ -160,6 +188,7 @@ export class MatchController {
   /** Fights one of the contested cards. §1.7 lets the player pick the order. */
   chooseBattle(cell: Cell): boolean {
     if (this.current.phase !== 'chooseBattle') return false;
+    if (!this.acceptsLocalInput) return false;
     return this.dispatch({ t: 'chooseBattle', cell });
   }
 

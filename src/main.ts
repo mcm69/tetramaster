@@ -16,6 +16,7 @@ import { COLORS, FONTS } from './render/theme.ts';
 import { clickToAction, hitTest } from './input/pointer.ts';
 import { KEY_BINDINGS, handleKey, resolveKey } from './input/keys.ts';
 import { MatchController } from './ui/app.ts';
+import { OpponentGate } from './ui/turn.ts';
 import { Opponent } from './ai/opponent.ts';
 import { renderBattlePicker } from './ui/components/picker.ts';
 import { renderHand, renderResults, statusText } from './ui/components/hand.ts';
@@ -123,7 +124,6 @@ function boot(): void {
   const synth = new Synth({ volume: profile.settings.volume });
   synth.setEnabled(profile.settings.audio && synth.available);
   const announcer = new Announcer(announceEl);
-  let thinking = false;
   let filter: CollectionFilter = DEFAULT_FILTER;
   let deckSlots: number[] = [...profile.save.deck];
   let modeId: ModeId = profile.mode;
@@ -131,13 +131,16 @@ function boot(): void {
   // Progression runs exactly once per finished match. Declared up here because `newController`
   // resets it and is called during initialisation, below this point.
   let settled = false;
+  // Same reason: `newController` resets the opponent's turn latch. Anything an initialiser touches
+  // has to exist before it runs.
+  const gate = new OpponentGate();
   const layout = boardLayout(BOARD_SIZE - 40, 20, 20);
   let controller = newController(seed);
 
   function newController(nextSeed: number): MatchController {
     const mode = MODES[modeId];
     opponent.reset(nextSeed + 101);
-    thinking = false;
+    gate.reset();
     settled = false;
     hintEl.textContent = '';
 
@@ -546,15 +549,24 @@ function boot(): void {
 
   // ── the one loop ───────────────────────────────────────────────────────────────────────────
 
-  // The opponent's turn: hand it to the AI once the board is still. `thinking` keeps it to one
-  // decision per turn rather than a burst of them as the animation settles.
+  // The opponent's turn. The latch — one decision per turn, however many frames the animation takes
+  // to settle — lives in `OpponentGate`, which is where it can be tested at all. It was a `thinking`
+  // flag in this function that was set once and only ever cleared by `newController`, so the
+  // opponent moved exactly once per match; and because the controller had no turn check either, the
+  // player quietly spent the rest of the match playing both sides.
   const stepOpponent = (): void => {
-    if (thinking || controller.busy) return;
-    const state = controller.state;
-    if (state.phase === 'over' || state.turn !== 'ai') return;
-    thinking = true;
-    const action = opponent.act(state, 'ai') ?? { t: 'forfeit' as const };
-    if (controller.submitExternal(action)) syncDom();
+    const acted = gate.step(
+      {
+        get busy(): boolean {
+          return controller.busy;
+        },
+        decide: (state, owner) => opponent.act(state, owner) ?? { t: 'forfeit' },
+        submit: (action) => controller.submitExternal(action),
+      },
+      controller.state,
+      'ai',
+    );
+    if (acted) syncDom();
   };
 
   const loop = (): void => {

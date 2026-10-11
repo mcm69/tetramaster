@@ -842,6 +842,75 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S18 — 2026-10-11 — the opponent moved once per match, and then you played for it
+
+**Reported:** "I start a match vs AI, I make the first move, it makes its first one, I make the
+second move, and then _I_ am in control of the opponent's second move, instead of the AI making it."
+
+**Status:** post-completion fix. **672 tests** (up from 655).
+
+**Did:** two independent bugs, one hiding the other.
+
+- **The opponent stopped moving after its first card.** The latch that stops it deciding once per turn
+  — `thinking` in `main.ts` — was set when it acted and cleared _only_ by `newController`. So the AI
+  placed exactly one card and then stood still for the rest of the match.
+- **The controller had no idea whose turn it was.** `playAt`, `selectCard` and `chooseBattle` never
+  asked. So once the opponent had stopped, a click during its turn placed _its_ card — which is why
+  the match kept appearing to work while one person quietly played both sides.
+
+The latch moved out of the render loop into `src/ui/turn.ts` (`OpponentGate`), because the render loop
+was the one place no test could reach. Its rule is now stated in full at the top of the file: do
+nothing while animating; **release** when the turn is not ours or the match is over; otherwise act
+once and latch. The release is the part that was missing, and it is why this is a class rather than a
+boolean — a flag you can only clear from one place is a flag you will forget to clear.
+
+`MatchController` gained `humanSeats` (default `['player']`) and an `acceptsLocalInput` getter.
+Hotseat passes both seats, because there the opponent genuinely is a person at the same keyboard.
+
+**Learned:**
+
+- **Two bugs, and the second is why the first was survivable.** Neither alone is fatal: the latch bug
+  just freezes the opponent, and the missing turn check is inert while the opponent is moving. It is
+  the _combination_ that produces "the game works but I play both sides". Fixing either one alone
+  would have hidden the other rather than removed it.
+- **The existing tests encoded the bug as an assumption.** The controller tests drove one loop to play
+  a whole match, which means the single "player" moves for both sides. They passed because they never
+  asked who was allowed to. They now say so — via an explicit `bothSeats()` helper — and the seat rule
+  has its own tests. When a fix breaks many tests at once, the tests are making a claim about the
+  product, and that claim deserves to be read before it is overwritten.
+- **Neither guard is independently pinned, and that is correct.** Removing the `selectCard` guard alone
+  changes nothing observable, because `playAt` still refuses; removing `playAt`'s alone changes
+  nothing, because nothing can be selected. They are redundant defence-in-depth, like the existing
+  `busy` guard in `dispatch`. The test pins the pair — and a mutation removing _both_ fails, which is
+  the faithful form of this bug.
+- **A test that passes for the wrong reason is worse than no test.** My first attempt at "the player
+  cannot act on the opponent's turn" passed under every single-guard mutation, because the controller
+  was still animating from the preceding placement: every assertion was being satisfied by the `busy`
+  guard instead. It only started biting once the test settled the animation first. The mutation is
+  what told me; the assertions all looked fine.
+- **The test driver has to look like the real loop, or it finds bugs that are not there.** My first
+  match-running driver called the gate only on the computer's frames. The gate releases when it
+  _observes_ the turn change hands, so that driver deadlocked — which read as a gate bug. `main.ts`
+  calls `stepOpponent()` on every frame regardless. Making the driver match meant both the test and the
+  comment could say why the shape matters.
+- **Fourth time the same class of mistake, in one file.** `newController` touches the latch, and
+  `newController` runs during initialisation — so the latch had to be declared with the other state,
+  400 lines above its use. `tsc` did not catch it. (Three previous instances: `settled`, and twice on
+  `modeId`/`deckSlots`.) **A `const`/`let` that an initialiser reads must be declared above it**, and
+  the compiler will not tell you.
+- **Verification, not belief.** Four mutations, all caught: release removed (the reported bug — 4
+  failures), latch removed (3), both controller guards removed (1), `acceptsLocalInput` always true
+  (3). Each was applied, the file diff confirmed, the suite re-run, and the file restored.
+
+**Next:** play it in a real browser. This is the second reported bug that lived in code no test
+touched (`main.ts`'s loop), and it is the second time the cause was an untested _assumption_ rather
+than a typo. Worth considering a standing rule: anything that decides _when_ something happens belongs
+in a module with tests, not in the render loop that draws it.
+**Files touched:** `src/ui/turn.ts` (new), `src/ui/app.ts`, `src/main.ts`,
+`tests/ui/opponentTurn.test.ts` (new), `tests/ui/controller.test.ts`, `STATUS.md`
+
+---
+
 ### S17 — 2026-10-11 — the cursor is a rook: rings, skipping and wrap-around
 
 **Status:** post-completion fix, replacing S16's model wholesale. **655 tests** (down from 660 — the
