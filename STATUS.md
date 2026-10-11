@@ -842,6 +842,67 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S19 — 2026-10-11 — a control on screen that could not be clicked
+
+**Reported:** "after the AI move they don't select the card to fight, and that shows on the UI for the
+player to do (and doesn't work)". Follow-up to S18, and the second half of the same defect.
+
+**Status:** post-completion fix. **674 tests** (up from 672).
+
+**The bug:** the latch in `OpponentGate` released "when the turn changes hands". A contested placement
+does not hand the turn over — §1.7 gives the attacker the choice of battle order, so `state.turn` is
+still the computer's while it owes a decision. The latch stayed shut, the computer was never asked
+again, and the match hung on a battle order only the computer could fill in. The interface then put
+that order in front of the player, who — correctly, for the first time in this project's history — was
+not allowed to act on it. So: a highlighted card, a "choose a battle" label, and a click that did
+nothing.
+
+**Did:**
+
+- `OpponentGate` now latches against **the exact state object the decision was made on**. Any action
+  produces a new state, so a new state re-arms it; the same state next frame does not. That covers
+  cascades, follow-up battle orders and ordinary turns without enumerating them, and still prevents a
+  burst of decisions while the animation settles — the state object is identical across frames until
+  an action lands. The release on "not our turn" is kept, not because it makes a normal turn work but
+  so a stale latch cannot survive into a new match.
+- `turnLabel` names the seat choosing a battle order ("Player 2 chooses the battle") instead of the
+  bare "choose a battle", which read as an instruction to whoever was looking at the screen.
+
+**Learned:**
+
+- **I had already seen this bug and talked myself out of it.** While fixing S18 the match-running
+  driver deadlocked, and I concluded the _driver_ was at fault for doing two actions in one frame. It
+  was not. The driver reproduced a real deadlock, and my correction — "not how the app runs" — was
+  wrong. I then shipped a fix built on that misreading, and the user found it in a browser. **A
+  deadlock is a fact about the system, not a defect in the thing that observed it.** When a harness
+  hangs, the first question should be which of the two is wrong, and the answer should not default to
+  the harness.
+- **The narrower the rule, the narrower the bug.** "Until the turn changes hands" sounded like a safe
+  generalisation of "until it has acted". It was not: it assumed every step of a turn is one action,
+  and §1.7 makes a turn up to three (place, choose order, resolve). Latching on **state identity** is
+  weaker as a statement and stronger as a rule, because it does not need to know what a turn is made
+  of.
+- **A UI label is part of the contract.** The label did not cause the hang, but it converted a silent
+  deadlock into an instruction to act — and pointing at a decision that belongs to someone else is a
+  bug even when the underlying flow is otherwise correct. Two of the three bugs in this pair were
+  invisible _only_ because the label said "choose a battle" rather than "Player 2 chooses".
+- **The controller's new seat guard is what made this visible.** Before it, the player could have
+  filled in the computer's battle order, so the hang would have been "the game played itself". Fixing
+  bug one exposed bug two, because the workaround had been covering it.
+
+**Verified by mutation**, all caught: latch reverted to the turn-based rule (3 failures, the reported
+bug), no latch at all (1), gate ignores pending battle orders (4), bare `choose a battle` label (1).
+The driver now reports a stall explicitly rather than spinning 5000 frames, so a deadlock fails with
+the seed that produced it.
+
+**Next:** the standing note from S18 applies twice over now. Three bugs in two days, all in the seam
+between the engine and the loop that draws it, none of them typos. Play it in a browser; the gate is
+the thing to watch.
+**Files touched:** `src/ui/turn.ts`, `src/render/boardView.ts`, `tests/ui/opponentTurn.test.ts`,
+`tests/ui/scoreBar.test.ts`, `STATUS.md`
+
+---
+
 ### S18 — 2026-10-11 — the opponent moved once per match, and then you played for it
 
 **Reported:** "I start a match vs AI, I make the first move, it makes its first one, I make the

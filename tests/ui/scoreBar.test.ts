@@ -18,7 +18,7 @@ import { createMatch, applyAction, legalCells } from '../../src/core/match.ts';
 import { createRng } from '../../src/core/rng.ts';
 import { rollInstance } from '../../src/core/card.ts';
 import { figuresOfTier } from '../../src/data/cards.ts';
-import type { Card, Tier } from '../../src/core/types.ts';
+import type { Card, GameState, Tier } from '../../src/core/types.ts';
 
 function deck(seed: number, tier: Tier = 3): Card[] {
   const pool = figuresOfTier(tier);
@@ -162,8 +162,27 @@ describe('the turn label', () => {
 
   it('says what is happening rather than whose turn it is', () => {
     const state = createMatch({ seed: 1, playerDeck: deck(1), aiDeck: deck(2) });
-    expect(turnLabel({ ...state, phase: 'chooseBattle' })).toBe('choose a battle');
     expect(turnLabel({ ...state, phase: 'over' })).toBe('match over');
+  });
+
+  it('names the seat choosing a battle order, not just "choose a battle"', () => {
+    // The bare label read as an instruction to whoever was looking at the screen. But the attacker
+    // picks the battle order (§1.7), and after the computer places a counter-attacking card it is the
+    // *computer's* choice while it is still the computer's turn -- so the player was told to make a
+    // decision only the computer could make, and nothing happened when they tried.
+    const state = createMatch({ seed: 1, playerDeck: deck(1), aiDeck: deck(2) });
+    const contested = { ...state, phase: 'chooseBattle' } as GameState;
+
+    expect(turnLabel(contested)).toBe('Player 1 chooses the battle');
+    expect(turnLabel({ ...contested, turn: 'ai' })).toBe('Player 2 chooses the battle');
+
+    // Whichever seat is choosing, the label must name that seat and not the other one.
+    for (const turn of ['player', 'ai'] as const) {
+      const label = turnLabel({ ...contested, turn });
+      expect(label).toContain(turn === 'player' ? 'Player 1' : 'Player 2');
+      expect(label).not.toContain(turn === 'player' ? 'Player 2' : 'Player 1');
+      expect(label).not.toBe('choose a battle');
+    }
   });
 
   it('never contains a raw owner id', () => {

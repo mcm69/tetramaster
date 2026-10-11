@@ -14,11 +14,26 @@
  * The rule is small enough to state in full:
  *
  *  - while the board is animating, do nothing;
- *  - while it is not the computer's turn, or the match is over, **release** the latch;
- *  - act once per turn, and latch until the turn changes hands.
+ *  - while it is not the computer's turn, or the match is over, release the latch;
+ *  - act once per turn, and latch until there is something new to decide about.
  *
- * The release is the part that was missing, which is why this is a class rather than a boolean: a
- * flag you can only clear from one place is a flag you will forget to clear.
+ * ## Why the latch is keyed on the state, not on the turn
+ *
+ * "Until the turn changes hands" was the first attempt, and it is wrong. A contested placement does
+ * **not** change hands: `applyAction` returns `phase: 'chooseBattle'` with `turn` still belonging to
+ * whoever placed the card (§1.7 — the attacker picks the battle order). So after the computer placed
+ * a counter-attacking card, the latch was still shut, the computer was never asked again, and the
+ * match hung on a battle order that only the computer was allowed to fill in. The interface offered it
+ * to the player, who could not act — correctly, for once — so it just sat there.
+ *
+ * The rule that survives: **latch against the exact state object the decision was made on.** Any
+ * action produces a new state, so a new state re-arms; the same state on the next frame does not. That
+ * covers cascades, follow-up battle orders, and ordinary turns without needing to enumerate them, and
+ * it still prevents a burst of decisions while the animation settles, because the state object is
+ * identical across frames until an action lands.
+ *
+ * The release on "not our turn" is kept as well. It is not what makes a normal turn work, but it is
+ * what stops a stale latch surviving into a new match.
  */
 
 import type { Action } from '../core/match.ts';
@@ -35,16 +50,17 @@ export interface OpponentHost {
 }
 
 export class OpponentGate {
-  private engaged = false;
+  /** The state object the last decision was made against, or null if none has been made. */
+  private decidedOn: GameState | null = null;
 
-  /** True once this turn has been acted on, until the turn changes hands. */
+  /** True once a decision has been made and no new state has arrived to justify another. */
   get hasActed(): boolean {
-    return this.engaged;
+    return this.decidedOn !== null;
   }
 
-  /** Forgets the latch. For tearing a match down; `step` releases it on its own. */
+  /** Forgets the latch. For tearing a match down; `step` clears it on its own. */
   reset(): void {
-    this.engaged = false;
+    this.decidedOn = null;
   }
 
   /**
@@ -56,14 +72,14 @@ export class OpponentGate {
     if (host.busy) return false;
 
     if (state.phase === 'over' || state.turn !== owner) {
-      // The turn has changed hands, so the latch goes. Leaving this out is the bug this module
-      // exists to make impossible to write again.
-      this.engaged = false;
+      this.decidedOn = null;
       return false;
     }
 
-    if (this.engaged) return false;
-    this.engaged = true;
+    // Same state, already decided. Re-deciding would either be a no-op or, worse, the same placement
+    // twice — and the animation would still be running, so `host.submit` would refuse it anyway.
+    if (this.decidedOn === state) return false;
+    this.decidedOn = state;
 
     const action = host.decide(state, owner);
     if (action === null) return false;

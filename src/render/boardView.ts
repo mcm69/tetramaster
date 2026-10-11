@@ -205,7 +205,12 @@ export function drawScoreBar(
  */
 export function turnLabel(state: GameState): string {
   if (state.phase === 'over') return 'match over';
-  if (state.phase === 'chooseBattle') return 'choose a battle';
+  // Naming the seat matters. "choose a battle" reads as an instruction to whoever is looking at the
+  // screen, and during a contested placement the *other* seat is the one choosing — so the bare
+  // label put the computer's battle order in front of the player, who could not act on it.
+  if (state.phase === 'chooseBattle') {
+    return state.turn === 'player' ? 'Player 1 chooses the battle' : 'Player 2 chooses the battle';
+  }
   return state.turn === 'player' ? 'Player 1 to play' : 'Player 2 to play';
 }
 

@@ -15,6 +15,17 @@
  * tests drove the controller directly with the turn check absent. So the tests below are about the
  * *sequence* — "it moves on every one of its turns" — which is what the bug actually was, rather than
  * "it moved", which is all the old coverage could have asserted.
+ *
+ * ## The bug this file's own driver found
+ *
+ * Writing that driver surfaced a third one, and it is why the header is worth reading twice. The
+ * first version of the latch here released "when the turn changes hands". That is wrong, because a
+ * contested placement does not hand the turn over: the attacker picks the battle order (§1.7), so
+ * `state.turn` is still the computer's while it owes a choice. The gate latched shut against a
+ * decision only it could make. In the app that surfaced as an interface asking the player to choose a
+ * battle they were not allowed to choose — a control that did nothing when clicked, which is exactly
+ * what was reported. The driver deadlocked on it for a while before I believed it was not a driver
+ * bug.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -24,7 +35,7 @@ import { createRng } from '../../src/core/rng.ts';
 import { rollInstance } from '../../src/core/card.ts';
 import { FIGURES } from '../../src/data/cards.ts';
 import type { Action } from '../../src/core/match.ts';
-import type { Card, GameState, Tier } from '../../src/core/types.ts';
+import type { Card, Cell, GameState, Tier } from '../../src/core/types.ts';
 
 function deck(seed: number, tier: Tier = 3): Card[] {
   const pool = FIGURES.filter((figure) => figure.tier === tier);
@@ -120,18 +131,33 @@ describe('the latch', () => {
 });
 
 describe('the regression this module exists for', () => {
+  /** What a match driven through the gate looks like from the outside. */
+  interface Driven {
+    readonly computerPlacements: number;
+    readonly computerBattles: number;
+    readonly final: GameState;
+    /** True if the match never got going, rather than stalling half way. */
+    readonly stalled: boolean;
+  }
+
   /**
-   * Plays a whole match the way `main.ts` does: the gate drives the computer, and the "player"
-   * only ever acts on their own turn. The computer's submissions are applied, so the state the
-   * gate sees is real.
+   * Plays a whole match the way `main.ts` does: the gate is asked on *every* frame, and whichever
+   * side the gate does not serve, the "player" plays — but only on the player's own turn.
+   *
+   * Two shapes here are load-bearing, and both were wrong at first:
+   *
+   *  - the gate is asked every frame, not only on the computer's. `main.ts` calls `stepOpponent()`
+   *    unconditionally. A driver that skips it elsewhere holds the latch forever.
+   *  - at most one action per frame, because a frame that does two things is not a frame.
    */
-  function playThroughGate(seed: number): { computerTurns: number; final: GameState } {
+  function playThroughGate(seed: number): Driven {
     let state: GameState = createMatch({
       seed,
       playerDeck: deck(seed * 2 + 1),
       aiDeck: deck(seed * 2 + 2),
     });
-    let computerTurns = 0;
+    let computerPlacements = 0;
+    let computerBattles = 0;
 
     const h: OpponentHost = {
       busy: false,
@@ -146,48 +172,95 @@ describe('the regression this module exists for', () => {
       },
       submit: (action) => {
         state = applyAction(state, action).state;
+        if (action.t === 'place') computerPlacements++;
+        else if (action.t === 'chooseBattle') computerBattles++;
         return true;
       },
     };
 
     const gate = new OpponentGate();
-    // One action per frame, and the gate is asked every frame — which is exactly what `main.ts`
-    // does. Skipping the gate on the player's frames is not a shortcut, it is a different program:
-    // the latch releases when the gate *observes* the turn change hands, so a driver that never
-    // calls it on the player's turn holds the latch forever and deadlocks. That is exactly the bug,
-    // which is why the driver has to look like the real loop.
     for (let frame = 0; frame < 5000 && state.phase !== 'over'; frame++) {
-      if (gate.step(h, state, 'ai')) {
-        computerTurns++;
-        continue;
-      }
+      if (gate.step(h, state, 'ai')) continue;
+
+      // The gate declined. That is only correct on the player's own turn — if it is the computer's
+      // turn and the gate is silent, the match is stuck and that is the failure being looked for.
+      if (state.turn !== 'player')
+        return { computerPlacements, computerBattles, final: state, stalled: true };
+
       const next = resolve(state);
-      if (next === null) break;
+      if (next === null)
+        return { computerPlacements, computerBattles, final: state, stalled: true };
       state = next;
     }
-    return { computerTurns, final: state };
+    return { computerPlacements, computerBattles, final: state, stalled: state.phase !== 'over' };
   }
 
-  it('acts on every one of its turns, not just the first', () => {
-    // The bug: the latch was set once and only cleared by `newController`, so the opponent made
-    // one move per match. Ten placements alternate, so it gets five turns.
-    const { computerTurns, final } = playThroughGate(1);
+  it('places all five of its cards, not just the first', () => {
+    // The first bug: the latch was set once and only cleared by `newController`, so the opponent
+    // made one move per match. Ten placements alternate, so it gets five turns.
+    const { computerPlacements, final, stalled } = playThroughGate(1);
+    expect(stalled).toBe(false);
     expect(final.phase).toBe('over');
-    expect(computerTurns).toBe(5);
+    expect(computerPlacements).toBe(5);
   });
 
-  it('still moves when the computer opens, and when it is the one contesting a battle', () => {
-    const { computerTurns, final } = playThroughGate(2);
-    expect(final.phase).toBe('over');
-    expect(computerTurns).toBeGreaterThanOrEqual(4);
-  });
-
-  it('handles several seeds, because the failure depended on the board', () => {
-    for (let seed = 3; seed < 12; seed++) {
-      const { computerTurns, final } = playThroughGate(seed);
-      expect(final.phase, `seed ${seed}`).toBe('over');
-      expect(computerTurns, `seed ${seed}`).toBe(5);
+  it('resolves the battle orders its own cards trigger', () => {
+    // The second bug, and the one that looked like a broken button. A contested placement does *not*
+    // hand the turn over (§1.7): the attacker picks the order. So after the computer played a
+    // counter-attacking card, it was the computer's turn to choose and the latch was shut -- the
+    // match hung on a decision only the computer could make, and the interface asked the player.
+    let sawContestedComputerPlacement = false;
+    for (let seed = 1; seed < 40 && !sawContestedComputerPlacement; seed++) {
+      const run = playThroughGate(seed);
+      expect(run.stalled, `seed ${seed}`).toBe(false);
+      expect(run.final.phase, `seed ${seed}`).toBe('over');
+      expect(run.computerPlacements, `seed ${seed}`).toBe(5);
+      sawContestedComputerPlacement = run.computerBattles > 0;
     }
+    // If no seed ever produced a contested computer placement the assertions above are vacuous, so
+    // insist on having actually walked through the situation.
+    expect(sawContestedComputerPlacement).toBe(true);
+  });
+
+  it('never leaves a battle order for a seat that cannot fill it in', () => {
+    // End to end: whatever the computer did, the match finished without a human being asked to act
+    // on the computer's behalf. The driver only ever plays on the player's turn, so a stuck battle
+    // order would show up as a stall rather than a pass.
+    for (let seed = 1; seed <= 12; seed++) {
+      const run = playThroughGate(seed);
+      expect(run.stalled, `seed ${seed}`).toBe(false);
+      expect(run.final.phase, `seed ${seed}`).toBe('over');
+    }
+  });
+
+  it('acts on a battle order left open by its own placement', () => {
+    // The narrow case, stated directly: hand the gate a contested state that is still the
+    // computer's turn, and it must fill in the order rather than waiting for the turn to move.
+    const gate = new OpponentGate();
+    const opened = findContestedComputerTurn();
+    expect(opened, 'no seed produced a contested computer placement').not.toBeNull();
+
+    const state = opened as GameState;
+    expect(state.phase).toBe('chooseBattle');
+    expect(state.turn).toBe('ai');
+
+    const submitted: Action[] = [];
+    const acted = gate.step(
+      {
+        busy: false,
+        decide: (current) => ({ t: 'chooseBattle', cell: current.pendingBattles[0] as Cell }),
+        submit: (action) => {
+          submitted.push(action);
+          return true;
+        },
+      },
+      state,
+      'ai',
+    );
+
+    expect(acted).toBe(true);
+    expect(submitted).toHaveLength(1);
+    expect(submitted[0]?.t).toBe('chooseBattle');
   });
 
   it('forgets the latch when told to reset', () => {
@@ -216,6 +289,29 @@ describe('the regression this module exists for', () => {
     expect(submitted).toHaveLength(0);
   });
 });
+
+/**
+ * Finds a state where the *computer* has just made a contested placement and owes a battle order.
+ *
+ * That is the exact shape the bug needed: `turn` is still the computer's, so a latch waiting for the
+ * turn to change hands never opens.
+ */
+function findContestedComputerTurn(): GameState | null {
+  for (let seed = 1; seed < 60; seed++) {
+    let state: GameState = createMatch({
+      seed,
+      playerDeck: deck(seed * 2 + 1),
+      aiDeck: deck(seed * 2 + 2),
+    });
+    for (let frame = 0; frame < 200 && state.phase !== 'over'; frame++) {
+      if (state.phase === 'chooseBattle' && state.turn === 'ai') return state;
+      const next = resolve(state);
+      if (next === null) break;
+      state = next;
+    }
+  }
+  return null;
+}
 
 /** Answers whatever the match is asking for, so the loop body can stay a loop. */
 function resolve(state: GameState): GameState | null {
