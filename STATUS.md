@@ -842,6 +842,57 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S34 — 2026-10-12 — M8: the screens nobody had opened, and a harness that opens them
+
+**Status:** mobile stage M8 complete. **768 tests** (unchanged). Harness now measures 11 viewports ×
+3 screens.
+
+**Done.** The plan's done-when — the deck fully editable at 360px with no horizontal scrolling — was
+**already true** and is now measured rather than assumed. Two things were not.
+
+**The 44px floor had missed this screen entirely.** M5 wrote it against the board's controls and nobody
+went looking for the others: `.deck-clear` 26px, the search box 33px, every filter `<select>` 27px.
+All at every width, as M5 decided for the rest.
+
+**The deck editor was one slot per row** — `flex: 1 1 12rem` against a 272px column at 320px — so five
+slots were **1450px of scrolling before the card list players came for**. Now an explicit two-column
+grid, as the plan says, which is also the answer to why: 12rem was chosen when the screen was never
+narrower than 640px, and it silently became a one-column layout the moment it was.
+
+**Learned:**
+
+- **A guard you can write is worth more than a guard you have.** `overflow: hidden` on the stat code
+  looked like clipping and was not: as a flex item in a column its width is its fit-content size, and
+  `overflow` only clips what has already been given a width. The two-column grid then pushed the
+  panel 9px past the viewport at every width — the exact bug the `96vw` comment four hundred lines
+  earlier warns about, in a different declaration. Found by measuring after the change, not by reading
+  the change.
+- **The harness measured one screen for the entire project.** The two it never opened are the two
+  nobody had looked at. It now presses the same button a player presses, waits for the screen it
+  asked for rather than a fixed delay, and reports each separately — 33 sections in the baseline.
+- **Faults must be asked only of what they are about.** "Board not fully visible" is a _true_ statement
+  about a board nobody is looking at when the collection screen is open. Board checks go to the board;
+  overflow, target size, overlaps and selectability go to every screen and are labelled with it.
+  Vertical overflow is not asked of collection or rules **because those screens are meant to scroll** —
+  demanding they fit would be demanding they not exist.
+- **The probe was returning a zero-size board for a hidden one**, which every downstream check reads
+  as "too small". It now returns null, and reports which screen it measured.
+- **One mutation survives and it should.** Removing the two-column grid is not a defect; it is the
+  shorter layout this stage rejected on purpose. The gate catches overflow, small targets and overlaps.
+  It does not catch taste, and inventing a threshold for "too tall to be nice" would be worse than
+  saying so.
+- **Three of the plan's four bullets were already satisfied** — the list scrolled independently, the
+  filters wrapped, the rules prose did not overflow. Recorded as already true rather than credited as
+  new work, because a plan read as a to-do list is a plan read as fiction.
+
+**Verified by mutation, six of six** (the sixth being the taste one above, deliberately uncaught).
+
+**Next:** M9, the gate goes green and joins CI.
+**Files touched:** `index.html`, `src/ui/layoutProbe.ts`, `tools/viewport.ts`, `MOBILE.md`,
+`MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S33 — 2026-10-12 — M7a: the bug the screenshot found, and the guard for the whole class
 
 **Status:** post-M7 fix, found from a screenshot. **768 tests** (+1).

@@ -143,11 +143,19 @@
          The checkboxes are labelled, and tapping the label toggles them, so the *label* is the target
          and it is the label that gets the height. The bare `<input>` is left at its natural size,
          because padding on a 13px box does nothing for anyone's thumb. */
+      /* The collection screen was added here in stage M8, which is how the floor turned out to have
+         missed it entirely: `.deck-clear` was 26px, the search box 33px and every filter `<select>`
+         27px. The floor was written against the board screen's controls and nobody went looking for
+         the others. */
       .mode-button,
       .menu-trigger,
       .rematch,
       .opponent-select,
-      .toolbar-toggle {
+      .toolbar-toggle,
+      .deck-clear,
+      .collection-search,
+      .collection-filter select,
+      .collection-filter-check {
         min-height: 44px;
       }
       .toolbar-toggle {
@@ -736,6 +744,47 @@
         .toolbar .rematch {
           padding: 0.3rem 0.55rem;
           font-size: 0.85rem;
+        }
+
+        /* The deck editor becomes an explicit two-column grid (MOBILE.md stage M8).
+
+           It was `flex: 1 1 12rem` on each slot, and 12rem is 192px — wider than the 272px left
+           inside a 320px phone once two fit. So flex put one slot per row, and each one is a
+           sprite, a name, a stat code, a list of scoring points and a button: about 290px tall. Five
+           of them is 1450px of scrolling before the card list, which is the list you came for.
+
+           Two columns rather than a smaller basis because the plan is explicit, and because a
+           shrink-to-fit basis is how this went wrong: 12rem was chosen when the screen was never
+           narrower than 640px, and it silently became a one-column layout the moment it was. */
+        .deck-slots {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.5rem;
+        }
+        .deck-slot {
+          padding: 0.4rem 0.3rem;
+          gap: 0.15rem;
+        }
+        /* The scoring points are the longest string in the slot and the least urgent: which
+           direction a card scores is on the card in the list below, and in the slot's own title and
+           accessible name. Truncated to an ellipsis, never wrapped, because a stat code broken
+           across three lines is harder to read than one line with a dot on the end. */
+        .deck-code {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          /* `max-width`, not just `overflow: hidden`. As a flex item in a column the code's width is
+             its fit-content size — 218px for "BM6A · points E, SE, S, SW, W, NW" — and `overflow`
+             only clips what has already been given a width. Without the cap the slot's contents
+             pushed the panel 9px past the viewport at every width, which is the exact bug the `96vw`
+             comment above warns about, in a different declaration. */
+          max-width: 100%;
+        }
+        /* Full width, so the 44px floor is a strip a thumb can land on rather than a 60px pill. */
+        .deck-clear {
+          width: 100%;
+          padding: 0 0.2rem;
+          font-size: 0.7rem;
         }
       }
       /* The disclosure becomes a panel rather than part of the bar. Whether it collapses at all is

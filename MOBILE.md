@@ -495,17 +495,58 @@ Two lessons from writing that check:
   and `.keys` are hidden by a `max-height: 760px` block rather than the landscape one. The check now
   runs to the end of the stylesheet.
 
-### M8 — Collection and rules on a narrow screen
+### M8 — Collection and rules on a narrow screen — **done**
 
-These are the screens players leave the board for, and neither has been looked at below 640px.
+**No horizontal scrolling at 320, 360, 390 or 640** — the plan's done-when, and it turns out it was
+already true. Everything else was not.
 
-- `.deck-slot { flex: 1 1 12rem }` becomes an explicit two-column grid on narrow screens, so slots
-  never shrink below a tappable size.
-- The collection list scrolls independently of the page.
-- The filter controls wrap sensibly.
-- The rules screen's prose is checked for overflow.
+**The 44px floor had missed this screen entirely.** Stage M5 wrote it against the board's controls and
+nobody went looking for the others: `.deck-clear` was **26px**, the search box 33px and every filter
+`<select>` 27px. The floor is now on all of them, at every width, as M5 decided for the rest.
 
-**Done when** the deck can be fully edited at 360px wide with no horizontal scrolling.
+**The deck editor is an explicit two-column grid below 48rem.** It was `flex: 1 1 12rem` per slot, and
+12rem is 192px — wider than the 272px left inside a 320px phone once two fit. So flex put **one slot
+per row**, and each slot is a sprite, a name, a stat code, a list of scoring points and a button:
+about 290px tall. Five of them was **1450px of scrolling before the card list**, which is the list
+players came for. Two columns is the plan's instruction and it is also the right answer to _why_ this
+happened: 12rem was chosen when the screen was never narrower than 640px, and it silently became a
+one-column layout the moment it was.
+
+**`.deck-code` needed `max-width`, not just `overflow: hidden`.** As a flex item in a column its width
+is its fit-content size — 218px for "BM6A · points E, SE, S, SW, W, NW" — and `overflow` only clips
+what has already been given a width. Without the cap, the two-column grid pushed the panel **9px past
+the viewport at every width**: the exact bug the `96vw` comment in that same stylesheet warns about,
+in a different declaration, four hundred lines later.
+
+**What the plan asked for that turned out to be already true:** the collection list already scrolled
+independently (`max-height: 45vh; overflow-y: auto`), the filters already wrapped, and the rules prose
+had no overflow at any width. Said plainly rather than credited.
+
+**The harness now opens all three screens.** For the whole project it measured one, and the two it
+never opened are the two nobody had looked at. It presses the same button a player presses, waits for
+the screen it asked for rather than a fixed delay, and reports each separately. **11 viewports × 3
+screens = 33 sections** in `MOBILE-baseline.md`.
+
+**Faults are asked only of what they are about.** "Board not fully visible" is a true statement about a
+board nobody is looking at when the collection is open, so the board checks are asked only of the
+board. Sideways overflow, undersized targets, overlapping regions and unselectable prose are asked of
+every screen, and are labelled with the screen so a fault is actionable. Vertical overflow is _not_
+asked of the collection or rules screens, because those are meant to scroll — demanding they fit
+would be demanding they not exist.
+
+The probe reports which screen it measured, and returns `null` for a hidden board and hand rather
+than a zero-size box, because zero reads as "too small" to every check downstream.
+
+**Verified by mutation, six of six.** `.deck-clear` losing the floor (caught); `.deck-code` losing
+`max-width` (caught — the overflow this stage introduced); the panel sized `100vw` instead of `100%`
+(caught); a deck slot given a `min-width` wider than its column (caught); the rules screen made
+unselectable (caught on all three screens at once); and the two-column grid removed (**not caught** —
+see below).
+
+**One mutation survives, and it should.** Removing the two-column grid is not a defect; it is the
+shorter layout this stage rejected on purpose. The gate catches overflow, small targets and
+overlaps — it does not catch taste, and the honest thing is to say so rather than invent a threshold
+for "too tall to be nice".
 
 ### M9 — The layout gate goes green and joins CI
 

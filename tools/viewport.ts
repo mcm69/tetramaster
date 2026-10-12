@@ -28,7 +28,11 @@ import { createServer, type Server } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { chromium, devices, type Browser } from 'playwright';
-import { MIN_TARGET_PX, type LayoutReport } from '../src/ui/layoutProbe.ts';
+import {
+  MIN_TARGET_PX,
+  type LayoutReport,
+  type Screen as ProbeScreen,
+} from '../src/ui/layoutProbe.ts';
 
 const ROOT = process.cwd();
 const DIST = join(ROOT, 'dist');
@@ -118,9 +122,16 @@ function serveDist(): Promise<Server> {
 
 interface Row {
   readonly viewport: Viewport;
-  readonly report: LayoutReport | null;
+  /** One report per screen. `match` is the board; the other two are the screens players leave it for. */
+  readonly reports: Partial<Record<ProbeScreen, LayoutReport>>;
   readonly failure: string | null;
 }
+
+/** The buttons that get us to each screen, in the order they are visited. */
+const SCREENS: readonly { readonly screen: ProbeScreen; readonly trigger: string }[] = [
+  { screen: 'collection', trigger: '#toggle-collection' },
+  { screen: 'rules', trigger: '#toggle-rules' },
+];
 
 async function measure(browser: Browser, viewport: Viewport): Promise<Row> {
   const device = UA_FOR[viewport.label];
@@ -156,14 +167,45 @@ async function measure(browser: Browser, viewport: Viewport): Promise<Row> {
       8,
       { timeout: 10_000 },
     );
-    const report = await page.evaluate<LayoutReport | null>(() => {
-      return (globalThis as unknown as { __layoutReport?: LayoutReport }).__layoutReport ?? null;
-    });
-    return { viewport, report, failure: problems.length > 0 ? problems.join('; ') : null };
+    const readReport = async (): Promise<LayoutReport | null> =>
+      page.evaluate<LayoutReport | null>(
+        () => (globalThis as unknown as { __layoutReport?: LayoutReport }).__layoutReport ?? null,
+      );
+
+    const reports: Partial<Record<ProbeScreen, LayoutReport>> = {};
+    const first = await readReport();
+    if (first !== null) reports[first.screen] = first;
+
+    // The other two screens, by pressing the same button a player presses.
+    //
+    // This is stage M8's lesson made mechanical: for the whole project the harness measured one
+    // screen, and the two it never opened are the two nobody had looked at below 640px. The probe
+    // re-publishes on any DOM mutation and toggling `hidden` is one, so each screen is measured
+    // where the player reaches it rather than by poking at internals.
+    for (const { screen, trigger } of SCREENS) {
+      await page.click(trigger);
+      // Wait for the screen we asked for rather than a fixed delay — the same rule the touch tool
+      // learned the hard way twice.
+      await page.waitForFunction(
+        (wanted) => {
+          const report = (globalThis as unknown as { __layoutReport?: { screen?: string } })
+            .__layoutReport;
+          return report?.screen === wanted;
+        },
+        screen,
+        { timeout: 10_000 },
+      );
+      const report = await readReport();
+      if (report !== null) reports[report.screen] = report;
+    }
+    // Back to the board, so the detail table's primary report is the one a player starts on.
+    await page.click('#toggle-collection');
+
+    return { viewport, reports, failure: problems.length > 0 ? problems.join('; ') : null };
   } catch (error) {
     return {
       viewport,
-      report: null,
+      reports: {},
       failure: error instanceof Error ? error.message : String(error),
     };
   } finally {
@@ -171,77 +213,121 @@ async function measure(browser: Browser, viewport: Viewport): Promise<Row> {
   }
 }
 
+/** The rows of the per-screen table, minus the ones that are only true of the board. */
+function screenRows(r: LayoutReport, viewport: Viewport): string[] {
+  const board = r.board;
+  return [
+    `| requested viewport | ${viewport.width}×${viewport.height} |`,
+    // `window.innerWidth` is not the requested width once content overflows, and the difference is
+    // exactly the kind of thing this tool exists to notice. Both numbers, always.
+    `| reported viewport | ${r.viewport.width}×${r.viewport.height} |`,
+    `| board | ${board === null ? 'hidden' : `${board.width}×${board.height} at (${board.x}, ${board.y})`} |`,
+    `| fully visible | ${r.boardFullyVisible ? 'yes' : '**NO**'} |`,
+    `| hand tray | ${r.hand === null ? 'hidden' : `${r.hand.width}×${r.hand.height} at (${r.hand.x}, ${r.hand.y})`} |`,
+    `| hand visible | ${r.handFullyVisible ? 'yes' : '**NO**'} |`,
+    `| board and hand together | ${r.boardAndHandVisible ? 'yes' : '**NO**'} |`,
+    `| sideways overflow | ${r.horizontalOverflow === 0 ? 'none' : `**${r.horizontalOverflow}px**`} |`,
+    `| chrome (everything but the board) | ${r.chromeHeight}px |`,
+    `| page height | ${r.viewport.height}${r.pageOverflowPx > 0 ? ` — **${r.pageOverflowPx}px taller than the screen**` : ' — fits vertically'} |`,
+    `| overlapping regions | ${r.overlaps.length === 0 ? 'none' : `**${r.overlaps.map((o) => `${o.a} / ${o.b} (${o.area}px²)`).join(', ')}**`} |`,
+    `| targets under ${MIN_TARGET_PX}px | ${r.tooSmall.length} of ${r.interactive} |`,
+    `| board touch-action | ${r.touch.boardTouchAction} |`,
+    `| hand touch-action | ${r.touch.handTouchAction} |`,
+    `| prose selectable | ${r.touch.proseSelectable ? 'yes' : '**no**'} |`,
+  ];
+}
+
 function summarise(rows: readonly Row[]): string[] {
   const lines: string[] = [];
   for (const row of rows) {
     const { viewport, failure } = row;
-    const r = row.report;
+    const r = row.reports['match'];
     const head = `## ${viewport.label} — ${viewport.width}×${viewport.height}${viewport.touch ? ' (touch)' : ''}`;
     lines.push(head, '');
-    if (r === null) {
+    if (r === undefined) {
       lines.push(`**Could not measure.** ${failure ?? 'unknown error'}`, '');
       continue;
     }
-    const board = r.board;
-    const tooSmall = r.tooSmall;
-    lines.push(
-      '| | |',
-      '|---|---|',
-      `| requested viewport | ${viewport.width}×${viewport.height} |`,
-      // `window.innerWidth` is not the requested width once content overflows, and the difference is
-      // exactly the kind of thing this tool exists to notice. Both numbers, always.
-      `| reported viewport | ${r.viewport.width}×${r.viewport.height} |`,
-      `| board | ${board === null ? '**not found**' : `${board.width}×${board.height} at (${board.x}, ${board.y})`} |`,
-      `| fully visible | ${r.boardFullyVisible ? 'yes' : '**NO**'} |`,
-      `| hand tray | ${r.hand === null ? '**not found**' : `${r.hand.width}×${r.hand.height} at (${r.hand.x}, ${r.hand.y})`} |`,
-      `| hand visible | ${r.handFullyVisible ? 'yes' : '**NO**'} |`,
-      `| board and hand together | ${r.boardAndHandVisible ? 'yes' : '**NO**'} |`,
-      `| sideways overflow | ${r.horizontalOverflow === 0 ? 'none' : `**${r.horizontalOverflow}px**`} |`,
-      `| chrome (everything but the board) | ${r.chromeHeight}px |`,
-      `| page height | ${r.viewport.height}${r.pageOverflowPx > 0 ? ` — **${r.pageOverflowPx}px taller than the screen**` : ' — fits vertically'} |`,
-      `| overlapping regions | ${r.overlaps.length === 0 ? 'none' : `**${r.overlaps.map((o) => `${o.a} / ${o.b} (${o.area}px²)`).join(', ')}**`} |`,
-      `| targets under ${MIN_TARGET_PX}px | ${tooSmall.length} of ${r.interactive} |`,
-      `| board touch-action | ${r.touch.boardTouchAction} |`,
-      `| hand touch-action | ${r.touch.handTouchAction} |`,
-      `| prose selectable | ${r.touch.proseSelectable ? 'yes' : '**no**'} |`,
-      '',
-    );
-    if (tooSmall.length > 0) {
+    lines.push('### board', '', '| | |', '|---|---|', ...screenRows(r, viewport), '');
+    if (r.tooSmall.length > 0) {
       lines.push('Controls too small to tap comfortably:', '');
-      for (const target of tooSmall) {
+      for (const target of r.tooSmall) {
         lines.push(`- \`${target.label}\` — ${target.width}×${target.height}`);
       }
       lines.push('');
+    }
+    for (const screen of ['collection', 'rules'] as const) {
+      const secondary = row.reports[screen];
+      if (secondary === undefined) continue;
+      const small = secondary.tooSmall;
+      lines.push(`### ${screen}`, '', '| | |', '|---|---|', ...screenRows(secondary, viewport), '');
+      if (small.length > 0) {
+        lines.push('Controls too small to tap comfortably:', '');
+        for (const target of small) {
+          lines.push(`- \`${target.label}\` — ${target.width}×${target.height}`);
+        }
+        lines.push('');
+      }
     }
     if (failure !== null) lines.push(`Page errors: ${failure}`, '');
   }
   return lines;
 }
 
-/** The headline facts, so the summary at the top of the document is readable without scrolling. */
-function verdicts(rows: readonly Row[]): string[] {
-  return rows.map((row) => {
-    const name = `${row.viewport.label} (${row.viewport.width}×${row.viewport.height})`;
-    if (row.report === null)
-      return `- **${name}** — could not measure: ${row.failure ?? 'unknown'}`;
-    const r = row.report;
-    const faults: string[] = [];
+/**
+ * The faults on one screen.
+ *
+ * Split by what each check is *about*. "Board not fully visible" is a real statement about a board
+ * nobody is looking at when the collection screen is open, so the board checks are asked only of the
+ * board. Everything else — sideways overflow, undersized targets, overlapping regions, text that
+ * cannot be selected — is about the page as a whole and is asked of every screen.
+ *
+ * Vertical overflow is asked only of the board too, and only because the collection and rules
+ * screens are *meant* to scroll: the collection has a deck and a catalogue, and the rules are 3000px
+ * of prose. Demanding they fit would be demanding they not exist.
+ */
+function faultsFor(r: LayoutReport): string[] {
+  const faults: string[] = [];
+  const onBoard = r.screen === 'match';
+  // Labelled only when it is not the board. "8px sideways overflow" appearing twice in one line,
+  // once for the collection and once for the rules, is a fault nobody can act on.
+  const say = (text: string): void => {
+    faults.push(onBoard ? text : `${r.screen}: ${text}`);
+  };
+
+  if (onBoard) {
     if (r.pageOverflowPx > 0) faults.push(`page ${r.pageOverflowPx}px too tall`);
     if (!r.boardFullyVisible) faults.push('board not fully visible');
     if (!r.handFullyVisible) faults.push('hand tray below the fold');
     else if (!r.boardAndHandVisible) faults.push('board and hand not visible together');
-    if (r.horizontalOverflow > 0) faults.push(`${r.horizontalOverflow}px sideways overflow`);
-    if (r.tooSmall.length > 0)
-      faults.push(`${r.tooSmall.length} control(s) under ${MIN_TARGET_PX}px`);
-    if (r.overlaps.length > 0)
-      faults.push(
-        `${r.overlaps.length} overlapping region(s): ${r.overlaps.map((o) => `${o.a}/${o.b}`).join(', ')}`,
-      );
+  }
+  if (r.horizontalOverflow > 0) say(`${r.horizontalOverflow}px sideways overflow`);
+  if (r.tooSmall.length > 0) say(`${r.tooSmall.length} control(s) under ${MIN_TARGET_PX}px`);
+  if (r.overlaps.length > 0)
+    say(
+      `${r.overlaps.length} overlapping region(s): ${r.overlaps.map((o) => `${o.a}/${o.b}`).join(', ')}`,
+    );
+  if (onBoard) {
     if (r.touch.boardTouchAction === 'none') faults.push('board blocks pinch-zoom');
     if (r.touch.handTouchAction !== 'none')
       faults.push('hand cards allow panning, so a drag would scroll the page');
-    if (r.touch.controlsSelectable) faults.push('controls are text-selectable');
-    if (!r.touch.proseSelectable) faults.push('the rules screen is not selectable');
+  }
+  if (r.touch.controlsSelectable && r.screen === 'match')
+    faults.push('controls are text-selectable');
+  // The rules screen is the prose. Not being able to select prose is a defect on every screen, and
+  // this is the one screen where anyone is actually trying to read some.
+  if (!r.touch.proseSelectable) say('prose is not selectable');
+  return faults;
+}
+
+/** The headline facts, so the summary at the top of the document is readable without scrolling. */
+function verdicts(rows: readonly Row[]): string[] {
+  return rows.map((row) => {
+    const name = `${row.viewport.label} (${row.viewport.width}×${row.viewport.height})`;
+    const reports = Object.values(row.reports);
+    if (reports.length === 0)
+      return `- **${name}** — could not measure: ${row.failure ?? 'unknown'}`;
+    const faults = reports.flatMap(faultsFor);
     return faults.length === 0 ? `- **${name}** — fits.` : `- **${name}** — ${faults.join(', ')}.`;
   });
 }
@@ -286,7 +372,7 @@ async function main(): Promise<void> {
   }
 
   writeFileSync(OUT, `${render(rows)}\n`);
-  process.stdout.write(`${formatReport(rows[0]?.report ?? null)}\n`);
+  process.stdout.write(`${formatReport(rows[0]?.reports['match'] ?? null)}\n`);
   process.stdout.write(`\nWrote ${OUT}\n`);
   for (const line of verdicts(rows)) process.stdout.write(`${line}\n`);
 }

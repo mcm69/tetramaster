@@ -26,6 +26,8 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 
 ## iPhone SE (1st gen) — 320×568 (touch)
 
+### board
+
 |                                   |                                      |
 | --------------------------------- | ------------------------------------ |
 | requested viewport                | 320×568                              |
@@ -44,7 +46,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                                 |
 | prose selectable                  | yes                                  |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 320×568                                |
+| reported viewport                 | 320×568                                |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 1375px                                 |
+| page height                       | 568 — **807px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 320×568                                 |
+| reported viewport                 | 320×568                                 |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 3612px                                  |
+| page height                       | 568 — **3044px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## small Android — 360×640 (touch)
+
+### board
 
 |                                   |                        |
 | --------------------------------- | ---------------------- |
@@ -64,7 +108,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                   |
 | prose selectable                  | yes                    |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 360×640                                |
+| reported viewport                 | 360×640                                |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 1283px                                 |
+| page height                       | 640 — **643px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 360×640                                 |
+| reported viewport                 | 360×640                                 |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 3262px                                  |
+| page height                       | 640 — **2622px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## iPhone SE (2nd/3rd) — 375×667 (touch)
+
+### board
 
 |                                   |                        |
 | --------------------------------- | ---------------------- |
@@ -84,7 +170,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                   |
 | prose selectable                  | yes                    |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 375×667                                |
+| reported viewport                 | 375×667                                |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 1295px                                 |
+| page height                       | 667 — **628px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 375×667                                 |
+| reported viewport                 | 375×667                                 |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 3160px                                  |
+| page height                       | 667 — **2493px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## iPhone 12/13/14 — 390×844 (touch)
+
+### board
 
 |                                   |                        |
 | --------------------------------- | ---------------------- |
@@ -104,7 +232,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                   |
 | prose selectable                  | yes                    |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 390×844                                |
+| reported viewport                 | 390×844                                |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 1477px                                 |
+| page height                       | 844 — **633px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 390×844                                 |
+| reported viewport                 | 390×844                                 |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 3180px                                  |
+| page height                       | 844 — **2336px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## iPhone XR/11 — 414×896 (touch)
+
+### board
 
 |                                   |                        |
 | --------------------------------- | ---------------------- |
@@ -124,7 +294,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                   |
 | prose selectable                  | yes                    |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 414×896                                |
+| reported viewport                 | 414×896                                |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 1500px                                 |
+| page height                       | 896 — **604px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 414×896                                 |
+| reported viewport                 | 414×896                                 |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 3040px                                  |
+| page height                       | 896 — **2144px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## phone landscape — 844×390 (touch)
+
+### board
 
 |                                   |                           |
 | --------------------------------- | ------------------------- |
@@ -144,7 +356,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                      |
 | prose selectable                  | yes                       |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 844×390                                |
+| reported viewport                 | 844×390                                |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 897px                                  |
+| page height                       | 390 — **507px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 844×390                                 |
+| reported viewport                 | 844×390                                 |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 1711px                                  |
+| page height                       | 390 — **1321px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## small landscape — 667×375 (touch)
+
+### board
 
 |                                   |                           |
 | --------------------------------- | ------------------------- |
@@ -164,7 +418,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                      |
 | prose selectable                  | yes                       |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 667×375                                |
+| reported viewport                 | 667×375                                |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 943px                                  |
+| page height                       | 375 — **568px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 667×375                                 |
+| reported viewport                 | 667×375                                 |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 2054px                                  |
+| page height                       | 375 — **1679px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## short landscape — 812×320 (touch)
+
+### board
 
 |                                   |                          |
 | --------------------------------- | ------------------------ |
@@ -184,7 +480,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                     |
 | prose selectable                  | yes                      |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 812×320                                |
+| reported viewport                 | 812×320                                |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 866px                                  |
+| page height                       | 320 — **546px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 812×320                                 |
+| reported viewport                 | 812×320                                 |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 1731px                                  |
+| page height                       | 320 — **1411px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## iPad portrait — 768×1024 (touch)
+
+### board
 
 |                                   |                          |
 | --------------------------------- | ------------------------ |
@@ -204,7 +542,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                     |
 | prose selectable                  | yes                      |
 
+### collection
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 768×1024                                |
+| reported viewport                 | 768×1024                                |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 1484px                                  |
+| page height                       | 1024 — **460px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 38                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
+### rules
+
+|                                   |                                          |
+| --------------------------------- | ---------------------------------------- |
+| requested viewport                | 768×1024                                 |
+| reported viewport                 | 768×1024                                 |
+| board                             | hidden                                   |
+| fully visible                     | **NO**                                   |
+| hand tray                         | hidden                                   |
+| hand visible                      | **NO**                                   |
+| board and hand together           | **NO**                                   |
+| sideways overflow                 | none                                     |
+| chrome (everything but the board) | 2100px                                   |
+| page height                       | 1024 — **1076px taller than the screen** |
+| overlapping regions               | none                                     |
+| targets under 44px                | 0 of 40                                  |
+| board touch-action                | manipulation                             |
+| hand touch-action                 | none                                     |
+| prose selectable                  | yes                                      |
+
 ## laptop — 1280×720
+
+### board
 
 |                                   |                                        |
 | --------------------------------- | -------------------------------------- |
@@ -224,7 +604,49 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | hand touch-action                 | none                                   |
 | prose selectable                  | yes                                    |
 
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 1280×720                               |
+| reported viewport                 | 1280×720                               |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 1162px                                 |
+| page height                       | 720 — **442px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 1280×720                                |
+| reported viewport                 | 1280×720                                |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 1898px                                  |
+| page height                       | 720 — **1178px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |
+
 ## desktop — 1440×900
+
+### board
 
 |                                   |                                        |
 | --------------------------------- | -------------------------------------- |
@@ -243,3 +665,43 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | board touch-action                | manipulation                           |
 | hand touch-action                 | none                                   |
 | prose selectable                  | yes                                    |
+
+### collection
+
+|                                   |                                        |
+| --------------------------------- | -------------------------------------- |
+| requested viewport                | 1440×900                               |
+| reported viewport                 | 1440×900                               |
+| board                             | hidden                                 |
+| fully visible                     | **NO**                                 |
+| hand tray                         | hidden                                 |
+| hand visible                      | **NO**                                 |
+| board and hand together           | **NO**                                 |
+| sideways overflow                 | none                                   |
+| chrome (everything but the board) | 1340px                                 |
+| page height                       | 900 — **440px taller than the screen** |
+| overlapping regions               | none                                   |
+| targets under 44px                | 0 of 38                                |
+| board touch-action                | manipulation                           |
+| hand touch-action                 | none                                   |
+| prose selectable                  | yes                                    |
+
+### rules
+
+|                                   |                                         |
+| --------------------------------- | --------------------------------------- |
+| requested viewport                | 1440×900                                |
+| reported viewport                 | 1440×900                                |
+| board                             | hidden                                  |
+| fully visible                     | **NO**                                  |
+| hand tray                         | hidden                                  |
+| hand visible                      | **NO**                                  |
+| board and hand together           | **NO**                                  |
+| sideways overflow                 | none                                    |
+| chrome (everything but the board) | 2001px                                  |
+| page height                       | 900 — **1101px taller than the screen** |
+| overlapping regions               | none                                    |
+| targets under 44px                | 0 of 40                                 |
+| board touch-action                | manipulation                            |
+| hand touch-action                 | none                                    |
+| prose selectable                  | yes                                     |

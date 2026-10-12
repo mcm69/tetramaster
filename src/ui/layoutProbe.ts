@@ -44,6 +44,9 @@ export interface ProbeTarget {
 }
 
 /** Two things painted on top of each other, which no amount of "is it on screen" can detect. */
+/** The screens the app has. The board-specific checks only apply to `match`. */
+export type Screen = 'match' | 'collection' | 'rules';
+
 export interface ProbeOverlap {
   readonly a: string;
   readonly b: string;
@@ -100,6 +103,15 @@ export interface LayoutReport {
    * question too.
    */
   readonly overlaps: readonly ProbeOverlap[];
+  /**
+   * Which screen this report describes.
+   *
+   * It matters because most of this report is about the board, and the board is hidden on the
+   * collection and rules screens. Measuring those and reporting "board not fully visible" would be a
+   * true statement about a board nobody is looking at — the same mistake as measuring a page before
+   * its JavaScript has run, and worth naming so nobody re-adds the check there.
+   */
+  readonly screen: Screen;
   /**
    * The touch policy the stylesheet promises, read back as computed style.
    *
@@ -173,10 +185,16 @@ export function collectLayout(
     };
   };
 
+  const shown = (id: string): boolean => doc.getElementById(id)?.hasAttribute('hidden') === false;
+  const screen: Screen = shown('collection') ? 'collection' : shown('rules') ? 'rules' : 'match';
+
+  // A hidden board has no rect worth reporting. `hidden` rather than a zero-size box, because a
+  // hidden canvas measures zero and a zero reads as "too small" to every other check downstream.
   const canvas = doc.querySelector('#board');
-  const board = canvas === null ? null : rectOf(canvas);
+  const board = canvas === null || canvas.hasAttribute('hidden') ? null : rectOf(canvas);
   const handElement = doc.querySelector('#hand');
-  const hand = handElement === null ? null : rectOf(handElement);
+  const hand =
+    handElement === null || handElement.hasAttribute('hidden') ? null : rectOf(handElement);
 
   const visibleHeight = view.visualViewport?.height ?? view.innerHeight;
   const visibleWidth = view.visualViewport?.width ?? view.innerWidth;
@@ -281,6 +299,7 @@ export function collectLayout(
     interactive: elements.length,
     tooSmall,
     overlaps,
+    screen,
     touch: {
       boardTouchAction,
       handTouchAction,
