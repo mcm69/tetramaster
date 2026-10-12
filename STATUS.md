@@ -893,6 +893,42 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S38 — 2026-10-12 — Published: upstream remote, Pages workflow, and the one line that made it work
+
+**Status:** `upstream` = `git@github.com:mcm69/tetramaster.git`. Two workflows: `verify` (the gate)
+and `pages` (the delivery).
+
+**The non-obvious part was `base: './'`.** `vite.config.ts` had no `base`, so Vite emitted
+`/assets/index-*.js` — correct at a domain root, **broken at a project page's subpath**. This is not a
+cosmetic difference:
+
+| build          | loaded from `mcm69.github.io/tetramaster/`                           |
+| -------------- | -------------------------------------------------------------------- |
+| default `base` | script 404s, the hand tray never renders, **the app does not boot**  |
+| `base: './'`   | no failed requests, board 560×560, five hand cards, zero page errors |
+
+Checked by serving `dist/` under a prefix with Playwright rather than assumed, and then confirmed by
+putting the old `base` back and watching the same check fail.
+
+**The Pages workflow deploys on `push` to main only, not on `pull_request`.** A Pages job firing on
+pull requests publishes unreviewed code to the live site, and a fork's pull request has neither the
+Pages permission nor the artifact access — so it would either overwrite production or fail on a
+branch nobody was going to look at. `verify.yml` still runs on pull requests; that is where review
+belongs. Its concurrency group does **not** cancel in progress, the opposite of `verify.yml`, because
+a half-finished deploy leaves a broken site.
+
+**The deploy does not re-run the gate.** `npm run build` is `tsc --noEmit && vite build`, so a deploy
+cannot ship a bundle that does not typecheck, and the layout gate lives in `verify.yml`. The two
+workflows run in parallel, so nothing waits on anything.
+
+**One thing I cannot do from here:** Pages must be enabled on the repository with **Settings → Pages
+→ Source: GitHub Actions**. That is a repo setting, not a file, so the workflow will fail until it is
+set. Flagged rather than left to be discovered by a red run.
+
+**Files touched:** `vite.config.ts`, `.github/workflows/pages.yml`, `README.md`, `STATUS.md`
+
+---
+
 ### S37 — 2026-10-12 — "You win" over a 0–10 board, and the save counted it
 
 **Reported from play:** losing every card showed **"Perfect game — you take everything"** and **"Every

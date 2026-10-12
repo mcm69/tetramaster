@@ -1,0 +1,71 @@
+# Publishes the built game to GitHub Pages.
+#
+# Separate from `verify.yml` on purpose. `verify` is the gate -- it decides whether a commit is
+# good -- and this is the delivery. Running the whole gate again here would double the CI time on
+# every push to re-derive a verdict that has just been derived, and the two workflows run in
+# parallel, so nothing waits on anything.
+#
+# `npm run build` is `tsc --noEmit && vite build`, so a deploy cannot ship a bundle that does not
+# typecheck. The layout gate lives in `verify.yml`, where it belongs.
+name: pages
+
+# `push` to main only, and not `pull_request`. A Pages job that fires on pull requests publishes
+# unreviewed code to the live site, and a fork's pull request has neither the Pages permission nor
+# the artifact access to deploy at all -- so it would either overwrite production or fail on a
+# branch nobody was ever going to look at. `verify.yml` still runs on pull requests; that is where
+# review belongs.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Required by `actions/deploy-pages`: OIDC token for the Pages API, and write access to publish.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages deploys are not cancellable in the usual way -- a half-finished deploy leaves a broken site.
+# So this group does *not* cancel in progress, which is the opposite of `verify.yml` and deliberate.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # The bundle is uploaded as an artifact and deployed by the next job, which is how
+      # `actions/deploy-pages` works: it will not deploy a directory, it deploys an artifact.
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # `github-pages` is the environment whose URL becomes the deployment's link and which carries
+    # the protection rules. Naming it is what makes the URL show up on the commit.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

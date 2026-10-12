@@ -9,12 +9,15 @@ this version shows you the rules, your exact stats, and your odds before every f
 Zero runtime dependencies. All card art is procedurally generated and all audio is synthesised — no
 asset from the original game is present in this repository.
 
+**Play it:** <https://mcm69.github.io/tetramaster/>
+
 ```bash
 npm install
 npm run dev      # http://localhost:8080
 ```
 
-Requires Node 22+ (developed on Node 26).
+Requires Node 22+ (developed on Node 26). Nothing to install to _play_ it — the bundle has zero runtime
+dependencies and is served straight from `dist/`.
 
 ## Playing it
 

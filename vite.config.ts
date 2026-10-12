@@ -1,6 +1,11 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Relative asset paths. The default `/` emits `/assets/index-*.js`, which resolves to the domain
+  // root -- correct at `mcm69.github.io/` and broken at `mcm69.github.io/tetramaster/`, because the
+  // project page is served from a subpath. `./` works at both, and at a domain served from disk,
+  // which is what the layout harness does when it serves `dist/` over HTTP.
+  base: './',
   server: { port: 8080, strictPort: true },
   preview: { port: 8080, strictPort: true },
   build: { target: 'es2022', outDir: 'dist', sourcemap: true },
