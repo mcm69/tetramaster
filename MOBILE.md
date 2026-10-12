@@ -548,20 +548,63 @@ shorter layout this stage rejected on purpose. The gate catches overflow, small 
 overlaps — it does not catch taste, and the honest thing is to say so rather than invent a threshold
 for "too tall to be nice".
 
-### M9 — The layout gate goes green and joins CI
+### M9 — The layout gate goes green and joins CI — **done**
 
-The harness from M0 becomes an assertion, which is when it stops being a measuring instrument and
-starts being a gate.
+`npm run layout` (or `npm run viewport -- --check`) measures, writes `MOBILE-baseline.md` and **exits
+non-zero** on a broken rule. It is the last step of `npm run verify`, and CI installs Chromium first.
+**787 tests**, 11 viewports × 3 screens = **33 measurements**.
 
-- Assertions per device size: board fully inside the viewport, `scrollWidth <= clientWidth`, no
-  interactive target under 44px, board height ≥ an agreed floor.
-- Matrix: 320×568, 360×640, 375×667, 390×844, 414×896, 768×1024, 844×390 landscape, and two desktop
-  sizes so the desktop layout cannot silently regress.
-- Wired into `npm run verify` and the existing CI job. This is also where desktop gets asserted,
-  which nothing currently does at the layout level.
+**The rules live in `tools/layoutGate.ts`, as a pure function of measurements.** That is what lets
+`tests/core/layoutGate.test.ts` check all four assertions — and the things that are deliberately not
+asserted — without launching a browser. A gate whose rules can only be checked by running a browser is
+a gate nobody checks the rules of, which is how "the gate exists" stays a claim long after it lands.
 
-**This closes the standing DoD gap.** Every stage of this project has been verified in Node and
-jsdom; nobody has watched the board draw on hardware.
+**The four assertions are the plan's, not mine.** Board inside the viewport; `scrollWidth <=
+clientWidth`; no interactive target under 44px; board at least 199px tall. That last number is
+**derived, not chosen**: `METRICS.cellSize` is 115px in a 520px board, so a board square is
+`size / 520 * 115`, and 199 is the size at which a square reaches the same 44px minimum every other
+target is held to. A board can be fully visible, free of overflow and free of small controls while
+being too small to play, and that number exists for exactly that case.
+
+**A gate that passes on a _missing_ measurement is not a gate.** `unmeasured()` fails when the harness
+did not produce a report for one of the three screens. Renaming a button the harness clicks makes
+**33 failures**, not zero — "not checked" is not "nothing wrong".
+
+**Three limitations are reported and do not fail**, each labelled with its viewport so two notes about
+two sizes are two lines a reader can tell apart:
+
+- **The hand tray is below the fold on every desktop size.** A 560px board plus 398px of chrome is
+  958px, so a 720px window cannot show both. It has always been this way, §7 says desktop is
+  unchanged, and none of the four assertions cover it. **This is a measurement of a known limitation,
+  not a statement that the desktop layout is verified good.** Making the board height-aware on
+  desktop is a real fix and a separate decision; the arithmetic is in `KNOWN_LIMITATIONS`.
+- **Board squares are 36px at 812×320**, under the 44px floor. Reaching 199 needs 35 more pixels, and
+  the only places they exist are the navigation buttons (50, which means putting Collection and
+  How-to-play in the settings menu — declined four times) or the hint row (18, which brings back the
+  board jumping under the player's finger). The floor drops to 160 **for viewports under 544px tall
+  and only those**, so a further 5% shrink still fails.
+
+**The plan does not assert page height anywhere, deliberately.** The collection and rules screens
+_must_ scroll; a game with a deck, a catalogue and 3000px of rules cannot be laid out to fit a phone,
+and a rule demanding it would be demanding they not exist.
+
+**CI:** `npx playwright install --with-deps chromium` before `verify`. `--with-deps` matters — without
+the shared libraries Chromium fails to launch and the gate reports an error rather than a layout
+failure, which is exactly the wrong thing to be loud about. The job timeout went 15 → 20 minutes for
+the install plus 33 page loads; a gate that times out teaches people to re-run it, and a re-run that
+passes teaches them the timeout was noise.
+
+**Verified by mutation, six of six.** `.mode-button` leaving the 44px floor (33 failures); the
+collection panel sized `100vw` (18); the landscape `aspect-ratio` backstop removed (an overlap);
+the board's `max-width` cut to 120px (the floor); the landscape board budget removed (the floor);
+and a button the harness needs renamed (33 — the missing-measurement rule).
+
+**The mutation run found the gate was not running at all.** Five of the first six mutations "passed".
+`tools/viewport.ts` serves `dist/`, and running it directly does not rebuild — so it measured a bundle
+that had never been built from the mutations. `npm run viewport` and `npm run layout` build first,
+which is why it only ever happens when the script is invoked directly, which is exactly when you are
+debugging it. **`refuseStaleBuild()` now exits 1 when `dist/` is older than `src/`**, and it fired on
+the very next run.
 
 ### M10 — Documentation
 

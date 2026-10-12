@@ -842,6 +842,58 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S35 — 2026-10-12 — M9: the gate, and the day it wasn't running
+
+**Status:** mobile stage M9 complete. **787 tests** (+19). Gate green: 11 viewports x 3 screens.
+
+**Done.** `npm run layout` measures, writes the baseline and exits non-zero on a broken rule. It is
+the last step of `npm run verify`; CI installs Chromium first. The rules live in `tools/layoutGate.ts`
+as a pure function of measurements, which is what lets all four assertions be tested without a
+browser — a gate whose rules can only be checked by running a browser is a gate nobody checks the
+rules of.
+
+**The board floor is derived, not chosen.** `METRICS.cellSize` is 115px in a 520px board, so 199 is the
+size at which a square reaches the same 44px minimum every other target holds. A board can be fully
+visible, overflow-free and small-target-free while being too small to play, and that number exists
+for exactly that case. **It fired on the gate's first real run.**
+
+**Learned:**
+
+- **Five of my first six mutations "passed" — the gate was not running.** `tools/viewport.ts` serves
+  `dist/`, and invoking it directly does not rebuild, so it measured a bundle that had never been
+  built from the mutations. `npm run viewport` and `npm run layout` build first, which is why this
+  only ever happens when you invoke the script directly — which is exactly when you are debugging it.
+  **This is the fifth time in this project that measuring a stale artefact read as "no problems".**
+  `refuseStaleBuild()` now exits 1 when `dist/` is older than `src/`, and it fired on the next run.
+  The lesson is not "remember to rebuild"; it is that a tool which reads a build artefact must check
+  the artefact is current, because _my_ memory is not part of its contract.
+- **A gate that passes on a missing measurement is not a gate.** Renaming a button the harness clicks
+  now produces **33 failures**, not zero. "Not checked" is not "nothing wrong", and the difference is
+  one function.
+- **Three limitations are reported rather than fixed, each with its arithmetic.** The hand tray is
+  below the fold on every desktop size (560px board + 398px chrome > 720px window) — pre-existing, and
+  §7 keeps desktop unchanged. Board squares are 36px at 812×320; closing that needs the navigation
+  buttons in the settings menu or the hint row gone, both declined before. The floor drops to 160
+  **only** below 544px tall, so a further 5% shrink still fails. **Reported, not hidden** — and the
+  desktop note says in its own words that it is a measurement, not a statement that desktop is good.
+- **A refactor broke a test that had been passing, which is the test working.** Moving the viewport
+  from a note's `detail` into its `screen` label left one assertion checking the wrong field. The test
+  caught it; I would not have.
+- **One test I wrote was weak and I replaced it rather than keeping it.** "fails when a screen could
+  not be measured" asserted that an empty result was empty — a test that could not fail. It now
+  asserts three specific failures.
+
+**Verified by mutation, six of six.** Mode button leaving the 44px floor (33 failures); collection
+panel sized `100vw` (18); landscape `aspect-ratio` backstop removed (an overlap); board max-width cut
+to 120px (the floor); landscape board budget removed (the floor); a button the harness needs renamed
+(33 — the missing-measurement rule).
+
+**Next:** M10, documentation — and then this plan is finished.
+**Files touched:** `tools/layoutGate.ts`, `tools/viewport.ts`, `tests/core/layoutGate.test.ts`,
+`package.json`, `.github/workflows/verify.yml`, `MOBILE.md`, `MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S34 — 2026-10-12 — M8: the screens nobody had opened, and a harness that opens them
 
 **Status:** mobile stage M8 complete. **768 tests** (unchanged). Harness now measures 11 viewports ×

@@ -20,10 +20,11 @@
     "coverage": "vitest run --coverage",
     "rules:audit": "node tools/rules-audit.ts",
     "simulate": "node tools/verify.ts 10000",
-    "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage && npm run rules:audit && npm run simulate && npm run balance && npm run perf",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run coverage && npm run rules:audit && npm run simulate && npm run balance && npm run perf && npm run layout",
     "perf": "node tools/perf.ts",
     "balance": "node tools/balance.ts",
-    "touch": "npm run build && node --experimental-strip-types tools/touchDrag.ts"
+    "touch": "npm run build && node --experimental-strip-types tools/touchDrag.ts",
+    "layout": "npm run build && node tools/viewport.ts --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

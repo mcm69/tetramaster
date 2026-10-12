@@ -23,7 +23,7 @@
  * used by the tool and by a person holding a real device.
  */
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -33,8 +33,12 @@ import {
   type LayoutReport,
   type Screen as ProbeScreen,
 } from '../src/ui/layoutProbe.ts';
+import { checkLayout } from './layoutGate.ts';
 
 const ROOT = process.cwd();
+/** `--check` turns the report into a gate. The measurements and the written file are identical. */
+const CHECK = process.argv.includes('--check');
+
 const DIST = join(ROOT, 'dist');
 const OUT = join(ROOT, 'MOBILE-baseline.md');
 const PORT = 8123;
@@ -354,11 +358,46 @@ function render(rows: readonly Row[]): string {
   ].join('\n');
 }
 
+/** The newest source file, so a stale `dist/` can be detected rather than measured. */
+function newestSourceMtime(dir: string): number {
+  let newest = statSync(join(ROOT, 'index.html')).mtimeMs;
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    newest = statSync(full).isDirectory()
+      ? Math.max(newest, newestSourceMtime(full))
+      : Math.max(newest, statSync(full).mtimeMs);
+  }
+  return newest;
+}
+
+/**
+ * Refuses to measure a build that is older than its sources.
+ *
+ * This tool serves `dist/`, so it reports on whatever was last built — not on what is in the
+ * working tree. That has now produced **four separate rounds of confident nonsense**: a reverted
+ * mutation, a mistyped anchor in an untyped tool, and two batches of layout changes measured against
+ * a bundle that had never been rebuilt. Every one of them read as "no problems found".
+ *
+ * `npm run viewport` and `npm run layout` build first, which is why it only ever happens when the
+ * script is invoked directly — which is exactly when you are debugging it.
+ */
+function refuseStaleBuild(): void {
+  const built = statSync(join(DIST, 'index.html')).mtimeMs;
+  const source = newestSourceMtime(join(ROOT, 'src'));
+  if (built >= source) return;
+  process.stderr.write(
+    'dist/ is older than the sources. This tool measures the build, not the working tree.\n' +
+      'Run `npm run layout` (or `npm run build`) first.\n',
+  );
+  process.exit(1);
+}
+
 async function main(): Promise<void> {
   if (!existsSync(join(DIST, 'index.html'))) {
     process.stderr.write('dist/index.html is missing. Run `npm run build` first.\n');
     process.exit(1);
   }
+  refuseStaleBuild();
 
   const server = await serveDist();
   const browser = await chromium.launch();
@@ -375,6 +414,30 @@ async function main(): Promise<void> {
   process.stdout.write(`${formatReport(rows[0]?.reports['match'] ?? null)}\n`);
   process.stdout.write(`\nWrote ${OUT}\n`);
   for (const line of verdicts(rows)) process.stdout.write(`${line}\n`);
+
+  // Stage M9. Until this point the harness only reported, which is exactly what MOBILE.md section
+  // 5.1 planned for: a gate cannot land before the layout works. With `--check` the same
+  // measurements are asserted and the process exits non-zero, which is what makes this a gate
+  // rather than an instrument.
+  if (!CHECK) return;
+
+  const { failures, noted } = checkLayout(rows);
+  if (noted.length > 0) {
+    process.stdout.write(`\nKnown limitations (reported, not failing) — ${noted.length}:`);
+    for (const note of noted) process.stdout.write(`\n  - ${note.screen}: ${note.rule}`);
+    process.stdout.write('\n');
+  }
+  if (failures.length === 0) {
+    process.stdout.write(
+      `\nLayout gate: OK — ${rows.length} viewports x 3 screens, ${rows.length * 3} measurements.\n`,
+    );
+    return;
+  }
+  process.stdout.write(`\nLayout gate: ${failures.length} FAILURE(S)\n`);
+  for (const failure of failures) {
+    process.stdout.write(`  [${failure.rule}] ${failure.screen}: ${failure.detail}\n`);
+  }
+  process.exitCode = 1;
 }
 
 function formatReport(report: LayoutReport | null): string {

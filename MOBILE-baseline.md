@@ -28,680 +28,681 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 
 ### board
 
-|                                   |                                      |
-| --------------------------------- | ------------------------------------ |
-| requested viewport                | 320×568                              |
-| reported viewport                 | 320×568                              |
-| board                             | 304×304 at (8, 58)                   |
-| fully visible                     | yes                                  |
-| hand tray                         | 304×93.3 at (8, 472.9)               |
-| hand visible                      | yes                                  |
-| board and hand together           | yes                                  |
-| sideways overflow                 | none                                 |
-| chrome (everything but the board) | 270px                                |
-| page height                       | 568 — **6px taller than the screen** |
-| overlapping regions               | none                                 |
-| targets under 44px                | 0 of 14                              |
-| board touch-action                | manipulation                         |
-| hand touch-action                 | none                                 |
-| prose selectable                  | yes                                  |
+| | |
+|---|---|
+| requested viewport | 320×568 |
+| reported viewport | 320×568 |
+| board | 304×304 at (8, 58) |
+| fully visible | yes |
+| hand tray | 304×93.3 at (8, 472.9) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 270px |
+| page height | 568 — **6px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 320×568                                |
-| reported viewport                 | 320×568                                |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 1375px                                 |
-| page height                       | 568 — **807px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 320×568 |
+| reported viewport | 320×568 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1375px |
+| page height | 568 — **807px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 320×568                                 |
-| reported viewport                 | 320×568                                 |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 3612px                                  |
-| page height                       | 568 — **3044px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 320×568 |
+| reported viewport | 320×568 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 3612px |
+| page height | 568 — **3044px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## small Android — 360×640 (touch)
 
 ### board
 
-|                                   |                        |
-| --------------------------------- | ---------------------- |
-| requested viewport                | 360×640                |
-| reported viewport                 | 360×640                |
-| board                             | 344×344 at (8, 70.2)   |
-| fully visible                     | yes                    |
-| hand tray                         | 344×93.3 at (8, 526.6) |
-| hand visible                      | yes                    |
-| board and hand together           | yes                    |
-| sideways overflow                 | none                   |
-| chrome (everything but the board) | 296px                  |
-| page height                       | 640 — fits vertically  |
-| overlapping regions               | none                   |
-| targets under 44px                | 0 of 14                |
-| board touch-action                | manipulation           |
-| hand touch-action                 | none                   |
-| prose selectable                  | yes                    |
+| | |
+|---|---|
+| requested viewport | 360×640 |
+| reported viewport | 360×640 |
+| board | 344×344 at (8, 70.2) |
+| fully visible | yes |
+| hand tray | 344×93.3 at (8, 526.6) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 296px |
+| page height | 640 — fits vertically |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 360×640                                |
-| reported viewport                 | 360×640                                |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 1283px                                 |
-| page height                       | 640 — **643px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 360×640 |
+| reported viewport | 360×640 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1283px |
+| page height | 640 — **643px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 360×640                                 |
-| reported viewport                 | 360×640                                 |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 3262px                                  |
-| page height                       | 640 — **2622px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 360×640 |
+| reported viewport | 360×640 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 3262px |
+| page height | 640 — **2622px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## iPhone SE (2nd/3rd) — 375×667 (touch)
 
 ### board
 
-|                                   |                        |
-| --------------------------------- | ---------------------- |
-| requested viewport                | 375×667                |
-| reported viewport                 | 375×667                |
-| board                             | 359×359 at (8, 76.2)   |
-| fully visible                     | yes                    |
-| hand tray                         | 359×93.3 at (8, 547.6) |
-| hand visible                      | yes                    |
-| board and hand together           | yes                    |
-| sideways overflow                 | none                   |
-| chrome (everything but the board) | 308px                  |
-| page height                       | 667 — fits vertically  |
-| overlapping regions               | none                   |
-| targets under 44px                | 0 of 14                |
-| board touch-action                | manipulation           |
-| hand touch-action                 | none                   |
-| prose selectable                  | yes                    |
+| | |
+|---|---|
+| requested viewport | 375×667 |
+| reported viewport | 375×667 |
+| board | 359×359 at (8, 76.2) |
+| fully visible | yes |
+| hand tray | 359×93.3 at (8, 547.6) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 308px |
+| page height | 667 — fits vertically |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 375×667                                |
-| reported viewport                 | 375×667                                |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 1295px                                 |
-| page height                       | 667 — **628px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 375×667 |
+| reported viewport | 375×667 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1295px |
+| page height | 667 — **628px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 375×667                                 |
-| reported viewport                 | 375×667                                 |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 3160px                                  |
-| page height                       | 667 — **2493px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 375×667 |
+| reported viewport | 375×667 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 3160px |
+| page height | 667 — **2493px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## iPhone 12/13/14 — 390×844 (touch)
 
 ### board
 
-|                                   |                        |
-| --------------------------------- | ---------------------- |
-| requested viewport                | 390×844                |
-| reported viewport                 | 390×844                |
-| board                             | 374×374 at (8, 106.2)  |
-| fully visible                     | yes                    |
-| hand tray                         | 374×93.3 at (8, 592.6) |
-| hand visible                      | yes                    |
-| board and hand together           | yes                    |
-| sideways overflow                 | none                   |
-| chrome (everything but the board) | 470px                  |
-| page height                       | 844 — fits vertically  |
-| overlapping regions               | none                   |
-| targets under 44px                | 0 of 14                |
-| board touch-action                | manipulation           |
-| hand touch-action                 | none                   |
-| prose selectable                  | yes                    |
+| | |
+|---|---|
+| requested viewport | 390×844 |
+| reported viewport | 390×844 |
+| board | 374×374 at (8, 106.2) |
+| fully visible | yes |
+| hand tray | 374×93.3 at (8, 592.6) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 470px |
+| page height | 844 — fits vertically |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 390×844                                |
-| reported viewport                 | 390×844                                |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 1477px                                 |
-| page height                       | 844 — **633px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 390×844 |
+| reported viewport | 390×844 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1477px |
+| page height | 844 — **633px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 390×844                                 |
-| reported viewport                 | 390×844                                 |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 3180px                                  |
-| page height                       | 844 — **2336px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 390×844 |
+| reported viewport | 390×844 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 3180px |
+| page height | 844 — **2336px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## iPhone XR/11 — 414×896 (touch)
 
 ### board
 
-|                                   |                        |
-| --------------------------------- | ---------------------- |
-| requested viewport                | 414×896                |
-| reported viewport                 | 414×896                |
-| board                             | 398×398 at (8, 120.2)  |
-| fully visible                     | yes                    |
-| hand tray                         | 398×93.3 at (8, 630.6) |
-| hand visible                      | yes                    |
-| board and hand together           | yes                    |
-| sideways overflow                 | none                   |
-| chrome (everything but the board) | 498px                  |
-| page height                       | 896 — fits vertically  |
-| overlapping regions               | none                   |
-| targets under 44px                | 0 of 14                |
-| board touch-action                | manipulation           |
-| hand touch-action                 | none                   |
-| prose selectable                  | yes                    |
+| | |
+|---|---|
+| requested viewport | 414×896 |
+| reported viewport | 414×896 |
+| board | 398×398 at (8, 120.2) |
+| fully visible | yes |
+| hand tray | 398×93.3 at (8, 630.6) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 498px |
+| page height | 896 — fits vertically |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 414×896                                |
-| reported viewport                 | 414×896                                |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 1500px                                 |
-| page height                       | 896 — **604px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 414×896 |
+| reported viewport | 414×896 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1500px |
+| page height | 896 — **604px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 414×896                                 |
-| reported viewport                 | 414×896                                 |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 3040px                                  |
-| page height                       | 896 — **2144px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 414×896 |
+| reported viewport | 414×896 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 3040px |
+| page height | 896 — **2144px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## phone landscape — 844×390 (touch)
 
 ### board
 
-|                                   |                           |
-| --------------------------------- | ------------------------- |
-| requested viewport                | 844×390                   |
-| reported viewport                 | 844×390                   |
-| board                             | 255.6×255.6 at (15.2, 60) |
-| fully visible                     | yes                       |
-| hand tray                         | 550×121.7 at (286, 127)   |
-| hand visible                      | yes                       |
-| board and hand together           | yes                       |
-| sideways overflow                 | none                      |
-| chrome (everything but the board) | 134.4px                   |
-| page height                       | 390 — fits vertically     |
-| overlapping regions               | none                      |
-| targets under 44px                | 0 of 14                   |
-| board touch-action                | manipulation              |
-| hand touch-action                 | none                      |
-| prose selectable                  | yes                       |
+| | |
+|---|---|
+| requested viewport | 844×390 |
+| reported viewport | 844×390 |
+| board | 255.6×255.6 at (15.2, 60) |
+| fully visible | yes |
+| hand tray | 550×121.7 at (286, 127) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 134.4px |
+| page height | 390 — fits vertically |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 844×390                                |
-| reported viewport                 | 844×390                                |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 897px                                  |
-| page height                       | 390 — **507px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 844×390 |
+| reported viewport | 844×390 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 897px |
+| page height | 390 — **507px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 844×390                                 |
-| reported viewport                 | 844×390                                 |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 1711px                                  |
-| page height                       | 390 — **1321px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 844×390 |
+| reported viewport | 844×390 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1711px |
+| page height | 390 — **1321px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## small landscape — 667×375 (touch)
 
 ### board
 
-|                                   |                           |
-| --------------------------------- | ------------------------- |
-| requested viewport                | 667×375                   |
-| reported viewport                 | 667×375                   |
-| board                             | 240.6×240.6 at (15.2, 60) |
-| fully visible                     | yes                       |
-| hand tray                         | 388×99.7 at (271, 130.5)  |
-| hand visible                      | yes                       |
-| board and hand together           | yes                       |
-| sideways overflow                 | none                      |
-| chrome (everything but the board) | 134.4px                   |
-| page height                       | 375 — fits vertically     |
-| overlapping regions               | none                      |
-| targets under 44px                | 0 of 14                   |
-| board touch-action                | manipulation              |
-| hand touch-action                 | none                      |
-| prose selectable                  | yes                       |
+| | |
+|---|---|
+| requested viewport | 667×375 |
+| reported viewport | 667×375 |
+| board | 240.6×240.6 at (15.2, 60) |
+| fully visible | yes |
+| hand tray | 388×99.7 at (271, 130.5) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 134.4px |
+| page height | 375 — fits vertically |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 667×375                                |
-| reported viewport                 | 667×375                                |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 943px                                  |
-| page height                       | 375 — **568px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 667×375 |
+| reported viewport | 667×375 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 943px |
+| page height | 375 — **568px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 667×375                                 |
-| reported viewport                 | 667×375                                 |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 2054px                                  |
-| page height                       | 375 — **1679px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 667×375 |
+| reported viewport | 667×375 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 2054px |
+| page height | 375 — **1679px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## short landscape — 812×320 (touch)
 
 ### board
 
-|                                   |                          |
-| --------------------------------- | ------------------------ |
-| requested viewport                | 812×320                  |
-| reported viewport                 | 812×320                  |
-| board                             | 164×164 at (26, 60)      |
-| fully visible                     | yes                      |
-| hand tray                         | 588×121.7 at (216, 81.2) |
-| hand visible                      | yes                      |
-| board and hand together           | yes                      |
-| sideways overflow                 | none                     |
-| chrome (everything but the board) | 156px                    |
-| page height                       | 320 — fits vertically    |
-| overlapping regions               | none                     |
-| targets under 44px                | 0 of 14                  |
-| board touch-action                | manipulation             |
-| hand touch-action                 | none                     |
-| prose selectable                  | yes                      |
+| | |
+|---|---|
+| requested viewport | 812×320 |
+| reported viewport | 812×320 |
+| board | 164×164 at (26, 60) |
+| fully visible | yes |
+| hand tray | 588×121.7 at (216, 81.2) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 156px |
+| page height | 320 — fits vertically |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 812×320                                |
-| reported viewport                 | 812×320                                |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 866px                                  |
-| page height                       | 320 — **546px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 812×320 |
+| reported viewport | 812×320 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 866px |
+| page height | 320 — **546px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 812×320                                 |
-| reported viewport                 | 812×320                                 |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 1731px                                  |
-| page height                       | 320 — **1411px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 812×320 |
+| reported viewport | 812×320 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1731px |
+| page height | 320 — **1411px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## iPad portrait — 768×1024 (touch)
 
 ### board
 
-|                                   |                          |
-| --------------------------------- | ------------------------ |
-| requested viewport                | 768×1024                 |
-| reported viewport                 | 768×1024                 |
-| board                             | 560×560 at (104, 104)    |
-| fully visible                     | yes                      |
-| hand tray                         | 748×121.7 at (10, 782.4) |
-| hand visible                      | yes                      |
-| board and hand together           | yes                      |
-| sideways overflow                 | none                     |
-| chrome (everything but the board) | 464px                    |
-| page height                       | 1024 — fits vertically   |
-| overlapping regions               | none                     |
-| targets under 44px                | 0 of 14                  |
-| board touch-action                | manipulation             |
-| hand touch-action                 | none                     |
-| prose selectable                  | yes                      |
+| | |
+|---|---|
+| requested viewport | 768×1024 |
+| reported viewport | 768×1024 |
+| board | 560×560 at (104, 104) |
+| fully visible | yes |
+| hand tray | 748×121.7 at (10, 782.4) |
+| hand visible | yes |
+| board and hand together | yes |
+| sideways overflow | none |
+| chrome (everything but the board) | 464px |
+| page height | 1024 — fits vertically |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 768×1024                                |
-| reported viewport                 | 768×1024                                |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 1484px                                  |
-| page height                       | 1024 — **460px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 38                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 768×1024 |
+| reported viewport | 768×1024 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1484px |
+| page height | 1024 — **460px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                          |
-| --------------------------------- | ---------------------------------------- |
-| requested viewport                | 768×1024                                 |
-| reported viewport                 | 768×1024                                 |
-| board                             | hidden                                   |
-| fully visible                     | **NO**                                   |
-| hand tray                         | hidden                                   |
-| hand visible                      | **NO**                                   |
-| board and hand together           | **NO**                                   |
-| sideways overflow                 | none                                     |
-| chrome (everything but the board) | 2100px                                   |
-| page height                       | 1024 — **1076px taller than the screen** |
-| overlapping regions               | none                                     |
-| targets under 44px                | 0 of 40                                  |
-| board touch-action                | manipulation                             |
-| hand touch-action                 | none                                     |
-| prose selectable                  | yes                                      |
+| | |
+|---|---|
+| requested viewport | 768×1024 |
+| reported viewport | 768×1024 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 2100px |
+| page height | 1024 — **1076px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## laptop — 1280×720
 
 ### board
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 1280×720                               |
-| reported viewport                 | 1280×720                               |
-| board                             | 560×560 at (360, 110.4)                |
-| fully visible                     | yes                                    |
-| hand tray                         | 1024×142.8 at (128, 799.3)             |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 398px                                  |
-| page height                       | 720 — **238px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 14                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 1280×720 |
+| reported viewport | 1280×720 |
+| board | 560×560 at (360, 110.4) |
+| fully visible | yes |
+| hand tray | 1024×142.8 at (128, 799.3) |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 398px |
+| page height | 720 — **238px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 1280×720                               |
-| reported viewport                 | 1280×720                               |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 1162px                                 |
-| page height                       | 720 — **442px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 1280×720 |
+| reported viewport | 1280×720 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1162px |
+| page height | 720 — **442px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 1280×720                                |
-| reported viewport                 | 1280×720                                |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 1898px                                  |
-| page height                       | 720 — **1178px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 1280×720 |
+| reported viewport | 1280×720 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1898px |
+| page height | 720 — **1178px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ## desktop — 1440×900
 
 ### board
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 1440×900                               |
-| reported viewport                 | 1440×900                               |
-| board                             | 560×560 at (440, 110.4)                |
-| fully visible                     | yes                                    |
-| hand tray                         | 1024×142.8 at (208, 830)               |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 501px                                  |
-| page height                       | 900 — **161px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 14                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 1440×900 |
+| reported viewport | 1440×900 |
+| board | 560×560 at (440, 110.4) |
+| fully visible | yes |
+| hand tray | 1024×142.8 at (208, 830) |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 501px |
+| page height | 900 — **161px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 14 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### collection
 
-|                                   |                                        |
-| --------------------------------- | -------------------------------------- |
-| requested viewport                | 1440×900                               |
-| reported viewport                 | 1440×900                               |
-| board                             | hidden                                 |
-| fully visible                     | **NO**                                 |
-| hand tray                         | hidden                                 |
-| hand visible                      | **NO**                                 |
-| board and hand together           | **NO**                                 |
-| sideways overflow                 | none                                   |
-| chrome (everything but the board) | 1340px                                 |
-| page height                       | 900 — **440px taller than the screen** |
-| overlapping regions               | none                                   |
-| targets under 44px                | 0 of 38                                |
-| board touch-action                | manipulation                           |
-| hand touch-action                 | none                                   |
-| prose selectable                  | yes                                    |
+| | |
+|---|---|
+| requested viewport | 1440×900 |
+| reported viewport | 1440×900 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 1340px |
+| page height | 900 — **440px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 38 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
 
 ### rules
 
-|                                   |                                         |
-| --------------------------------- | --------------------------------------- |
-| requested viewport                | 1440×900                                |
-| reported viewport                 | 1440×900                                |
-| board                             | hidden                                  |
-| fully visible                     | **NO**                                  |
-| hand tray                         | hidden                                  |
-| hand visible                      | **NO**                                  |
-| board and hand together           | **NO**                                  |
-| sideways overflow                 | none                                    |
-| chrome (everything but the board) | 2001px                                  |
-| page height                       | 900 — **1101px taller than the screen** |
-| overlapping regions               | none                                    |
-| targets under 44px                | 0 of 40                                 |
-| board touch-action                | manipulation                            |
-| hand touch-action                 | none                                    |
-| prose selectable                  | yes                                     |
+| | |
+|---|---|
+| requested viewport | 1440×900 |
+| reported viewport | 1440×900 |
+| board | hidden |
+| fully visible | **NO** |
+| hand tray | hidden |
+| hand visible | **NO** |
+| board and hand together | **NO** |
+| sideways overflow | none |
+| chrome (everything but the board) | 2001px |
+| page height | 900 — **1101px taller than the screen** |
+| overlapping regions | none |
+| targets under 44px | 0 of 40 |
+| board touch-action | manipulation |
+| hand touch-action | none |
+| prose selectable | yes |
+

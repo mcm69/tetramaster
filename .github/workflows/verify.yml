@@ -21,7 +21,12 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Was 15. Stage M9 added a browser install and the layout gate -- eleven
+    # viewports x three screens, each a fresh page load -- which is roughly two
+    # minutes on top of everything else. The headroom is deliberate: a gate that
+    # times out teaches people to re-run it, and a re-run that passes teaches
+    # them the timeout was noise.
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +40,16 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      # The layout gate needs a real browser. This is the stage-M9 cost that
+      # MOBILE.md 5.1 named as the risk: a large first install, on every CI run
+      # rather than once, because the binaries are not cached by npm ci.
+      #
+      # --with-deps installs the shared libraries too. Without it Chromium fails
+      # to launch on ubuntu-latest and the gate reports an error rather than a
+      # layout failure, which is exactly the wrong thing to be loud about.
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
 
       # Formatting is not part of `verify` -- it rewrites files -- so it is
       # checked, and it is a separate step because a diff should not be able to
