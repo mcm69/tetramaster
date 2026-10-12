@@ -840,6 +840,36 @@ The engine stays free of any knowledge that cards persist, and `src/game` stays 
 the same rules can be exercised from Node in tests. `DECK_SIZE` moved to `src/core/constants.ts` for
 the same reason: both layers need it, so neither owns it.
 
+### 7.4b Mobile deviations from the desktop design (documented, intentional)
+
+Added by `MOBILE.md`. These are not gameplay deviations — the rules are untouched — but they change
+things a player sees, and they are listed here for the same reason §7.4 exists: **documented rather
+than silently shipped.**
+
+1. **The board sizes itself, and CSS owns the number.** `MIN_VIEWPORT` and a hardcoded `260` were
+   deleted; `main.ts` reads the rendered rectangle instead. Two coordinate systems would have been
+   one source of truth too many.
+2. **A 44px touch floor, at every width including desktop.** Stage M0 found eight controls under it on
+   every device — the mode buttons at 33.6px, the opponent `<select>` at 27px, both preference toggles
+   at 19.2px. A 19px checkbox is not a desktop design choice; it is a small target that happens to have
+   a mouse beside it.
+3. **The toolbar collapses behind a Settings disclosure on narrow _or short_ screens.** Width alone was
+   wrong: a phone in landscape is 844px wide, so width said "desktop" and rendered the panel inline,
+   taking 156 of the 390 available pixels.
+4. **Drag-to-place is added, and tap-tap is untouched.** A press that travels less than 10px is a tap,
+   not a drag, so a shaky thumb still selects. The rules live in `src/input/drag.ts` as a pure reducer,
+   for the same reason `src/ui/turn.ts` exists: game flow used to be unreachable from tests.
+5. **Landscape puts the board and the hand tray side by side.** Vertical space is the binding
+   constraint and a landscape phone has none to spare.
+6. **The board never allows `touch-action: none`.** The old value also forbade pinch-zoom over the
+   main play area, which is an accessibility cost for a player who may need to magnify the board.
+   Hand cards keep `none`, because the drag starts there.
+7. **Three known limitations are reported rather than fixed**, each with its arithmetic in
+   `tools/layoutGate.ts`: the hand tray is below the fold on every desktop size (a 560px board plus
+   398px of chrome does not fit a 720px window, and desktop layout is unchanged by this plan); board
+   squares are 36px on a 320px-tall viewport with a keyboard open; and 320×568 portrait is 6px too
+   tall, on the oldest device in the matrix and below this project's own 360×640 target.
+
 ### 7.5 Art & audio policy
 
 - Card faces are **procedurally generated** from `figureId` — a seeded geometric sigil system with a

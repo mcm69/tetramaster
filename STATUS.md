@@ -3,7 +3,7 @@
 > **Working log.** `PLAN.md` is the spec; this file is the live state.
 > A fresh session should be able to continue from these two files alone.
 >
-> **Last updated:** 2026-10-10 · **Session count:** 14 · **Current stage:** complete — 11 of 11 done
+> **Last updated:** 2026-10-12 · **Session count:** 35 · **Current stage:** `MOBILE.md` complete — M0–M10 all done
 
 ---
 
@@ -19,16 +19,25 @@
 
 **Commands**
 
-| Command               | Purpose                                              |
-| --------------------- | ---------------------------------------------------- |
-| `npm run dev`         | Vite dev server, http://localhost:8080, HMR          |
-| `npm test`            | Unit tests (Vitest). Fast inner loop; commit gate.   |
-| `npm run typecheck`   | `tsc --noEmit`, strict                               |
-| `npm run lint`        | ESLint + typescript-eslint, incl. architecture rules |
-| `npm run coverage`    | Vitest with v8 coverage against the §9.2 thresholds  |
-| `npm run rules:audit` | Fails if any §1 rule paragraph has no tagged test    |
-| `npm run build`       | Production `dist/`                                   |
-| `npm run verify`      | Everything, in order — the full gate                 |
+| Command               | Purpose                                                    |
+| --------------------- | ---------------------------------------------------------- |
+| `npm run dev`         | Vite dev server, http://localhost:8080, HMR                |
+| `npm test`            | Unit tests (Vitest). Fast inner loop; commit gate.         |
+| `npm run typecheck`   | `tsc --noEmit`, strict                                     |
+| `npm run lint`        | ESLint + typescript-eslint, incl. architecture rules       |
+| `npm run coverage`    | Vitest with v8 coverage against the §9.2 thresholds        |
+| `npm run rules:audit` | Fails if any §1 rule paragraph has no tagged test          |
+| `npm run balance`     | Opponent strength and tournament-counter checks            |
+| `npm run perf`        | Frame and decision budgets, animator queue bound           |
+| `npm run viewport`    | Measure 11 devices × 3 screens, write `MOBILE-baseline.md` |
+| `npm run layout`      | The same, asserted — the gate. Needs Chromium              |
+| `npm run touch`       | Real touch gestures through a browser (21 checks)          |
+| `npm run build`       | Production `dist/`                                         |
+| `npm run verify`      | Everything, in order — the full gate                       |
+
+**Browser gates need `npx playwright install chromium` first.** CI runs
+`--with-deps`; without the shared libraries Chromium will not launch and the gate reports an error
+instead of a layout failure.
 
 **Commit gate:** `typecheck` + `lint` + `test` green. No skipped tests, no `it.skip` to go green.
 
@@ -36,57 +45,99 @@
 
 ## Stage Progress
 
-| Stage | Name                                  | Status         | DoD met | Notes                              |
-| ----- | ------------------------------------- | -------------- | ------- | ---------------------------------- |
-| 0     | Scaffold                              | ✅ Done        | ✅      | toolchain green; `verify` exit 0   |
-| 1     | Grid geometry & stats                 | ✅ Done        | ✅      | 72 tests; §1.2 + §1.3 traced       |
-| 2     | Card catalog                          | ✅ Done        | ✅      | 103 tests; 100 figures             |
-| 3     | Resolution engine (takedown + combos) | ✅ Done        | ✅      | 144 tests; §1.4/§1.5/§1.7 traced   |
-| 4     | Battle math + multi-battle chains     | ✅ Done        | ✅      | 163 tests; §1.6 traced             |
-| 5     | Match state machine                   | ✅ Done        | ✅      | 201 tests; §1.1 traced             |
-| 6     | Rendering                             | ✅ Done        | ✅      | 248 tests; board on screen         |
-| 7     | Playable match UI                     | ✅ Done        | ✅      | mouse + keyboard match             |
-| 8     | Opponent AI                           | ✅ Done        | ✅      | 10 NPCs; beats random by 12-18     |
-| 9     | Progression, collection, save         | ✅ Done        | ✅      | 468 tests; **all §1 traced**       |
-| 10    | Modes & polish                        | ✅ Done        | ✅      | 3 modes, rules screen, audio, a11y |
-| 11    | Hardening & docs                      | ⬜ Not started | ☐       | **next up** — README + CI          |
+| Stage | Name                                  | Status  | DoD met | Notes                              |
+| ----- | ------------------------------------- | ------- | ------- | ---------------------------------- |
+| 0     | Scaffold                              | ✅ Done | ✅      | toolchain green; `verify` exit 0   |
+| 1     | Grid geometry & stats                 | ✅ Done | ✅      | 72 tests; §1.2 + §1.3 traced       |
+| 2     | Card catalog                          | ✅ Done | ✅      | 103 tests; 100 figures             |
+| 3     | Resolution engine (takedown + combos) | ✅ Done | ✅      | 144 tests; §1.4/§1.5/§1.7 traced   |
+| 4     | Battle math + multi-battle chains     | ✅ Done | ✅      | 163 tests; §1.6 traced             |
+| 5     | Match state machine                   | ✅ Done | ✅      | 201 tests; §1.1 traced             |
+| 6     | Rendering                             | ✅ Done | ✅      | 248 tests; board on screen         |
+| 7     | Playable match UI                     | ✅ Done | ✅      | mouse + keyboard match             |
+| 8     | Opponent AI                           | ✅ Done | ✅      | 10 NPCs; beats random by 12-18     |
+| 9     | Progression, collection, save         | ✅ Done | ✅      | 468 tests; **all §1 traced**       |
+| 10    | Modes & polish                        | ✅ Done | ✅      | 3 modes, rules screen, audio, a11y |
+| 11    | Hardening & docs                      | ✅ Done | ✅      | README, CI, layout gate            |
+
+### Mobile stages (`MOBILE.md`)
+
+| Stage | Name                             | Status | DoD met | Notes                                            |
+| ----- | -------------------------------- | ------ | ------- | ------------------------------------------------ |
+| M0    | Measure before changing anything | ✅     | ✅      | Playwright, 11-device harness, report-only       |
+| M1    | CSS owns the board's size        | ✅     | ✅      | `MIN_VIEWPORT` and `260` deleted                 |
+| M2    | Viewport & document work         | ✅     | ✅      | overlap detection; a `96vw` overflow fixed       |
+| M3    | Narrow-screen layout             | ✅     | ✅      | every portrait phone from 320px fits             |
+| M4    | Toolbar → Settings disclosure    | ✅     | ✅      | §5.4 settled by arithmetic                       |
+| M5    | 44px touch targets + hygiene     | ✅     | ✅      | floor applied at desktop too; probe checks style |
+| M6    | Drag to place                    | ✅     | ✅      | pure reducer; tap-tap provably untouched         |
+| M7    | Landscape                        | ✅     | ✅      | board + tray side by side                        |
+| M7a   | The panels the grid never placed | ✅     | ✅      | found from a screenshot; guard added             |
+| M8    | Collection & rules on a phone    | ✅     | ✅      | harness now opens all three screens              |
+| M9    | Layout gate green, in CI         | ✅     | ✅      | 33 measurements; fails on unmeasured screens     |
+| M10   | Documentation                    | ✅     | ✅      | touch column, §7.4b deviation note               |
 
 Legend: ⬜ not started · 🟡 in progress · ✅ done · ⛔ blocked · 🔒 waiting on earlier stage
 
-### Gate status (last run 2026-10-10 — all green)
+### Gate status (last run 2026-10-12 — all green)
 
-| Gate                  | Result                                                         |
-| --------------------- | -------------------------------------------------------------- |
-| `npm run typecheck`   | ✅ pass                                                        |
-| `npm run lint`        | ✅ pass — architecture guards verified to actually fire        |
-| `npm test`            | ✅ 18 tests / 2 files — both node and jsdom projects exercised |
-| `npm run coverage`    | ✅ pass — `src/core/rng.ts` at 100/100/100/100                 |
-| `npm run rules:audit` | ✅ pass — 0 traced · 9 pending · 0 untested                    |
-| `npm run build`       | ✅ pass — `dist/` produced                                     |
-| `npm run dev`         | ✅ verified serving + TS transform over HTTP                   |
+| Gate                  | Result                                                                      |
+| --------------------- | --------------------------------------------------------------------------- |
+| `npm run typecheck`   | ✅ pass                                                                     |
+| `npm run lint`        | ✅ pass — architecture guards verified to actually fire                     |
+| `npm test`            | ✅ **787 tests** across the node and jsdom projects                         |
+| `npm run coverage`    | ✅ pass — 90.9% stmts / 83.1% branch / 92.0% funcs / 92.5% lines            |
+| `npm run rules:audit` | ✅ pass — **9 traced · 0 pending · 0 untested**                             |
+| `npm run simulate`    | ✅ pass — all invariants held across 10,000 matches                         |
+| `npm run balance`     | ✅ pass — opening player wins 41.9%; counter better in 100% of 120 decks    |
+| `npm run perf`        | ✅ pass — animator frame p95 0.0004ms / 4ms; `ai.decide` p95 0.0323ms / 8ms |
+| `npm run layout`      | ✅ pass — 11 viewports × 3 screens, **33 measurements**, 3 noted limits     |
+| `npm run build`       | ✅ pass — `dist/` produced                                                  |
+
+`npm run touch` (21 checks, real touch through CDP) is run deliberately rather than on every commit;
+it needs a browser and a built bundle, and `npm run verify` already ends with `npm run layout`.
 
 ---
 
 ## Current Focus
 
-**Every stage is complete.** `npm run verify` is green from a clean clone, and `PLAN.md` §6 has no
-remaining items.
+**`PLAN.md` §6 and `MOBILE.md` are both complete.** `npm run verify` is green from a clean clone, and
+the last stage of it is a real browser asserting the layout on eleven device sizes across all three
+screens.
 
-The gate, in order: typecheck → lint → tests → coverage → rules audit → 10,000-match invariant sweep →
-balance → performance → build. `rules:audit` reports **9 traced · 0 pending · 0 untested**, so every
-paragraph of §1 has a tagged test and the in-game rules screen has a test proving it matches the spec.
+**Measured:** 787 tests · 9 traced / 0 pending / 0 untested · 10,000-match invariant sweep holds ·
+every AI beats random decisively · the Master Tournament counter has a 12.2-point mean advantage and
+is better in **100%** of 120 decks · the opening player wins 41.9% of decided matches · perfect games
+~17.7% · animator frame p95 **0.0004ms** against a 4ms budget · AI decision p95 **0.0323ms** against
+8ms · animator queue depth **18** against a limit of 64 · layout gate green across 33 measurements.
 
-**Measured:** 610 tests · every AI beats random by 12–18 points · the Master Tournament counter has a
-12.2-point mean advantage and is better in **100%** of 120 decks · the opening player wins 41.9% of
-decided matches · perfect games ~17.7% · animator frame p95 **0.0008ms** against a 4ms budget · AI
-decision p95 **0.036ms** against 8ms · animator queue depth **8** against a limit of 64.
+**Three limitations the gate reports and does not fail**, each carried in `tools/layoutGate.ts` with
+its arithmetic:
+
+- The **hand tray is below the fold on every desktop size** (560px board + 398px chrome in a 720px
+  window). Pre-existing; `PLAN.md` §7 keeps desktop unchanged. Making the board height-aware there is
+  a real fix and a separate decision.
+- **Board squares are 36px at 812×320**, under the 44px floor. Closing the gap needs the navigation
+  buttons in the settings menu or the hint row gone.
+- **320×568 portrait is 6px too tall**, on the oldest device in the matrix and below this project's
+  own 360×640 target.
 
 ## Next Actions
 
 Nothing is required. If the project continues, in rough order of value:
 
-- [ ] **Play it in a real browser.** The one DoD item checked headlessly rather than for real: every
-      stage was verified in Node and jsdom, and no one has yet seen the board render on hardware.
+- [ ] **Play it on a real phone.** The standing DoD gap, and now the only one. Everything above was
+      verified in Node, jsdom and a desktop Chromium emulating a phone; nobody has held this on glass.
+      The drag gesture in particular is the one thing emulated touch is least like a finger.
+- [ ] **Make the board height-aware on desktop**, so the hand tray is above the fold on a 720px window.
+      Tracked as a known limitation by the layout gate rather than fixed, because `PLAN.md` §7 keeps
+      desktop unchanged and that is a separate decision.
+- [ ] **Fix the copy.** The status line says "Click a square to play" on a phone, and the hint block
+      below the tray is keyboard help shown on devices with no keyboard. Both surfaced during the
+      mobile stages; neither is a layout fault, so the layout gate cannot see them.
+- [ ] **Give `H` a touch route**, or accept that asking what a square would do is unavailable on a
+      phone. It was deliberately left off the touch list in M10 — a square that reported on tap would
+      fire on every tap — but _deliberate_ is not the same as _finished_.
 - [ ] Optional: FF9's per-match card _sale_ economy, which is the main progression loop still missing
 - [ ] Optional: an opponent roster from the real game rather than the project-authored set
 - [ ] Optional: replay/export of a finished match from its event log — §3.2 already keeps the log
@@ -839,6 +890,46 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 `src/ui/screens/*`, `src/ui/accessibility.ts`, `src/ui/components/toolbar.ts`, `src/main.ts`,
 `index.html`, `vite.config.ts`, `tests/{ai/counterDeck,game/modes,game/session,audio/synth,ui/rules,ui/toolbar,ui/collection,ui/boot}.test.ts`,
 `tools/balance.ts`, `PLAN.md`, `STATUS.md`
+
+---
+
+### S36 — 2026-10-12 — M10: documentation, and most of what it documents was wrong
+
+**Status:** `MOBILE.md` complete — M0–M10 all done. 787 tests, `verify` exit 0.
+
+**Done.** The README's controls table gained a **Touch** column, so the keyboard bindings stop being
+the only documented way to play. `PLAN.md` §7.4b carries the mobile deviations, in the same
+"documented rather than silently shipped" place as the deviations from the original game. The new
+browser commands are in both command tables.
+
+**Learned:**
+
+- **The README claimed things the gate had not earned.** It said "the keyboard does everything the
+  mouse does" — true, and the reason the table read as keyboard-only. And STATUS.md's front matter
+  said **18 tests**, **0 traced · 9 pending**, **610 tests** and **stage 11 not started**, all of
+  which had been false for twenty-odd commits. A working log nobody has updated is worse than none:
+  it is a resume instruction that resumes you into the wrong place.
+- **A documentation stage is an accuracy stage, so I checked my own claims against the tools.** Every
+  number in the gate table came from that run's output, not from memory. One was wrong on the first
+  pass — I had written "90.9% lines" where the column is statements, and lines is 92.5% — which is
+  what happens when a number is copied from a table without reading the header.
+- **The first sentence I wrote for the controls table contradicted the paragraph under it.** "Every
+  action has a touch route" and then, three lines down, "two of them do not". Changed to say what is
+  true: nothing is keyboard-only, and two of the ten are _touch_-only-missing, with the reason.
+- **I checked the two claims most likely to be false and left them in if they held.** The 44px floor
+  really is met on every screen at every viewport in the matrix (zero non-zero entries in
+  `MOBILE-baseline.md`), and `npm run touch` really is 21 checks. Neither was taken on trust.
+- **The Next Actions list had the real remaining work in it and I sharpened it.** "Play it in a real
+  browser" is now three specific things: a real phone, the desktop hand tray, and the "Click a square
+  to play" copy on a phone with no keyboard. All three were surfaced by the mobile stages and all three
+  are still unfixed, deliberately or otherwise.
+
+**The plan is finished. What is not fixed is listed, not buried:** a real phone has never held this;
+the hand tray needs a scroll on a 720px desktop window; the status line says "click" on a phone; and
+board squares are 36px on a 320px-tall viewport with a keyboard open. Three of the four are named in
+`KNOWN_LIMITATIONS` and reported by the gate on every run.
+
+**Files touched:** `README.md`, `PLAN.md`, `STATUS.md`
 
 ---
 

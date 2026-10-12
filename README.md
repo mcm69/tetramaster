@@ -29,20 +29,47 @@ Pick a mode from the bar at the top, then play the board.
 Every card you hold shows its **arrow pattern** — the actual directions it points — because that is
 the thing that decides where to play it. The board draws the same pattern, from the same code.
 
-**Controls** — the keyboard does everything the mouse does.
+**Controls** — every action has a key, and all but one has a way to do it without one. The table used
+to list bindings alone, which made a game that plays perfectly well on a phone look as though it
+needed a keyboard.
 
-| Key                      | Action                                |
-| ------------------------ | ------------------------------------- |
-| `W` `A` `S` `D` / arrows | Move the board cursor                 |
-| `1` – `5`                | Pick a card from your hand            |
-| `Enter` / `Space`        | Play the selected card here           |
-| `Q`                      | Choose the highlighted pending battle |
-| `Esc`                    | Deselect                              |
-| `H`                      | Hint for this square                  |
-| `N`                      | New match                             |
-| `M`                      | Next mode                             |
-| `C`                      | Collection and deck editor            |
-| `R`                      | How to play                           |
+| Action                                | Touch                                  | Mouse        | Key                      |
+| ------------------------------------- | -------------------------------------- | ------------ | ------------------------ |
+| Move the board cursor                 | The highlight follows your finger      | Move         | `W` `A` `S` `D` / arrows |
+| Pick a card from your hand            | Tap it                                 | Click it     | `1` – `5`                |
+| Play the selected card here           | Tap the square, or drop the card on it | Click it     | `Enter` / `Space`        |
+| Choose the highlighted pending battle | Tap the card                           | Click it     | `Q`                      |
+| Deselect                              | Drop the card away from the board      | Drop it away | `Esc`                    |
+| Hint for this square                  | —                                      | —            | `H`                      |
+| New match                             | **Play again** on the result           | Click it     | `N`                      |
+| Next mode                             | The mode buttons                       | Click it     | `M`                      |
+| Collection and deck editor            | **Collection (C)**                     | Click it     | `C`                      |
+| How to play                           | **How to play (R)**                    | Click it     | `R`                      |
+
+**`H` has no touch route, and that is deliberate.** It explains what playing a square would do, and
+there is no gesture for "tell me something" — a square that reported on tap would fire on every tap.
+So _asking what a square does_ is unavailable on a phone; that is a real gap and `STATUS.md` lists it.
+The hint line itself still works without a key: it carries why a mode was refused, and what your cards
+grew into after a match.
+
+**"Move the board cursor" is not quite the same action by touch.** With a key it is a cursor you can
+walk around and inspect. With a finger it is the highlight following wherever you drag, which is
+enough to see what a square would do while choosing, and there is no way to idle the cursor on one
+square without committing to something.
+
+**Dragging is optional.** Tap a card, tap a square — that path is unchanged and fully supported.
+Dragging is an addition for the case where reaching across the screen with two taps is awkward, and it
+only begins after the finger has travelled 10px, so a tap with a shaky thumb is still a tap.
+
+**On a phone.** The board sizes itself to the space available, and **every control is at least
+44×44px** — asserted, not intended: the layout gate checks eleven device sizes from 320×568 up to a
+1440×900 desktop, in portrait and in landscape, on all three screens. Turn the phone sideways and the
+board and hand tray sit side by side, because vertical space is what a landscape phone does not have.
+Orientation is not locked; rotating mid-match keeps the board where it was and the game playable.
+
+Three things the gate reports rather than claims are perfect: the hand tray needs a scroll to reach on
+a 720px-tall desktop window, board squares are 36px on a 320px-tall viewport with a keyboard open, and
+a 320×568 phone is 6px too tall. `MOBILE.md` has the arithmetic for each.
 
 ## The rules in one screen
 
@@ -83,7 +110,7 @@ backwards. So correctness is pinned three ways, and `npm run verify` runs all of
 3. **Invariants under simulation** — 10,000 headless matches asserting the ten-card invariant, score
    totals, exactly one game-over, no illegal placements, and the perfect-game precondition.
 
-Plus two gates added late, both of which exist because a requirement nobody checks is a requirement
+Plus three gates added late, all of which exist because a requirement nobody checks is a requirement
 that quietly stops being true:
 
 - **`npm run balance`** — every opponent must beat a random-move baseline by a real margin, turn order
@@ -91,6 +118,15 @@ that quietly stops being true:
   your deck than your own cards would be.
 - **`npm run perf`** — the renderer's per-frame work and the AI's per-decision cost, gated on **p95**
   rather than the median, and the animator queue depth bounded over whole matches.
+- **`npm run layout`** — a real browser, eleven device sizes and **all three screens** (board,
+  collection, rules): the board inside the viewport, no sideways overflow, no interactive target under
+  44px, and a board big enough for its squares to be tappable. The last of those is _derived_ from the
+  44px figure rather than picked, and it fails if a screen cannot be measured at all — a gate that
+  passes on a missing measurement is not a gate. Three known limitations are reported rather than
+  hidden; `MOBILE.md` carries each with its arithmetic.
+
+`npm run touch` is not in `verify` — it needs a browser and a built bundle, so it is run deliberately
+rather than on every commit.
 
 What is deliberately _not_ tested: pixel output, audio, animation timing, and game feel.
 
@@ -137,20 +173,26 @@ consumes the event log. That is what makes the rules testable without rendering 
 
 ## Commands
 
-| Command               | Purpose                                                      |
-| --------------------- | ------------------------------------------------------------ |
-| `npm run dev`         | Vite dev server with HMR on port 8080                        |
-| `npm run build`       | Typecheck, then production build to `dist/`                  |
-| `npm test`            | Unit tests (Vitest) — the fast inner loop                    |
-| `npm run typecheck`   | `tsc --noEmit`, strict                                       |
-| `npm run lint`        | ESLint, including the architecture guards                    |
-| `npm run format`      | Prettier, in place. `format:check` is the CI form            |
-| `npm run coverage`    | Tests + v8 coverage against the thresholds in `PLAN.md` §9.2 |
-| `npm run rules:audit` | Fails if any §1 rule paragraph has no tagged test            |
-| `npm run simulate`    | 10,000 headless matches with invariant assertions            |
-| `npm run balance`     | Opponent strength and tournament-counter checks              |
-| `npm run perf`        | Frame and decision budgets, animator queue bound             |
-| `npm run verify`      | All of the above, in order — the full gate                   |
+| Command               | Purpose                                                                      |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `npm run dev`         | Vite dev server with HMR on port 8080                                        |
+| `npm run build`       | Typecheck, then production build to `dist/`                                  |
+| `npm test`            | Unit tests (Vitest) — the fast inner loop                                    |
+| `npm run typecheck`   | `tsc --noEmit`, strict                                                       |
+| `npm run lint`        | ESLint, including the architecture guards                                    |
+| `npm run format`      | Prettier, in place. `format:check` is the CI form                            |
+| `npm run coverage`    | Tests + v8 coverage against the thresholds in `PLAN.md` §9.2                 |
+| `npm run rules:audit` | Fails if any §1 rule paragraph has no tagged test                            |
+| `npm run simulate`    | 10,000 headless matches with invariant assertions                            |
+| `npm run balance`     | Opponent strength and tournament-counter checks                              |
+| `npm run perf`        | Frame and decision budgets, animator queue bound                             |
+| `npm run viewport`    | Measure the layout on 11 devices × 3 screens, and write `MOBILE-baseline.md` |
+| `npm run layout`      | The same measurements, asserted — **the gate**, exits non-zero               |
+| `npm run touch`       | Drive real touch gestures through a browser (21 checks)                      |
+| `npm run verify`      | All of the above, in order — the full gate                                   |
+
+The last three need Playwright's Chromium: `npx playwright install chromium`. CI installs it with
+`--with-deps` before the gate runs.
 
 Commit gate: `typecheck` + `lint` + `test`. No skipped tests, no `it.skip` to go green.
 
