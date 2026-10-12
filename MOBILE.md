@@ -141,7 +141,7 @@ arrival and every later stage would be red for the wrong reason. The gate is M9.
 
 **Done.** Baseline exists, is reproducible, and has corrected this document twice.
 
-### M1 — Sizing core
+### M1 — Sizing core — **done**
 
 - New `src/ui/sizing.ts`, pure and DOM-free:
   ```ts
@@ -454,7 +454,7 @@ matrix** and only showed up at 812×320, where the board overruns its row and pa
 line. That size is now in the matrix for that reason. The playability check and the harness's overlap
 detector each caught two.
 
-### M7a — The bug this stage shipped with, found in a screenshot
+### M7a — The bug this stage shipped with, found in a screenshot — **done**
 
 **Reported from a screenshot, not by a check: the end-of-match panel rendered above the board and
 crushed it to 6px tall.** Stage M7 turned the body into a grid and placed seven of its fourteen
@@ -606,12 +606,29 @@ which is why it only ever happens when the script is invoked directly, which is 
 debugging it. **`refuseStaleBuild()` now exits 1 when `dist/` is older than `src/`**, and it fired on
 the very next run.
 
-### M10 — Documentation
+### M10 — Documentation — **done**
 
-- README's controls table gains a touch column, so the keyboard-only bindings stop being the only
-  documented way to play.
-- `PLAN.md` §7.4 gains the mobile deviation note.
-- `STATUS.md` gets a session entry per stage.
+- **README's controls table gained a Touch column**, so the keyboard-only bindings stop being the
+  only documented way to play. Ten actions, three columns, and the two gaps marked as gaps: `H` has
+  no touch route (there is no gesture for "tell me something"), and "move the board cursor" is not
+  quite the same action by touch.
+- **`PLAN.md` §7.4b** carries the mobile deviations, in the same "documented rather than silently
+  shipped" place as the deviations from the original game.
+- **`STATUS.md` gets a session entry per stage** — and its front matter turned out to be the real
+  work: it said 18 tests, `0 traced · 9 pending`, 610 tests and stage 11 not started, all false for
+  twenty-odd commits. A working log nobody has updated is worse than none, because it is a resume
+  instruction that resumes you into the wrong place.
+
+**A documentation stage is an accuracy stage, so the claims were checked against the tools.** Every
+number came from that run's output rather than from memory, and one was wrong on the first pass —
+"90.9% lines" where the column is statements and lines is 92.5%, which is what happens when a number
+is copied from a table without reading the header. Two of my own sentences also contradicted the
+table beneath them and were corrected rather than left to be found.
+
+**What is not fixed is listed, not buried:** a real phone has never held this, the hand tray needs a
+scroll on a 720px desktop window, the status line says "click" on a phone, `H` has no touch route,
+and board squares are 36px on a 320px-tall viewport. Three of those are `KNOWN_LIMITATIONS` and are
+reported by the gate on every run.
 
 ---
 
