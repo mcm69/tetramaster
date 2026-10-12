@@ -893,6 +893,39 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S39 — 2026-10-12 — A zero-byte file in the repo root, and a search that missed it
+
+**Found by listing the directory.** The file is named `, dirs.map(d=>n(c,d)).join(`, it is **0 bytes**,
+and it has been tracked since `3c1d91f` — "stage(3): the placement cascade" — which means it shipped
+to GitHub with the Pages deploy. Removed.
+
+**I said it did not exist. It did.** Asked about that fragment I ran two searches — a recursive grep
+for the text, and a `find` for `tmp*`, `*probe*` and `*mutate*` — and reported that nothing in the
+repository matched. The file was in the root the whole time.
+
+**Both searches were incapable of finding it, which is the actual lesson.** It is **empty**, so a grep
+for its _contents_ matches nothing. And its _name_ matched none of the patterns I guessed at, because
+the only way I would have looked for it is having seen it. A filename is not a thing a content search
+finds, and no pattern short-matches arbitrary garbage.
+
+`ls` answers "what is in this directory" in one command. `find -name` with guessed patterns answers
+"did I leave behind the specific things I know I might have left behind", which is a different and much
+narrower question. **When the answer is about the filesystem rather than the text in it, list the
+filesystem.**
+
+**How it got there is almost certainly a malformed shell redirect** during stage 3 — an unquoted
+one-liner that split on a comma and left a fragment as a redirect target. The file has never been
+readable and nothing could import a name containing a comma, a space and parentheses, which is why it
+never broke anything. It cost one 0-byte entry in a directory listing and **a wrong answer to a direct
+question**, which is the more expensive half.
+
+**Retracting, not editing:** the previous message said "there is no such file in this repository". That
+was wrong, stated confidently, and the user had to ask a second question to surface it.
+
+**Files touched:** repository root, `STATUS.md`
+
+---
+
 ### S38 — 2026-10-12 — Published: upstream remote, Pages workflow, and the one line that made it work
 
 **Status:** `upstream` = `git@github.com:mcm69/tetramaster.git`. Two workflows: `verify` (the gate)
