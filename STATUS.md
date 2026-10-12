@@ -893,6 +893,61 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S37 — 2026-10-12 — "You win" over a 0–10 board, and the save counted it
+
+**Reported from play:** losing every card showed **"Perfect game — you take everything"** and **"Every
+one of their cards is yours. You may take all five"**, over a panel with nothing to take.
+
+(The reported score was 0:9. The score of a total loss is **0:10** — ten cards are always placed — so
+this is the same thing, and reproducing it found exactly that.)
+
+**The cause.** `Outcome` is `'win' | 'loss' | 'draw' | 'perfect'` and `perfect` carries **no
+direction**. `finishMatch` set it when _either_ side owned every card, on the reasonable-sounding
+ground that a sweep is a sweep — and everything downstream read `'perfect'` as a player win:
+
+- the results panel congratulated you and offered five cards, with `claimable` empty;
+- `recordOutcome` counted a **lost match as a win** and incremented **`perfects`**;
+- `profile.ts` recorded `won: true`.
+
+**So this was not only a wrong sentence.** In a 60-match sample it mislabelled **11 matches** as
+perfect wins for a player who owned nothing. That is the user's save file.
+
+**The fix is one line.** §1.1 settles the direction: "**Perfect Game** (capture all 5 enemy cards) →
+take all 5 enemy cards." It is the player's achievement. `counts.player === total` alone.
+
+**Reproduced before fixing, not after.** A deliberately awful player policy — its emptiest card,
+placed next to an enemy — reaches 0:10 on seven seeds in the first sixty, deterministically. That is
+how a sweep actually happens, so the test plays it through the cascade rather than hand-building a
+board and hoping it still means the same thing after the next engine change.
+
+**Learned:**
+
+- **A test conditional on the code's own answer proves nothing.** The invariant was written the
+  obvious way round — `if (outcome === 'draw') expect(level)`. Mutating the draw branch away turned a
+  level board into a loss, so the condition was **never true and the assertion never ran**: all four
+  tests passed with the branch deleted. Rewritten as biconditionals — a win _iff_ ahead, a draw _iff_
+  level — which catch both directions. **Third time in this project** a test has hidden behind
+  another test passing.
+- **That mutation found a second, unguarded bug one line away.** Disabling the draw branch makes 5-5
+  a **loss**, and **the entire 787-test suite passed**. A draw was being recorded as a loss and
+  nothing noticed. It was never the bug I was sent to fix; it was found by asking whether a mutation
+  that mattered was caught, and noticing that it was not.
+- **When the user's report was a detail I could check, I checked it rather than matching their
+  words.** "0:9" is not a score this game can produce at the end of a match. Confirming that is how
+  the reproduction found the right scenario; assuming their digits and searching for a 0:9 would have
+  found nothing and looked like a fix that did not work.
+
+**Verified by mutation, four of four.** The original `|| counts.ai === total` restored; win and loss
+swapped; the draw branch disabled; `perfect` no longer counting as a win in the save.
+
+**Still slightly wrong, and left alone deliberately:** on a total loss the body reads "They take one of
+the cards they captured" when they took all five. Fixing it means the panel needs the final score,
+which `MatchResult` does not carry — more than this bug warrants, and recorded rather than done.
+
+**Files touched:** `src/core/match.ts`, `tests/core/sweepOutcome.test.ts`, `STATUS.md`
+
+---
+
 ### S36 — 2026-10-12 — M10: documentation, and most of what it documents was wrong
 
 **Status:** `MOBILE.md` complete — M0–M10 all done. 787 tests, `verify` exit 0.

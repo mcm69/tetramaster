@@ -173,8 +173,14 @@ function finishMatch(state: GameState): MatchResult | null {
   let outcome: Outcome;
   if (!playerWon && !aiWon) {
     outcome = 'draw';
-  } else if (counts.player === total || counts.ai === total) {
-    outcome = 'perfect'; // one side owns every card on the board
+  } else if (counts.player === total) {
+    // §1.1: a perfect game is *yours* — you captured all five of their cards. The check used to be
+    // `counts.player === total || counts.ai === total`, on the reasonable-sounding ground that a
+    // sweep is a sweep. But `Outcome` has no direction to it, and everything downstream read
+    // `'perfect'` as a player win: the results panel said "Perfect game — you take everything" over a
+    // 0:10 board with nothing to take, and `recordOutcome` counted a lost match as a win and a
+    // perfect. An opponent sweeping the board is a loss, and an unremarkable one.
+    outcome = 'perfect';
   } else {
     outcome = playerWon ? 'win' : 'loss';
   }
