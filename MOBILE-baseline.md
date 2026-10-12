@@ -130,13 +130,13 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | --------------------------------- | ------------------------- |
 | requested viewport                | 844×390                   |
 | reported viewport                 | 844×390                   |
-| board                             | 263.6×263.6 at (11.2, 60) |
+| board                             | 255.6×255.6 at (15.2, 60) |
 | fully visible                     | yes                       |
-| hand tray                         | 550×121.7 at (286, 131)   |
+| hand tray                         | 550×121.7 at (286, 127)   |
 | hand visible                      | yes                       |
 | board and hand together           | yes                       |
 | sideways overflow                 | none                      |
-| chrome (everything but the board) | 126.39999999999998px      |
+| chrome (everything but the board) | 134.4px                   |
 | page height                       | 390 — fits vertically     |
 | overlapping regions               | none                      |
 | targets under 44px                | 0 of 14                   |
@@ -150,13 +150,13 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | --------------------------------- | ------------------------- |
 | requested viewport                | 667×375                   |
 | reported viewport                 | 667×375                   |
-| board                             | 248.6×248.6 at (11.2, 60) |
+| board                             | 240.6×240.6 at (15.2, 60) |
 | fully visible                     | yes                       |
-| hand tray                         | 388×99.7 at (271, 134.5)  |
+| hand tray                         | 388×99.7 at (271, 130.5)  |
 | hand visible                      | yes                       |
 | board and hand together           | yes                       |
 | sideways overflow                 | none                      |
-| chrome (everything but the board) | 126.4px                   |
+| chrome (everything but the board) | 134.4px                   |
 | page height                       | 375 — fits vertically     |
 | overlapping regions               | none                      |
 | targets under 44px                | 0 of 14                   |
@@ -170,13 +170,13 @@ gate would be red for the wrong reason at every stage. See MOBILE.md stage M9.
 | --------------------------------- | ------------------------ |
 | requested viewport                | 812×320                  |
 | reported viewport                 | 812×320                  |
-| board                             | 172×172 at (22, 60)      |
+| board                             | 164×164 at (26, 60)      |
 | fully visible                     | yes                      |
-| hand tray                         | 588×121.7 at (216, 85.2) |
+| hand tray                         | 588×121.7 at (216, 81.2) |
 | hand visible                      | yes                      |
 | board and hand together           | yes                      |
 | sideways overflow                 | none                     |
-| chrome (everything but the board) | 148px                    |
+| chrome (everything but the board) | 156px                    |
 | page height                       | 320 — fits vertically    |
 | overlapping regions               | none                     |
 | targets under 44px                | 0 of 14                  |

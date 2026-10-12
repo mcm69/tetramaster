@@ -454,6 +454,47 @@ matrix** and only showed up at 812×320, where the board overruns its row and pa
 line. That size is now in the matrix for that reason. The playability check and the harness's overlap
 detector each caught two.
 
+### M7a — The bug this stage shipped with, found in a screenshot
+
+**Reported from a screenshot, not by a check: the end-of-match panel rendered above the board and
+crushed it to 6px tall.** Stage M7 turned the body into a grid and placed seven of its fourteen
+children. The other seven were auto-placed, and grid's implicit rows put them in the one cell nobody
+named.
+
+Three body children were unplaced, and all three were broken:
+
+- **`#picker` and `#results`** landed above the board. Now they take the whole second column, over
+  the tray rather than the board — the tray is finished at that point and the panel is what the
+  player came for. They span the column rather than taking a row of their own, so the board's height
+  does not change the moment a match ends. The tray is hidden behind them with `visibility` rather
+  than `display`, so it keeps its place and the board does not jump.
+- **`#collection` and `#rules`** landed in the board's own column: 270px wide and 38px too tall. They
+  replace the board entirely, so they now take the whole grid.
+- **`#hint`** — what pressing H would say about the square under the cursor — was unplaced too. It
+  gets a row of its own rather than being hidden: it is an explanation of the move, and dropping it
+  on the screens with least room is the exact trade this project keeps refusing. The row is
+  **reserved** rather than collapsed, because an `auto` row that grows would shrink the `1fr` row and
+  move the board under the player's finger. A fixed 17px costs the board 6% and never moves.
+
+**Why nothing caught it, and what now does.** The viewport harness measures a fresh page, where every
+one of those elements is `hidden`. The touch tool never finishes a match. Both screens are reachable
+only by playing a whole game — which is precisely how this was found, by a person looking at one.
+
+`tests/ui/stylesheetClasses.test.ts` now asserts that **every direct child of `<body>` has a place in
+the landscape grid, or is removed from it** — placed with `grid-area`/`grid-column`, or `display:
+none`, or the `.sr-only` live region that `position: absolute` takes out of flow. **Four mutations,
+all caught**: each of the three above unplaced again, and a brand-new `<div id="toast">` added to the
+body with nothing styling it.
+
+Two lessons from writing that check:
+
+- **The first version matched every tag on the page** and reported the two `rematch` buttons _inside_
+  the navigation toolbar as unplaced body children. A test failing about elements it was never meant
+  to be looking at is worse than no test. It now tracks nesting depth and reads only direct children.
+- **Stopping at the first `@media` boundary reported four more false positives**, because `.mode-note`
+  and `.keys` are hidden by a `max-height: 760px` block rather than the landscape one. The check now
+  runs to the end of the stylesheet.
+
 ### M8 — Collection and rules on a narrow screen
 
 These are the screens players leave the board for, and neither has been looked at below 640px.

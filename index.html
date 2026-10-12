@@ -829,7 +829,8 @@
           /* Board budget: the viewport's short axis, less everything that shares a grid *row* with
              the board. The toolbar (44) sits beside it, the navigation buttons (44) sit beside the
              status line, and the status line (22) sits under the board itself; add the body's
-             vertical padding (8 + 8) and the two 8px row gaps. 44 + 44 + 22 + 16 + 16 = 142px.
+             vertical padding (8 + 8), the two 8px row gaps, and the hint's reserved row (17).
+             44 + 44 + 22 + 17 + 16 + 16 = 159px.
              Rounded to 8.875rem.
 
              Getting this wrong is visible rather than subtle, which is the good news: the board
@@ -855,11 +856,12 @@
           padding-right: max(0.5rem, env(safe-area-inset-right));
           display: grid;
           grid-template-columns: var(--land-board) minmax(0, 1fr);
-          grid-template-rows: auto minmax(0, 1fr) auto;
+          grid-template-rows: auto minmax(0, 1fr) auto auto;
           grid-template-areas:
             '.      toolbar'
             'board  hand'
-            'status nav';
+            'status nav'
+            '.      hint';
           align-items: start;
         }
         h1 {
@@ -894,9 +896,61 @@
         #status {
           grid-area: status;
         }
+        /* The hint — what pressing H would say about the square under the cursor. It gets a row
+           rather than being hidden: it is an explanation of the move, and dropping it on the
+           screens with least room would be the exact trade this whole project keeps refusing.
+
+           The row is reserved rather than collapsed. Its `min-height: 1.4em` is there in portrait so
+           the tray does not jump when a hint appears, and an `auto` row that grows would push the
+           `1fr` row smaller and shrink the board under the player's finger. A fixed 17px costs the
+           board 6% and never moves. */
+        #hint {
+          grid-area: hint;
+        }
         .toolbar {
           grid-area: nav;
           justify-content: flex-start;
+        }
+        /* The battle picker and the end-of-match panel take the whole second column, over the tray
+           rather than over the board.
+
+           This is a bug stage M7 introduced and did not catch. Both are body children, and neither
+           was given a `grid-area`, so grid auto-placed them into the unnamed cell above the board —
+           and a results panel is 300px tall, which crushed the board to 6px. Nothing reported it:
+           the viewport harness measures a fresh page, where both panels are `hidden`, and the touch
+           tool never finishes a match. **Every body child now has a place in this layout**, and
+           `tests/ui/stylesheetClasses.test.ts` checks that they all do.
+
+           They span the full column rather than taking a row of their own, because a grid row that
+           only exists while they are showing would change the board's height the moment a match
+           ended. Over the tray instead: the tray is finished at that point and the panel is what
+           the player came for. */
+        #picker,
+        #results {
+          grid-column: 2;
+          grid-row: 1 / -1;
+          align-self: center;
+          justify-self: center;
+        }
+        /* The collection and the rules replace the board entirely, so in landscape they take the
+           whole grid rather than a column. Unplaced, they auto-flowed into the board's column at
+           270px wide and 38px too tall — the same bug as the results panel above, in a second
+           place, which is the argument for the test that now exists. */
+        #collection,
+        #rules {
+          grid-column: 1 / -1;
+          grid-row: 1 / -1;
+          overflow-y: auto;
+        }
+        /* `visibility`, not `display`: the tray keeps its place in the grid, so the board does not
+           jump when a match ends. Without this the cards stick out either side of the panel and
+           read as an accident. The panels come after the tray in the source, so no sibling
+           combinator can reach back to it — `:has()` on the body is the only selector that works,
+           and it is here rather than in JS so that the hiding follows the same truth (`hidden`) the
+           rest of the layout reads. */
+        body:has(#results:not([hidden])) #hand,
+        body:has(#picker:not([hidden])) #hand {
+          visibility: hidden;
         }
         /* The precise clamp. The `calc` above is a budget; this is the truth, and it means the
            constant can be wrong in only one direction — wasteful, never overflowing. */

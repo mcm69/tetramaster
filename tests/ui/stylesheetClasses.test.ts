@@ -75,6 +75,115 @@ describe('stylesheet classes', () => {
   });
 
   /**
+   * Every child of `<body>` must have a place in the landscape grid, or be gone from it.
+   *
+   * Stage M7 turned the body into a grid for landscape and placed seven of its fourteen children.
+   * The other seven were auto-placed, and grid's implicit rows put two of them in the one cell
+   * nobody named: a 300px-tall results panel landed above the board and crushed it to 6px, and the
+   * collection screen landed in the board's own column, 270px wide and 38px too tall.
+   *
+   * Nothing caught either. The viewport harness measures a fresh page, where both are `hidden`, and
+   * a person only reaches them by playing a whole match — which is exactly how this was found.
+   *
+   * A child is accounted for if the landscape block places it (`grid-area`, `grid-column`), or
+   * removes it (`display: none`), or is the screen-reader-only live region, which is taken out of
+   * flow by `position: absolute` and is not a grid item at all.
+   */
+  it('gives every body child a place in the landscape grid', () => {
+    // From the landscape block to the *end* of the stylesheet, not to the next media query. A child
+    // can be removed from a landscape layout by a rule in a different block — `.mode-note` and
+    // `.keys` are hidden by `max-height: 760px`, not by the landscape block — and stopping at the
+    // first `@media` boundary reported four children as unplaced that the page has already dealt with.
+    const landscape = styleSheet.slice(styleSheet.indexOf('@media (orientation: landscape)'));
+
+    /**
+     * The direct children of `<body>`, in order.
+     *
+     * Depth-tracked rather than regex-matched, because the first version of this matched *every* tag in
+     * the page and cheerfully reported the two `rematch` buttons inside the navigation toolbar as
+     * unplaced body children — a test failing about elements it was never meant to be looking at, which
+     * is worse than no test.
+     */
+    function bodyChildren(): { tag: string; id: string; className: string }[] {
+      const inner = page
+        .slice(page.indexOf('<body'), page.indexOf('</body>'))
+        .replace(/^<body[^>]*>/, '');
+      const voids = ['br', 'img', 'input', 'hr', 'meta', 'link'];
+      const found: { tag: string; id: string; className: string }[] = [];
+      let depth = 0;
+      // Every capture group defaults, because `noUncheckedIndexedAccess` types them all as possibly
+      // undefined and the defaults are what the code below already assumed.
+      for (const [, closing = '', tag = '', attrs = '', selfClose = ''] of inner.matchAll(
+        /<(\/?)(\w+)([^>]*?)(\/?)>/g,
+      )) {
+        if (closing === '/') {
+          depth -= 1;
+          continue;
+        }
+        if (depth === 0) {
+          found.push({
+            tag,
+            id: /id="([^"]+)"/.exec(attrs)?.[1] ?? '',
+            className: /class="([^"]+)"/.exec(attrs)?.[1] ?? '',
+          });
+        }
+        if (selfClose === '/' || voids.includes(tag.toLowerCase())) continue;
+        depth += 1;
+      }
+      return found;
+    }
+
+    const children = bodyChildren();
+    expect(children.length).toBeGreaterThan(10);
+
+    /**
+     * Every rule in the block, as `selector` and `declarations`.
+     *
+     * Matched on plain substrings rather than a compiled pattern: building a `RegExp` from a
+     * selector means escaping `#`, `.` and `[`, and three layers of escaping in a test is three
+     * chances to write a test that matches nothing and passes. Splitting on braces cannot do that.
+     */
+    const rules = [...landscape.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+      ([, selector = '', body = '']) => ({ selector, body }),
+    );
+    expect(rules.length).toBeGreaterThan(5);
+
+    const namesOf = (child: { tag: string; id: string; className: string }): string[] =>
+      // `child.id` is genuinely absent on a child with no id, so the filter is a type guard rather
+      // than a length test — a length test on `undefined` throws, and throws in a helper reads as a
+      // broken test rather than a missing id.
+      [child.id, ...child.className.split(/\s+/)].filter(
+        (n): n is string => typeof n === 'string' && n.length > 0,
+      );
+
+    const rulesFor = (child: { tag: string; id: string; className: string }) => {
+      // Falls back to the tag when there is no id or class. `h1` is both hidden and unplaced in
+      // landscape, and a name-only match found no rules for it at all — which read as "unplaced"
+      // when the truth was "never looked at".
+      const names = namesOf(child);
+      if (names.length === 0) {
+        return rules.filter((rule) => new RegExp(`(^|[\\s,>])${child.tag}\\b`).test(rule.selector));
+      }
+      return rules.filter((rule) =>
+        names.some((n) => rule.selector.includes(`#${n}`) || rule.selector.includes(`.${n}`)),
+      );
+    };
+
+    const unplaced = children.filter((child) => {
+      // Taken out of flow by `position: absolute`, so it is not a grid item and needs no area, and a
+      // `<script>` is not a layout element whatever it is.
+      if (child.className.split(/\s+/).includes('sr-only')) return false;
+      if (child.tag === 'script') return false;
+      const own = rulesFor(child);
+      const placed = own.some((rule) => /grid-(area|column)/.test(rule.body));
+      const removed = own.some((rule) => /display:\s*none/.test(rule.body));
+      return !placed && !removed;
+    });
+
+    expect(unplaced.map((c) => c.id || c.className || c.tag)).toEqual([]);
+  });
+
+  /**
    * The specific regression, kept separately because the general check above would also pass if the
    * wrapper were renamed consistently and `display: contents` dropped from both — a different layout
    * bug with the same visible symptom.

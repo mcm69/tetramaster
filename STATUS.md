@@ -842,6 +842,55 @@ the collection screen wired into `main.ts` and `index.html`, and `src/game/**` a
 
 ---
 
+### S33 — 2026-10-12 — M7a: the bug the screenshot found, and the guard for the whole class
+
+**Status:** post-M7 fix, found from a screenshot. **768 tests** (+1).
+
+**The bug.** The end-of-match panel rendered _above_ the board in landscape and crushed it to 6px
+tall. Stage M7 made the body a grid and placed seven of its fourteen children; the other seven were
+auto-placed into the cell nobody named.
+
+**Three children were unplaced and all three were broken:** `#picker`/`#results` above the board,
+`#collection`/`#rules` squeezed into the board's column at 270px wide and 38px too tall, and `#hint`
+— the "explain this square" line — floating in an implicit row. The user's question was whether the
+panel could go somewhere other than above the board. It should not have been there at all.
+
+**The fixes.** Results and the battle picker take the whole second column, over the tray rather than
+the board, spanning it rather than taking a row of their own so the board does not jump when a match
+ends. The tray hides behind them with `visibility` rather than `display`, for the same reason.
+Collection and rules take the whole grid, because they replace the board. The hint gets its own
+reserved row — hiding it would be the exact trade this project keeps refusing — and **reserved**
+rather than collapsed, because an `auto` row that grows shrinks the `1fr` row and moves the board
+under the player's finger. A fixed 17px costs the board 6% and never moves.
+
+**The guard.** `tests/ui/stylesheetClasses.test.ts` asserts every direct child of `<body>` has a place
+in the landscape grid or is removed from it. Four mutations, all caught: each of the three above
+unplaced again, and a new `<div id="toast">` added with nothing styling it.
+
+**Learned:**
+
+- **Why nothing caught it is worth more than the bug.** The viewport harness measures a fresh page,
+  where all three elements are `hidden`; the touch tool never finishes a match. Both screens are
+  reachable only by playing a whole game. **A layout can pass every check in the project and still be
+  wrong for the person actually playing it**, and the honest fix is a check that enumerates the
+  elements rather than another check that happens to look at the common ones.
+- **The first version of that check was wrong in the most embarrassing direction: it matched every tag
+  on the page** and reported the two `rematch` buttons _inside_ the navigation toolbar as unplaced
+  body children. It now tracks nesting depth. A test failing about elements it was never meant to be
+  looking at is worse than no test — it teaches you to ignore it.
+- **Stopping at the first `@media` boundary produced four more false positives**, because `.mode-note`
+  and `.keys` are hidden by a `max-height: 760px` block, not the landscape one. The check now runs to
+  the end of the stylesheet. Both mistakes were found by reading the _failure output_ rather than the
+  code, which is the argument for reading it.
+- **Writing the guard found a third bug I had not been asked about.** The hint line. Screenshot,
+  reproduce, fix the thing you were asked about — and the next screenshot has something else in it.
+
+**Next:** M8, collection and rules on a narrow screen.
+**Files touched:** `index.html`, `tests/ui/stylesheetClasses.test.ts`, `MOBILE.md`,
+`MOBILE-baseline.md`, `STATUS.md`
+
+---
+
 ### S32 — 2026-10-11 — M7: landscape, and a constant I could not argue my way out of
 
 **Status:** mobile stage M7 complete. **767 tests** (unchanged). `npm run touch`: 20 checks.
